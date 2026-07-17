@@ -62,9 +62,12 @@ def _strat(xp, reg):
 
 class BatchedGPUCFR:
     def __init__(self, flop, oop, ip, w_oop, w_ip, pot_bb,
-                 bet_frac=0.66, streets=3, backend="auto"):
+                 bet_frac=0.66, streets=3, backend="auto", dtype="float64"):
         self.xp, self.scatter_add, self.to_dev, self.to_host, self.backend = get_backend(backend)
         xp = self.xp
+        # Compute dtype for reaches/regrets/showdown. float32 is much faster on
+        # consumer GPUs (which are FP64-crippled); float64 is exact.
+        self.dtype = np.dtype(dtype)
         self.flop = list(flop)
         self.oc = np.array(oop, dtype=np.int64)
         self.ic = np.array(ip, dtype=np.int64)
@@ -79,18 +82,18 @@ class BatchedGPUCFR:
         for c in range(52):
             o_alive[c, (self.oc[:, 0] == c) | (self.oc[:, 1] == c)] = 0.0
             i_alive[c, (self.ic[:, 0] == c) | (self.ic[:, 1] == c)] = 0.0
-        self.o_alive = xp.asarray(o_alive)
-        self.i_alive = xp.asarray(i_alive)
+        self.o_alive = xp.asarray(o_alive.astype(self.dtype))
+        self.i_alive = xp.asarray(i_alive.astype(self.dtype))
 
         B = np.ones((self.no, self.ni))
         for i in range(self.no):
             a, b = self.oc[i]
             B[i, (self.ic[:, 0] == a) | (self.ic[:, 1] == a)
                | (self.ic[:, 0] == b) | (self.ic[:, 1] == b)] = 0.0
-        self.B = xp.asarray(B)
+        self.B = xp.asarray(B.astype(self.dtype))
 
-        self.w_o = xp.asarray(w_oop / w_oop.sum())
-        self.w_i = xp.asarray(w_ip / w_ip.sum())
+        self.w_o = xp.asarray((w_oop / w_oop.sum()).astype(self.dtype))
+        self.w_i = xp.asarray((w_ip / w_ip.sum()).astype(self.dtype))
 
         self._build_showdown_tensor()      # E_all on device + board->idx map
         self.R: Dict[str, object] = {}
@@ -118,7 +121,7 @@ class BatchedGPUCFR:
     def _reg(self, key, C, player_o, na):
         r = self.R.get(key)
         if r is None:
-            r = self.xp.zeros((C, self.no if player_o else self.ni, na))
+            r = self.xp.zeros((C, self.no if player_o else self.ni, na), dtype=self.dtype)
             self.R[key] = r
             self.S[key] = self.xp.zeros_like(r)
         return r
@@ -222,7 +225,8 @@ class BatchedGPUCFR:
         for t in range(1, iterations + 1):
             self._t = t
             uo, ui = self._solve(1, [list(self.flop)],
-                                 xp.zeros(1), xp.zeros(1), ro0 + 0, ri0 + 0, "")
+                                 xp.zeros(1, dtype=self.dtype), xp.zeros(1, dtype=self.dtype),
+                                 ro0 + 0, ri0 + 0, "")
             if t == iterations:
                 root_ev = float(self.to_host((self.w_o * uo[0]).sum()))
         if self.backend == "cupy":
@@ -230,6 +234,7 @@ class BatchedGPUCFR:
         rt = time.time() - t0
         return {
             "backend": self.backend,
+            "dtype": str(self.dtype),
             "root_ev_oop_bb": root_ev,
             "root_ev_pct_pot": 100 * root_ev / self.P0,
             "iterations": iterations,

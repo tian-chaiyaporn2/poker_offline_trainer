@@ -39,10 +39,11 @@ def main():
     streets = int(sys.argv[1]) if len(sys.argv) > 1 else 3
     sizes = [int(x) for x in sys.argv[2:]] or [40, 80, 160]
 
-    # POKER_BACKEND=cupy|numpy|auto lets the Colab notebook compare GPU vs CPU.
+    # POKER_BACKEND=cupy|numpy|auto ; POKER_DTYPE=float32|float64
     prefer = os.environ.get("POKER_BACKEND", "auto")
+    dtype = os.environ.get("POKER_DTYPE", "float64")
     backend = get_backend(prefer)[4]
-    print(f"backend: {backend}"
+    print(f"backend: {backend}   dtype: {dtype}"
           + ("" if backend == "cupy" else "   (CPU — install cupy on a GPU box for GPU)"))
     print(f"streets={streets}\n")
 
@@ -61,11 +62,11 @@ def main():
         oop, ip = subsample(oop_full, n), subsample(ip_full, n)
         wo, wi = np.ones(len(oop)), np.ones(len(ip))
         try:
-            s = BatchedGPUCFR(flop, oop, ip, wo, wi, 5.5, 0.66, streets=streets, backend=prefer)
+            s = BatchedGPUCFR(flop, oop, ip, wo, wi, 5.5, 0.66, streets=streets, backend=prefer, dtype=dtype)
             t = time.time(); s.run(1); build = time.time() - t
             xp = s.xp
             del s; free_pool(xp)        # release before building the timed run
-            s2 = BatchedGPUCFR(flop, oop, ip, wo, wi, 5.5, 0.66, streets=streets, backend=prefer)
+            s2 = BatchedGPUCFR(flop, oop, ip, wo, wi, 5.5, 0.66, streets=streets, backend=prefer, dtype=dtype)
             K = 11
             t = time.time(); r = s2.run(K)
             steady = (r["runtime_sec"] - build) / (K - 1) if K > 1 else r["runtime_sec"]
