@@ -1,0 +1,67 @@
+"""GPU benchmark for the batched multi-street CFR (MIT).
+
+Runs the GPU-ready solver (solver/batched_gpu.py) on whatever backend is present:
+CuPy if installed + a GPU is visible, otherwise NumPy (CPU) as a fallback so the
+script still runs and self-checks.
+
+On a GPU box:
+    pip install cupy-cuda12x          # match your CUDA version
+    PYTHONPATH=src python bench/gpu_bench.py 3 80 160 250
+
+Args: <streets> <combo sizes...>   (defaults: streets=3, sizes 40 80 160)
+
+The point of this bench: the dominant cost is the showdown einsum, a big batched
+matrix multiply. On CPU it is ~n²-bound (see docs/multistreet_spike.md); on GPU
+it should drop sharply. Compare the printed ms/iter across backends.
+"""
+
+import sys
+import time
+
+import numpy as np
+
+sys.path.insert(0, "src")
+from pokertrainer.cards import parse_cards                        # noqa: E402
+from pokertrainer.presets import BB_SRP, BTN_SRP                  # noqa: E402
+from pokertrainer.ranges import expand_range                     # noqa: E402
+from pokertrainer.solver.batched_gpu import BatchedGPUCFR, get_backend  # noqa: E402
+
+
+def subsample(lst, n):
+    if n >= len(lst):
+        return lst
+    idx = np.linspace(0, len(lst) - 1, n).astype(int)
+    return [lst[i] for i in idx]
+
+
+def main():
+    streets = int(sys.argv[1]) if len(sys.argv) > 1 else 3
+    sizes = [int(x) for x in sys.argv[2:]] or [40, 80, 160]
+
+    backend = get_backend()[4]
+    print(f"backend: {backend}"
+          + ("" if backend == "cupy" else "   (CPU fallback — install cupy on a GPU box)"))
+    print(f"streets={streets}\n")
+
+    flop = parse_cards("As7h2d")
+    oop_full = [c for c, _ in expand_range(BB_SRP, flop)]
+    ip_full = [c for c, _ in expand_range(BTN_SRP, flop)]
+
+    print(f"  {'combos':>7} {'build+1':>9} {'ms/iter':>9}")
+    for n in sizes:
+        oop, ip = subsample(oop_full, n), subsample(ip_full, n)
+        wo, wi = np.ones(len(oop)), np.ones(len(ip))
+        s = BatchedGPUCFR(flop, oop, ip, wo, wi, 5.5, 0.66, streets=streets)
+        t = time.time(); s.run(1); build = time.time() - t
+        s2 = BatchedGPUCFR(flop, oop, ip, wo, wi, 5.5, 0.66, streets=streets)
+        K = 11
+        t = time.time(); r = s2.run(K); steady = (r["runtime_sec"] - 0) / K
+        # subtract first-iter cache build for a cleaner steady figure
+        steady = (r["runtime_sec"] - build) / (K - 1) if K > 1 else r["runtime_sec"]
+        print(f"  {len(oop):>7} {build:>9.2f} {steady * 1000:>9.1f}", flush=True)
+
+    print("\nAt 600 iters, ms/iter × 600 / 1000 = seconds/board; × 12 / 60 = minutes for the library.")
+
+
+if __name__ == "__main__":
+    main()

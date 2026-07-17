@@ -3,3 +3,8 @@ numpy>=1.24          # BSD-3-Clause
 
 # Dev-only (not shipped)
 pytest>=7.0          # MIT
+
+# Optional, GPU-only (NOT required; the multi-street GPU spike falls back to
+# NumPy without it). Install the wheel matching your CUDA version on a GPU box:
+#   cupy-cuda12x     # MIT/BSD-style permissive licence
+# Used only by src/pokertrainer/solver/batched_gpu.py + bench/gpu_bench.py.

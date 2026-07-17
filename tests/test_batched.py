@@ -9,6 +9,7 @@ import numpy as np
 
 from pokertrainer.cards import parse_cards, parse_hand
 from pokertrainer.solver.batched import BatchedCFR
+from pokertrainer.solver.batched_gpu import BatchedGPUCFR
 from pokertrainer.solver.multistreet import MultiStreetSpike
 
 FLOP = parse_cards("As7h2d")
@@ -40,3 +41,15 @@ def test_batched_converges_and_is_deterministic():
     assert abs(high - low) < 0.5
     again = _run(BatchedCFR, 2, 400)["root_ev_oop_bb"]
     assert high == again
+
+
+def test_gpu_backend_matches_oracle_on_cpu():
+    """The GPU-ready solver's NumPy backend must reproduce the oracle exactly.
+
+    This is the correctness guarantee for the CuPy (GPU) path, which is the same
+    code with a different array module and cannot be unit-tested without a GPU."""
+    for streets in (1, 2):
+        a = _run(MultiStreetSpike, streets, 80)
+        g = _run(BatchedGPUCFR, streets, 80)
+        assert g["backend"] == "numpy"  # no GPU in CI
+        assert abs(a["root_ev_oop_bb"] - g["root_ev_oop_bb"]) < 1e-9

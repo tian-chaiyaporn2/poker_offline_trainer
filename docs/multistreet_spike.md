@@ -197,4 +197,29 @@ minutes/board** at production range sizes.
 the batched CFR is the correct foundation — but a practical full-range library
 needs **batched CFR + GPU** (still zero copyleft), not CPU NumPy alone. The
 compile-to-C idea was a dead end (bandwidth-bound, ~4×); the GPU path is the one
-worth spiking next (needs GPU hardware, unavailable in this environment).
+worth spiking next.
+
+## GPU path — built and ready to run (`solver/batched_gpu.py`)
+
+The GPU version is **written and validated**, pending only GPU hardware to
+benchmark (none in this environment). It is the same algorithm with a **pluggable
+array backend** (`xp`): CuPy on a GPU, NumPy otherwise. Because CuPy mirrors the
+NumPy API, the NumPy backend reproduces `batched.py`/the oracle **exactly**
+(regression test `tests/test_batched.py::test_gpu_backend_matches_oracle_on_cpu`)
+— that is the correctness guarantee for the untestable-here GPU path. It also
+**vectorises the chance node** (one gather instead of a per-context Python loop)
+and keeps **all boards' win-matrices in one on-device tensor**, so the dominant
+showdown einsum runs as a single big GPU kernel — exactly the batched matmul GPUs
+excel at.
+
+To benchmark on a GPU box:
+
+```
+pip install cupy-cuda12x            # match your CUDA version (permissive licence)
+PYTHONPATH=src python bench/gpu_bench.py 3 80 160 250
+```
+
+`bench/gpu_bench.py` auto-detects the backend (falls back to NumPy/CPU with a
+notice) and prints ms/iter per range size. Expected result to confirm the go
+decision: the showdown einsum drops sharply on GPU, taking full-range river
+solves from *hours/board* (CPU) toward *minutes/board*.
