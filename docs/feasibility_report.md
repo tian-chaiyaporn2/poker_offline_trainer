@@ -94,9 +94,15 @@ internal-benchmarking permission before using it as a reference (PRD §3).
 
 1. **Multi-street solving.** Add turn/river betting for realistic GTO. This is
    the single most important extension; the CFR core, equity engine, scenario
-   format, comparison, export, and trainer are all reusable (they were built for
-   it). Expect a large compute increase (47×46 runout betting subtrees) — profile
-   before committing to a full library.
+   format, comparison, export, and trainer are all reusable. **A spike has now
+   been run** (`docs/multistreet_spike.md`): the multi-street CFR math is correct
+   and converges, but a **pure-Python full-enumeration implementation is not
+   practical** — cost grows ~155× per street (0.7 → 109 → 18,390 ms/iter for
+   flop → +turn → +river), making a river solve ~2.5 hours per board even at a
+   tiny 15-hand range. The fix is a **compiled inner loop** (Numba/Rust/C++/GPU;
+   the runtime is call-overhead-bound, not arithmetic-bound) plus suit
+   isomorphism on suited boards. The approach is sound; the pure-Python
+   implementation is the bottleneck.
 2. **TexasSolver benchmark.** Once (1) exists and the licence is cleared, run the
    real cross-solver comparison the PRD envisions. The adapter and normalization
    format are already in place.
