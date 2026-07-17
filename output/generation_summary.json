@@ -1,0 +1,217 @@
+{
+  "total_questions": 120,
+  "total_wall_sec": 142.09,
+  "iterations": 1500,
+  "boards": [
+    {
+      "board": "As7h2d",
+      "categories": [
+        "dry",
+        "high_card",
+        "rainbow"
+      ],
+      "combos": "265x221",
+      "root_ev_pct_pot": 27.3114,
+      "exploit_pct_pot": 0.002066,
+      "range_freqs": {
+        "check": 0.226641,
+        "bet_small": 0.550325,
+        "bet_large": 0.223034
+      },
+      "questions": 10,
+      "wall_sec": 11.87
+    },
+    {
+      "board": "Kd9c4h",
+      "categories": [
+        "dry",
+        "high_card",
+        "rainbow"
+      ],
+      "combos": "258x231",
+      "root_ev_pct_pot": 42.2328,
+      "exploit_pct_pot": 0.002041,
+      "range_freqs": {
+        "check": 0.020152,
+        "bet_small": 0.655636,
+        "bet_large": 0.324212
+      },
+      "questions": 10,
+      "wall_sec": 11.54
+    },
+    {
+      "board": "Th9h8d",
+      "categories": [
+        "connected",
+        "two_suit",
+        "draw_heavy"
+      ],
+      "combos": "243x236",
+      "root_ev_pct_pot": 51.4699,
+      "exploit_pct_pot": 0.000259,
+      "range_freqs": {
+        "check": 0.012397,
+        "bet_small": 0.467598,
+        "bet_large": 0.520005
+      },
+      "questions": 10,
+      "wall_sec": 11.08
+    },
+    {
+      "board": "8s7s6c",
+      "categories": [
+        "connected",
+        "two_suit",
+        "low"
+      ],
+      "combos": "268x241",
+      "root_ev_pct_pot": 47.7554,
+      "exploit_pct_pot": 0.000696,
+      "range_freqs": {
+        "check": 0.029908,
+        "bet_small": 0.405996,
+        "bet_large": 0.564096
+      },
+      "questions": 10,
+      "wall_sec": 12.02
+    },
+    {
+      "board": "KsKd6h",
+      "categories": [
+        "paired",
+        "high_card"
+      ],
+      "combos": "259x221",
+      "root_ev_pct_pot": 35.2164,
+      "exploit_pct_pot": 0.003713,
+      "range_freqs": {
+        "check": 0.004101,
+        "bet_small": 0.736813,
+        "bet_large": 0.259086
+      },
+      "questions": 10,
+      "wall_sec": 11.54
+    },
+    {
+      "board": "5c5d2h",
+      "categories": [
+        "paired",
+        "low"
+      ],
+      "combos": "277x243",
+      "root_ev_pct_pot": 30.7055,
+      "exploit_pct_pot": 0.001145,
+      "range_freqs": {
+        "check": 0.000228,
+        "bet_small": 0.724975,
+        "bet_large": 0.274798
+      },
+      "questions": 10,
+      "wall_sec": 12.52
+    },
+    {
+      "board": "AhQh7c",
+      "categories": [
+        "two_suit",
+        "high_card",
+        "draw_heavy"
+      ],
+      "combos": "256x210",
+      "root_ev_pct_pot": 31.1781,
+      "exploit_pct_pot": 0.000893,
+      "range_freqs": {
+        "check": 0.2132,
+        "bet_small": 0.552437,
+        "bet_large": 0.234364
+      },
+      "questions": 10,
+      "wall_sec": 11.16
+    },
+    {
+      "board": "Jd8d3s",
+      "categories": [
+        "two_suit",
+        "mid"
+      ],
+      "combos": "257x232",
+      "root_ev_pct_pot": 42.5953,
+      "exploit_pct_pot": 0.000749,
+      "range_freqs": {
+        "check": 0.023504,
+        "bet_small": 0.545887,
+        "bet_large": 0.430609
+      },
+      "questions": 10,
+      "wall_sec": 11.76
+    },
+    {
+      "board": "Qh8h3h",
+      "categories": [
+        "monotone"
+      ],
+      "combos": "264x232",
+      "root_ev_pct_pot": 39.9277,
+      "exploit_pct_pot": 0.001358,
+      "range_freqs": {
+        "check": 0.119182,
+        "bet_small": 0.612442,
+        "bet_large": 0.268376
+      },
+      "questions": 10,
+      "wall_sec": 12.05
+    },
+    {
+      "board": "7s5s2s",
+      "categories": [
+        "monotone",
+        "low"
+      ],
+      "combos": "275x242",
+      "root_ev_pct_pot": 36.8735,
+      "exploit_pct_pot": 0.000545,
+      "range_freqs": {
+        "check": 0.163982,
+        "bet_small": 0.510118,
+        "bet_large": 0.3259
+      },
+      "questions": 10,
+      "wall_sec": 12.83
+    },
+    {
+      "board": "6h4d2c",
+      "categories": [
+        "dry",
+        "low",
+        "rainbow"
+      ],
+      "combos": "276x243",
+      "root_ev_pct_pot": 32.1734,
+      "exploit_pct_pot": 0.001369,
+      "range_freqs": {
+        "check": 0.050598,
+        "bet_small": 0.615238,
+        "bet_large": 0.334164
+      },
+      "questions": 10,
+      "wall_sec": 12.9
+    },
+    {
+      "board": "JcTs9d",
+      "categories": [
+        "connected",
+        "high_card",
+        "rainbow"
+      ],
+      "combos": "234x225",
+      "root_ev_pct_pot": 48.2323,
+      "exploit_pct_pot": 0.001744,
+      "range_freqs": {
+        "check": 0.034493,
+        "bet_small": 0.687175,
+        "bet_large": 0.278332
+      },
+      "questions": 10,
+      "wall_sec": 10.67
+    }
+  ]
+}

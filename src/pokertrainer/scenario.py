@@ -1,0 +1,91 @@
+"""Scenario loading, validation, and range expansion (MIT).
+
+Turns a canonical scenario dict (docs/scenario_format.md) into concrete inputs
+for the solver, and enforces the technical validation rules from PRD §6.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Dict, List, Tuple
+
+import numpy as np
+
+from .cards import parse_cards
+from .ranges import expand_range
+
+Combo = Tuple[int, int]
+
+
+class ValidationError(Exception):
+    pass
+
+
+@dataclass
+class Scenario:
+    raw: Dict
+    board: List[int]
+    oop_combos: List[Combo]
+    ip_combos: List[Combo]
+    w_oop: np.ndarray
+    w_ip: np.ndarray
+    pot_bb: float
+    small_frac: float
+    large_frac: float
+    iterations: int
+
+    @property
+    def id(self) -> str:
+        return self.raw["id"]
+
+
+def load_scenario(raw: Dict) -> Scenario:
+    board = parse_cards(raw["board"])
+
+    # PRD §6: no duplicate or impossible cards on the board.
+    if len(set(board)) != len(board):
+        raise ValidationError(f"duplicate board cards in {raw['id']}")
+    if len(board) != 3:
+        raise ValidationError(f"flop must be 3 cards in {raw['id']}")
+
+    oop_wc = expand_range(raw["ranges"]["BB"]["combos"], board)
+    ip_wc = expand_range(raw["ranges"]["BTN"]["combos"], board)
+    if not oop_wc or not ip_wc:
+        raise ValidationError(f"empty range after board removal in {raw['id']}")
+
+    oop_combos = [c for c, _ in oop_wc]
+    ip_combos = [c for c, _ in ip_wc]
+    w_oop = np.array([w for _, w in oop_wc], dtype=np.float64)
+    w_ip = np.array([w for _, w in ip_wc], dtype=np.float64)
+
+    sizes = raw["actions"]["bet_sizes_pct_pot"]
+    return Scenario(
+        raw=raw,
+        board=board,
+        oop_combos=oop_combos,
+        ip_combos=ip_combos,
+        w_oop=w_oop,
+        w_ip=w_ip,
+        pot_bb=float(raw["pot_bb"]),
+        small_frac=sizes["small"] / 100.0,
+        large_frac=sizes["large"] / 100.0,
+        iterations=int(raw["solver"]["iterations"]),
+    )
+
+
+def validate_solution(strategies: Dict[str, np.ndarray], tol: float = 1e-6) -> None:
+    """PRD §6 technical validation on solver output.
+
+    - No illegal actions (arrays have the right number of columns handled by
+      the solver's fixed tree).
+    - Action probabilities total ~100%.
+    """
+    for key, arr in strategies.items():
+        sums = arr.sum(axis=1)
+        if not np.allclose(sums, 1.0, atol=1e-4):
+            bad = np.where(~np.isclose(sums, 1.0, atol=1e-4))[0]
+            raise ValidationError(
+                f"infoset {key}: {len(bad)} rows do not sum to 1 (e.g. {sums[bad[:3]]})"
+            )
+        if (arr < -tol).any():
+            raise ValidationError(f"infoset {key}: negative probability")

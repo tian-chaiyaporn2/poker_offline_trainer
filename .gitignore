@@ -12,12 +12,12 @@ env/
 .mypy_cache/
 .ruff_cache/
 
-# Solver output (large, regenerable) — keep the directory, ignore contents
-output/*.json
-output/*.db
-output/*.sqlite
-output/**/*.json
-!output/.gitkeep
+# Solver output — the generated training library IS a deliverable, so it is
+# committed. Only ignore ad-hoc scratch under output/scratch/.
+output/scratch/
+
+# Trainer's local user-results DB (per-user, not a deliverable)
+trainer/results.db
 
 # TexasSolver reference workspace — MUST stay out of the distributable
 reference/texassolver/

@@ -1,0 +1,6033 @@
+{
+  "count": 120,
+  "questions": [
+    {
+      "id": "srp_btn_bb_100bb_flop_As7h2d__AcJc",
+      "scenario_id": "srp_btn_bb_100bb_flop_As7h2d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "As",
+        "7h",
+        "2d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "Jc"
+      ],
+      "hand_class": "AJs",
+      "hand_descriptor": "top pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0001,
+        "bet_small": 0.0,
+        "bet_large": 0.9999
+      },
+      "action_ev_bb": {
+        "check": 5.2837,
+        "bet_small": 5.3081,
+        "bet_large": 5.5718
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 5.2381,
+        "bet_small": 4.7942,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "costly",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_As7h2d__AcTc",
+      "scenario_id": "srp_btn_bb_100bb_flop_As7h2d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "As",
+        "7h",
+        "2d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "Tc"
+      ],
+      "hand_class": "ATs",
+      "hand_descriptor": "top pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0001,
+        "bet_small": 0.0002,
+        "bet_large": 0.9997
+      },
+      "action_ev_bb": {
+        "check": 4.979,
+        "bet_small": 5.0811,
+        "bet_large": 5.1336
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 2.811,
+        "bet_small": 0.955,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "acceptable",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_As7h2d__KcQc",
+      "scenario_id": "srp_btn_bb_100bb_flop_As7h2d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "As",
+        "7h",
+        "2d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Kc",
+        "Qc"
+      ],
+      "hand_class": "KQs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 1.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 0.7893,
+        "bet_small": 1.0263,
+        "bet_large": 0.1608
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 4.3089,
+        "bet_small": 0.0,
+        "bet_large": 15.7358
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_As7h2d__QcJc",
+      "scenario_id": "srp_btn_bb_100bb_flop_As7h2d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "As",
+        "7h",
+        "2d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Qc",
+        "Jc"
+      ],
+      "hand_class": "QJs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0032,
+        "bet_small": 0.9967,
+        "bet_large": 0.0001
+      },
+      "action_ev_bb": {
+        "check": -0.0036,
+        "bet_small": 0.0364,
+        "bet_large": -0.3157
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.726,
+        "bet_small": 0.0,
+        "bet_large": 6.4016
+      },
+      "action_grade": {
+        "check": "acceptable",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_As7h2d__JcTc",
+      "scenario_id": "srp_btn_bb_100bb_flop_As7h2d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "As",
+        "7h",
+        "2d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Jc",
+        "Tc"
+      ],
+      "hand_class": "JTs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.9998,
+        "bet_small": 0.0,
+        "bet_large": 0.0002
+      },
+      "action_ev_bb": {
+        "check": 0.0,
+        "bet_small": -0.1761,
+        "bet_large": -0.2265
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.0,
+        "bet_small": 3.203,
+        "bet_large": 4.1177
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "costly",
+        "bet_large": "costly"
+      },
+      "recommended_action": "check",
+      "acceptable_actions": [
+        "check"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_As7h2d__Tc9c",
+      "scenario_id": "srp_btn_bb_100bb_flop_As7h2d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "As",
+        "7h",
+        "2d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Tc",
+        "9c"
+      ],
+      "hand_class": "T9s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.9997,
+        "bet_small": 0.0,
+        "bet_large": 0.0003
+      },
+      "action_ev_bb": {
+        "check": 0.0,
+        "bet_small": -0.2235,
+        "bet_large": -0.1751
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.0,
+        "bet_small": 4.0641,
+        "bet_large": 3.1837
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "costly",
+        "bet_large": "costly"
+      },
+      "recommended_action": "check",
+      "acceptable_actions": [
+        "check"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_As7h2d__9c8c",
+      "scenario_id": "srp_btn_bb_100bb_flop_As7h2d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "As",
+        "7h",
+        "2d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "9c",
+        "8c"
+      ],
+      "hand_class": "98s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.9989,
+        "bet_small": 0.0,
+        "bet_large": 0.0011
+      },
+      "action_ev_bb": {
+        "check": 0.0,
+        "bet_small": -0.1905,
+        "bet_large": -0.0632
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.0,
+        "bet_small": 3.4639,
+        "bet_large": 1.1497
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "costly",
+        "bet_large": "acceptable"
+      },
+      "recommended_action": "check",
+      "acceptable_actions": [
+        "check"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_As7h2d__7c6c",
+      "scenario_id": "srp_btn_bb_100bb_flop_As7h2d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "As",
+        "7h",
+        "2d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "7c",
+        "6c"
+      ],
+      "hand_class": "76s",
+      "hand_descriptor": "middle/bottom pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.9999,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 2.0854,
+        "bet_small": 2.3155,
+        "bet_large": 1.8473
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 4.1833,
+        "bet_small": 0.0,
+        "bet_large": 8.5126
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_As7h2d__5c4c",
+      "scenario_id": "srp_btn_bb_100bb_flop_As7h2d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "As",
+        "7h",
+        "2d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "5c",
+        "4c"
+      ],
+      "hand_class": "54s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0001,
+        "bet_large": 0.9999
+      },
+      "action_ev_bb": {
+        "check": 0.4632,
+        "bet_small": 0.6113,
+        "bet_large": 0.8985
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 7.9143,
+        "bet_small": 5.2221,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "costly",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_As7h2d__Ac5c",
+      "scenario_id": "srp_btn_bb_100bb_flop_As7h2d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "As",
+        "7h",
+        "2d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "5c"
+      ],
+      "hand_class": "A5s",
+      "hand_descriptor": "top pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0005,
+        "bet_small": 0.9984,
+        "bet_large": 0.0011
+      },
+      "action_ev_bb": {
+        "check": 4.6205,
+        "bet_small": 4.7222,
+        "bet_large": 4.5993
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 1.8492,
+        "bet_small": 0.0,
+        "bet_large": 2.2347
+      },
+      "action_grade": {
+        "check": "acceptable",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Kd9c4h__AcJc",
+      "scenario_id": "srp_btn_bb_100bb_flop_Kd9c4h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Kd",
+        "9c",
+        "4h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "Jc"
+      ],
+      "hand_class": "AJs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.1659,
+        "bet_large": 0.8341
+      },
+      "action_ev_bb": {
+        "check": 1.254,
+        "bet_small": 1.8538,
+        "bet_large": 1.8545
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 10.9176,
+        "bet_small": 0.0114,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_small",
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Kd9c4h__AcTc",
+      "scenario_id": "srp_btn_bb_100bb_flop_Kd9c4h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Kd",
+        "9c",
+        "4h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "Tc"
+      ],
+      "hand_class": "ATs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.9999,
+        "bet_large": 0.0001
+      },
+      "action_ev_bb": {
+        "check": 0.9703,
+        "bet_small": 1.4318,
+        "bet_large": 1.3447
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 8.3893,
+        "bet_small": 0.0,
+        "bet_large": 1.583
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "acceptable"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Kd9c4h__KcQc",
+      "scenario_id": "srp_btn_bb_100bb_flop_Kd9c4h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Kd",
+        "9c",
+        "4h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Kc",
+        "Qc"
+      ],
+      "hand_class": "KQs",
+      "hand_descriptor": "top pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0,
+        "bet_large": 1.0
+      },
+      "action_ev_bb": {
+        "check": 5.5988,
+        "bet_small": 5.375,
+        "bet_large": 5.9493
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 6.3723,
+        "bet_small": 10.4429,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "costly",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Kd9c4h__QcJc",
+      "scenario_id": "srp_btn_bb_100bb_flop_Kd9c4h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Kd",
+        "9c",
+        "4h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Qc",
+        "Jc"
+      ],
+      "hand_class": "QJs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0005,
+        "bet_large": 0.9995
+      },
+      "action_ev_bb": {
+        "check": 1.1864,
+        "bet_small": 1.6011,
+        "bet_large": 1.6643
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 8.6883,
+        "bet_small": 1.1497,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "acceptable",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Kd9c4h__JcTc",
+      "scenario_id": "srp_btn_bb_100bb_flop_Kd9c4h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Kd",
+        "9c",
+        "4h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Jc",
+        "Tc"
+      ],
+      "hand_class": "JTs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0009,
+        "bet_large": 0.9991
+      },
+      "action_ev_bb": {
+        "check": 1.0259,
+        "bet_small": 1.3344,
+        "bet_large": 1.3876
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 6.575,
+        "bet_small": 0.9671,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "acceptable",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Kd9c4h__Td9d",
+      "scenario_id": "srp_btn_bb_100bb_flop_Kd9c4h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Kd",
+        "9c",
+        "4h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Td",
+        "9d"
+      ],
+      "hand_class": "T9s",
+      "hand_descriptor": "middle/bottom pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0235,
+        "bet_small": 0.9739,
+        "bet_large": 0.0026
+      },
+      "action_ev_bb": {
+        "check": 3.8985,
+        "bet_small": 3.9042,
+        "bet_large": 3.8871
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.1039,
+        "bet_small": 0.0,
+        "bet_large": 0.3098
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "good",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Kd9c4h__9d8d",
+      "scenario_id": "srp_btn_bb_100bb_flop_Kd9c4h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Kd",
+        "9c",
+        "4h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "9d",
+        "8d"
+      ],
+      "hand_class": "98s",
+      "hand_descriptor": "middle/bottom pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.002,
+        "bet_small": 0.9975,
+        "bet_large": 0.0005
+      },
+      "action_ev_bb": {
+        "check": 3.6721,
+        "bet_small": 3.6908,
+        "bet_large": 3.6548
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.3393,
+        "bet_small": 0.0,
+        "bet_large": 0.6543
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "good",
+        "bet_large": "acceptable"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "check",
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Kd9c4h__7c6c",
+      "scenario_id": "srp_btn_bb_100bb_flop_Kd9c4h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Kd",
+        "9c",
+        "4h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "7c",
+        "6c"
+      ],
+      "hand_class": "76s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0043,
+        "bet_small": 0.9951,
+        "bet_large": 0.0005
+      },
+      "action_ev_bb": {
+        "check": 0.1172,
+        "bet_small": 0.1724,
+        "bet_large": 0.0773
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 1.0038,
+        "bet_small": 0.0,
+        "bet_large": 1.7283
+      },
+      "action_grade": {
+        "check": "acceptable",
+        "bet_small": "good",
+        "bet_large": "acceptable"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Kd9c4h__5c4c",
+      "scenario_id": "srp_btn_bb_100bb_flop_Kd9c4h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Kd",
+        "9c",
+        "4h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "5c",
+        "4c"
+      ],
+      "hand_class": "54s",
+      "hand_descriptor": "middle/bottom pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0003,
+        "bet_small": 0.9975,
+        "bet_large": 0.0021
+      },
+      "action_ev_bb": {
+        "check": 2.69,
+        "bet_small": 2.7436,
+        "bet_large": 2.7057
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.9747,
+        "bet_small": 0.0,
+        "bet_large": 0.6891
+      },
+      "action_grade": {
+        "check": "acceptable",
+        "bet_small": "good",
+        "bet_large": "acceptable"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Kd9c4h__Ac5c",
+      "scenario_id": "srp_btn_bb_100bb_flop_Kd9c4h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Kd",
+        "9c",
+        "4h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "5c"
+      ],
+      "hand_class": "A5s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0001,
+        "bet_small": 0.9995,
+        "bet_large": 0.0005
+      },
+      "action_ev_bb": {
+        "check": 0.3796,
+        "bet_small": 0.8146,
+        "bet_large": 0.7221
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 7.9086,
+        "bet_small": 0.0,
+        "bet_large": 1.6812
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "acceptable"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Th9h8d__AcJc",
+      "scenario_id": "srp_btn_bb_100bb_flop_Th9h8d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Th",
+        "9h",
+        "8d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "Jc"
+      ],
+      "hand_class": "AJs",
+      "hand_descriptor": "high card + straight draw",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0103,
+        "bet_large": 0.9897
+      },
+      "action_ev_bb": {
+        "check": 1.0809,
+        "bet_small": 2.3745,
+        "bet_large": 2.3747
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 23.5224,
+        "bet_small": 0.0027,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_small",
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Th9h8d__AcTc",
+      "scenario_id": "srp_btn_bb_100bb_flop_Th9h8d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Th",
+        "9h",
+        "8d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "Tc"
+      ],
+      "hand_class": "ATs",
+      "hand_descriptor": "top pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 1.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 1.7871,
+        "bet_small": 3.0382,
+        "bet_large": 2.8687
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 22.7467,
+        "bet_small": 0.0,
+        "bet_large": 3.0803
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Th9h8d__KcQc",
+      "scenario_id": "srp_btn_bb_100bb_flop_Th9h8d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Th",
+        "9h",
+        "8d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Kc",
+        "Qc"
+      ],
+      "hand_class": "KQs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0001,
+        "bet_large": 0.9999
+      },
+      "action_ev_bb": {
+        "check": 0.4288,
+        "bet_small": 1.3525,
+        "bet_large": 1.3719
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 17.1464,
+        "bet_small": 0.3518,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_small",
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Th9h8d__QcJc",
+      "scenario_id": "srp_btn_bb_100bb_flop_Th9h8d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Th",
+        "9h",
+        "8d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Qc",
+        "Jc"
+      ],
+      "hand_class": "QJs",
+      "hand_descriptor": "straight",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0,
+        "bet_large": 1.0
+      },
+      "action_ev_bb": {
+        "check": 5.8408,
+        "bet_small": 6.0373,
+        "bet_large": 6.7673
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 16.8439,
+        "bet_small": 13.2713,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "costly",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Th9h8d__JcTc",
+      "scenario_id": "srp_btn_bb_100bb_flop_Th9h8d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Th",
+        "9h",
+        "8d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Jc",
+        "Tc"
+      ],
+      "hand_class": "JTs",
+      "hand_descriptor": "top pair + straight draw",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.541,
+        "bet_large": 0.459
+      },
+      "action_ev_bb": {
+        "check": 3.8668,
+        "bet_small": 3.9387,
+        "bet_large": 3.9381
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 1.3075,
+        "bet_small": 0.0,
+        "bet_large": 0.0101
+      },
+      "action_grade": {
+        "check": "acceptable",
+        "bet_small": "good",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small",
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Th9h8d__Tc9c",
+      "scenario_id": "srp_btn_bb_100bb_flop_Th9h8d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Th",
+        "9h",
+        "8d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Tc",
+        "9c"
+      ],
+      "hand_class": "T9s",
+      "hand_descriptor": "two pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0,
+        "bet_large": 1.0
+      },
+      "action_ev_bb": {
+        "check": 4.3225,
+        "bet_small": 4.4009,
+        "bet_large": 4.6419
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 5.8076,
+        "bet_small": 4.382,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "costly",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Th9h8d__9c8c",
+      "scenario_id": "srp_btn_bb_100bb_flop_Th9h8d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Th",
+        "9h",
+        "8d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "9c",
+        "8c"
+      ],
+      "hand_class": "98s",
+      "hand_descriptor": "two pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0,
+        "bet_large": 1.0
+      },
+      "action_ev_bb": {
+        "check": 4.2276,
+        "bet_small": 4.2864,
+        "bet_large": 4.4784
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 4.5608,
+        "bet_small": 3.4909,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "costly",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Th9h8d__7c6c",
+      "scenario_id": "srp_btn_bb_100bb_flop_Th9h8d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Th",
+        "9h",
+        "8d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "7c",
+        "6c"
+      ],
+      "hand_class": "76s",
+      "hand_descriptor": "straight",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0,
+        "bet_large": 1.0
+      },
+      "action_ev_bb": {
+        "check": 4.8596,
+        "bet_small": 5.0058,
+        "bet_large": 5.4392
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 10.5386,
+        "bet_small": 7.8809,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "costly",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Th9h8d__5c4c",
+      "scenario_id": "srp_btn_bb_100bb_flop_Th9h8d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Th",
+        "9h",
+        "8d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "5c",
+        "4c"
+      ],
+      "hand_class": "54s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 1.0,
+        "bet_small": 0.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 0.0001,
+        "bet_small": -0.4768,
+        "bet_large": -0.6342
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.0,
+        "bet_small": 8.6711,
+        "bet_large": 11.5335
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "costly",
+        "bet_large": "costly"
+      },
+      "recommended_action": "check",
+      "acceptable_actions": [
+        "check"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Th9h8d__Ac5c",
+      "scenario_id": "srp_btn_bb_100bb_flop_Th9h8d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Th",
+        "9h",
+        "8d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "5c"
+      ],
+      "hand_class": "A5s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 1.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 0.1142,
+        "bet_small": 0.2889,
+        "bet_large": 0.0061
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 3.176,
+        "bet_small": 0.0,
+        "bet_large": 5.1423
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_8s7s6c__AcJc",
+      "scenario_id": "srp_btn_bb_100bb_flop_8s7s6c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "8s",
+        "7s",
+        "6c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "Jc"
+      ],
+      "hand_class": "AJs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 1.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 1.2772,
+        "bet_small": 1.9559,
+        "bet_large": 1.7866
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 12.3387,
+        "bet_small": 0.0,
+        "bet_large": 3.0777
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_8s7s6c__AcTc",
+      "scenario_id": "srp_btn_bb_100bb_flop_8s7s6c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "8s",
+        "7s",
+        "6c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "Tc"
+      ],
+      "hand_class": "ATs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.9999,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 2.128,
+        "bet_small": 2.3684,
+        "bet_large": 2.3094
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 4.3727,
+        "bet_small": 0.0,
+        "bet_large": 1.0728
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "acceptable"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_8s7s6c__KcQc",
+      "scenario_id": "srp_btn_bb_100bb_flop_8s7s6c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "8s",
+        "7s",
+        "6c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Kc",
+        "Qc"
+      ],
+      "hand_class": "KQs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 1.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 0.5507,
+        "bet_small": 1.0261,
+        "bet_large": 0.7394
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 8.6445,
+        "bet_small": 0.0,
+        "bet_large": 5.2132
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_8s7s6c__QcJc",
+      "scenario_id": "srp_btn_bb_100bb_flop_8s7s6c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "8s",
+        "7s",
+        "6c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Qc",
+        "Jc"
+      ],
+      "hand_class": "QJs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0004,
+        "bet_small": 0.9995,
+        "bet_large": 0.0001
+      },
+      "action_ev_bb": {
+        "check": 0.1265,
+        "bet_small": 0.3046,
+        "bet_large": 0.2078
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 3.2378,
+        "bet_small": 0.0,
+        "bet_large": 1.7606
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "acceptable"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_8s7s6c__JcTc",
+      "scenario_id": "srp_btn_bb_100bb_flop_8s7s6c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "8s",
+        "7s",
+        "6c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Jc",
+        "Tc"
+      ],
+      "hand_class": "JTs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0,
+        "bet_large": 1.0
+      },
+      "action_ev_bb": {
+        "check": 0.7301,
+        "bet_small": 1.0894,
+        "bet_large": 1.3567
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 11.3912,
+        "bet_small": 4.8596,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "costly",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_8s7s6c__Tc9c",
+      "scenario_id": "srp_btn_bb_100bb_flop_8s7s6c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "8s",
+        "7s",
+        "6c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Tc",
+        "9c"
+      ],
+      "hand_class": "T9s",
+      "hand_descriptor": "straight",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0,
+        "bet_large": 1.0
+      },
+      "action_ev_bb": {
+        "check": 7.1293,
+        "bet_small": 6.4783,
+        "bet_large": 7.3438
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 3.8996,
+        "bet_small": 15.7365,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "costly",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_8s7s6c__9c8c",
+      "scenario_id": "srp_btn_bb_100bb_flop_8s7s6c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "8s",
+        "7s",
+        "6c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "9c",
+        "8c"
+      ],
+      "hand_class": "98s",
+      "hand_descriptor": "top pair + straight draw",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0,
+        "bet_large": 1.0
+      },
+      "action_ev_bb": {
+        "check": 4.6217,
+        "bet_small": 4.4692,
+        "bet_large": 4.8107
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 3.4369,
+        "bet_small": 6.2087,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "costly",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_8s7s6c__7d6d",
+      "scenario_id": "srp_btn_bb_100bb_flop_8s7s6c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "8s",
+        "7s",
+        "6c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "7d",
+        "6d"
+      ],
+      "hand_class": "76s",
+      "hand_descriptor": "two pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0001,
+        "bet_small": 0.0,
+        "bet_large": 0.9999
+      },
+      "action_ev_bb": {
+        "check": 5.3815,
+        "bet_small": 5.1059,
+        "bet_large": 5.5504
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 3.07,
+        "bet_small": 8.0819,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "costly",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_8s7s6c__5c4c",
+      "scenario_id": "srp_btn_bb_100bb_flop_8s7s6c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "8s",
+        "7s",
+        "6c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "5c",
+        "4c"
+      ],
+      "hand_class": "54s",
+      "hand_descriptor": "straight",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0,
+        "bet_large": 1.0
+      },
+      "action_ev_bb": {
+        "check": 6.4728,
+        "bet_small": 5.9602,
+        "bet_large": 6.6859
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 3.8742,
+        "bet_small": 13.1932,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "costly",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_8s7s6c__Ac5c",
+      "scenario_id": "srp_btn_bb_100bb_flop_8s7s6c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "8s",
+        "7s",
+        "6c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "5c"
+      ],
+      "hand_class": "A5s",
+      "hand_descriptor": "high card + straight draw",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.9999,
+        "bet_large": 0.0001
+      },
+      "action_ev_bb": {
+        "check": 2.2915,
+        "bet_small": 2.5128,
+        "bet_large": 2.4954
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 4.0248,
+        "bet_small": 0.0,
+        "bet_large": 0.3161
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small",
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_KsKd6h__AcJc",
+      "scenario_id": "srp_btn_bb_100bb_flop_KsKd6h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Ks",
+        "Kd",
+        "6h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "Jc"
+      ],
+      "hand_class": "AJs",
+      "hand_descriptor": "one pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.9968,
+        "bet_large": 0.0032
+      },
+      "action_ev_bb": {
+        "check": 1.7255,
+        "bet_small": 2.109,
+        "bet_large": 2.0941
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 6.972,
+        "bet_small": 0.0,
+        "bet_large": 0.2712
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small",
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_KsKd6h__AcTc",
+      "scenario_id": "srp_btn_bb_100bb_flop_KsKd6h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Ks",
+        "Kd",
+        "6h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "Tc"
+      ],
+      "hand_class": "ATs",
+      "hand_descriptor": "one pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.9997,
+        "bet_large": 0.0003
+      },
+      "action_ev_bb": {
+        "check": 1.2737,
+        "bet_small": 1.6994,
+        "bet_large": 1.4653
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 7.739,
+        "bet_small": 0.0,
+        "bet_large": 4.2561
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_KsKd6h__KcQc",
+      "scenario_id": "srp_btn_bb_100bb_flop_KsKd6h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Ks",
+        "Kd",
+        "6h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Kc",
+        "Qc"
+      ],
+      "hand_class": "KQs",
+      "hand_descriptor": "three of a kind",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0001,
+        "bet_small": 0.0,
+        "bet_large": 0.9999
+      },
+      "action_ev_bb": {
+        "check": 6.9361,
+        "bet_small": 6.5708,
+        "bet_large": 7.4198
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 8.7949,
+        "bet_small": 15.4365,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "costly",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_KsKd6h__QcJc",
+      "scenario_id": "srp_btn_bb_100bb_flop_KsKd6h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Ks",
+        "Kd",
+        "6h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Qc",
+        "Jc"
+      ],
+      "hand_class": "QJs",
+      "hand_descriptor": "one pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.4745,
+        "bet_large": 0.5254
+      },
+      "action_ev_bb": {
+        "check": 0.4085,
+        "bet_small": 0.7871,
+        "bet_large": 0.7887
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 6.9129,
+        "bet_small": 0.0278,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_small",
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_KsKd6h__JcTc",
+      "scenario_id": "srp_btn_bb_100bb_flop_KsKd6h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Ks",
+        "Kd",
+        "6h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Jc",
+        "Tc"
+      ],
+      "hand_class": "JTs",
+      "hand_descriptor": "one pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0002,
+        "bet_small": 0.9993,
+        "bet_large": 0.0005
+      },
+      "action_ev_bb": {
+        "check": 0.0717,
+        "bet_small": 0.3563,
+        "bet_large": 0.2483
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 5.1736,
+        "bet_small": 0.0,
+        "bet_large": 1.9627
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "acceptable"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_KsKd6h__Tc9c",
+      "scenario_id": "srp_btn_bb_100bb_flop_KsKd6h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Ks",
+        "Kd",
+        "6h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Tc",
+        "9c"
+      ],
+      "hand_class": "T9s",
+      "hand_descriptor": "one pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0004,
+        "bet_small": 0.999,
+        "bet_large": 0.0006
+      },
+      "action_ev_bb": {
+        "check": 0.0485,
+        "bet_small": 0.2661,
+        "bet_large": 0.1771
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 3.9559,
+        "bet_small": 0.0,
+        "bet_large": 1.618
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "acceptable"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_KsKd6h__9c8c",
+      "scenario_id": "srp_btn_bb_100bb_flop_KsKd6h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Ks",
+        "Kd",
+        "6h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "9c",
+        "8c"
+      ],
+      "hand_class": "98s",
+      "hand_descriptor": "one pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0008,
+        "bet_small": 0.9179,
+        "bet_large": 0.0813
+      },
+      "action_ev_bb": {
+        "check": 0.0794,
+        "bet_small": 0.2012,
+        "bet_large": 0.2007
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 2.2148,
+        "bet_small": 0.0,
+        "bet_large": 0.0091
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small",
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_KsKd6h__7c6c",
+      "scenario_id": "srp_btn_bb_100bb_flop_KsKd6h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Ks",
+        "Kd",
+        "6h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "7c",
+        "6c"
+      ],
+      "hand_class": "76s",
+      "hand_descriptor": "two pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0001,
+        "bet_small": 0.9998,
+        "bet_large": 0.0001
+      },
+      "action_ev_bb": {
+        "check": 2.8704,
+        "bet_small": 2.9717,
+        "bet_large": 2.6784
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 1.8413,
+        "bet_small": 0.0,
+        "bet_large": 5.3328
+      },
+      "action_grade": {
+        "check": "acceptable",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_KsKd6h__5c4c",
+      "scenario_id": "srp_btn_bb_100bb_flop_KsKd6h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Ks",
+        "Kd",
+        "6h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "5c",
+        "4c"
+      ],
+      "hand_class": "54s",
+      "hand_descriptor": "one pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.9996,
+        "bet_small": 0.0,
+        "bet_large": 0.0004
+      },
+      "action_ev_bb": {
+        "check": 0.0003,
+        "bet_small": -0.2172,
+        "bet_large": -0.1366
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.0,
+        "bet_small": 3.9538,
+        "bet_large": 2.4881
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "costly",
+        "bet_large": "costly"
+      },
+      "recommended_action": "check",
+      "acceptable_actions": [
+        "check"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_KsKd6h__Ac5c",
+      "scenario_id": "srp_btn_bb_100bb_flop_KsKd6h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Ks",
+        "Kd",
+        "6h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "5c"
+      ],
+      "hand_class": "A5s",
+      "hand_descriptor": "one pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.9998,
+        "bet_large": 0.0002
+      },
+      "action_ev_bb": {
+        "check": 0.5512,
+        "bet_small": 0.9234,
+        "bet_large": 0.7196
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 6.7674,
+        "bet_small": 0.0,
+        "bet_large": 3.7061
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_5c5d2h__AcJc",
+      "scenario_id": "srp_btn_bb_100bb_flop_5c5d2h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "5c",
+        "5d",
+        "2h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "Jc"
+      ],
+      "hand_class": "AJs",
+      "hand_descriptor": "one pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.9999,
+        "bet_large": 0.0001
+      },
+      "action_ev_bb": {
+        "check": 2.719,
+        "bet_small": 2.8263,
+        "bet_large": 2.6807
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 1.9504,
+        "bet_small": 0.0,
+        "bet_large": 2.6479
+      },
+      "action_grade": {
+        "check": "acceptable",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_5c5d2h__AcTc",
+      "scenario_id": "srp_btn_bb_100bb_flop_5c5d2h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "5c",
+        "5d",
+        "2h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "Tc"
+      ],
+      "hand_class": "ATs",
+      "hand_descriptor": "one pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.9999,
+        "bet_large": 0.0001
+      },
+      "action_ev_bb": {
+        "check": 2.3244,
+        "bet_small": 2.4977,
+        "bet_large": 2.2828
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 3.1522,
+        "bet_small": 0.0,
+        "bet_large": 3.9083
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_5c5d2h__KcQc",
+      "scenario_id": "srp_btn_bb_100bb_flop_5c5d2h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "5c",
+        "5d",
+        "2h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Kc",
+        "Qc"
+      ],
+      "hand_class": "KQs",
+      "hand_descriptor": "one pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 1.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 1.2801,
+        "bet_small": 1.5924,
+        "bet_large": 1.1979
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 5.6783,
+        "bet_small": 0.0,
+        "bet_large": 7.1725
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_5c5d2h__QcJc",
+      "scenario_id": "srp_btn_bb_100bb_flop_5c5d2h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "5c",
+        "5d",
+        "2h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Qc",
+        "Jc"
+      ],
+      "hand_class": "QJs",
+      "hand_descriptor": "one pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.9999,
+        "bet_large": 0.0001
+      },
+      "action_ev_bb": {
+        "check": 0.3721,
+        "bet_small": 0.7569,
+        "bet_large": 0.5458
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 6.9957,
+        "bet_small": 0.0,
+        "bet_large": 3.8383
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_5c5d2h__JcTc",
+      "scenario_id": "srp_btn_bb_100bb_flop_5c5d2h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "5c",
+        "5d",
+        "2h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Jc",
+        "Tc"
+      ],
+      "hand_class": "JTs",
+      "hand_descriptor": "one pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.9997,
+        "bet_large": 0.0003
+      },
+      "action_ev_bb": {
+        "check": 0.0893,
+        "bet_small": 0.4486,
+        "bet_large": 0.3694
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 6.5342,
+        "bet_small": 0.0,
+        "bet_large": 1.4403
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "acceptable"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_5c5d2h__Tc9c",
+      "scenario_id": "srp_btn_bb_100bb_flop_5c5d2h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "5c",
+        "5d",
+        "2h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Tc",
+        "9c"
+      ],
+      "hand_class": "T9s",
+      "hand_descriptor": "one pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.9988,
+        "bet_large": 0.0012
+      },
+      "action_ev_bb": {
+        "check": 0.1169,
+        "bet_small": 0.4178,
+        "bet_large": 0.3963
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 5.4714,
+        "bet_small": 0.0,
+        "bet_large": 0.392
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small",
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_5c5d2h__9c8c",
+      "scenario_id": "srp_btn_bb_100bb_flop_5c5d2h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "5c",
+        "5d",
+        "2h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "9c",
+        "8c"
+      ],
+      "hand_class": "98s",
+      "hand_descriptor": "one pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0205,
+        "bet_large": 0.9795
+      },
+      "action_ev_bb": {
+        "check": 0.1815,
+        "bet_small": 0.46,
+        "bet_large": 0.4816
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 5.4558,
+        "bet_small": 0.3911,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_small",
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_5c5d2h__7c6c",
+      "scenario_id": "srp_btn_bb_100bb_flop_5c5d2h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "5c",
+        "5d",
+        "2h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "7c",
+        "6c"
+      ],
+      "hand_class": "76s",
+      "hand_descriptor": "one pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0007,
+        "bet_large": 0.9992
+      },
+      "action_ev_bb": {
+        "check": 0.2747,
+        "bet_small": 0.4582,
+        "bet_large": 0.585
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 5.6409,
+        "bet_small": 2.3045,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "costly",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_5c5d2h__5h4h",
+      "scenario_id": "srp_btn_bb_100bb_flop_5c5d2h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "5c",
+        "5d",
+        "2h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "5h",
+        "4h"
+      ],
+      "hand_class": "54s",
+      "hand_descriptor": "three of a kind",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0,
+        "bet_large": 1.0
+      },
+      "action_ev_bb": {
+        "check": 7.4924,
+        "bet_small": 6.8328,
+        "bet_large": 7.9288
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 7.9346,
+        "bet_small": 19.928,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "costly",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_5c5d2h__Ah5h",
+      "scenario_id": "srp_btn_bb_100bb_flop_5c5d2h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "5c",
+        "5d",
+        "2h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ah",
+        "5h"
+      ],
+      "hand_class": "A5s",
+      "hand_descriptor": "three of a kind",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0,
+        "bet_large": 1.0
+      },
+      "action_ev_bb": {
+        "check": 7.4693,
+        "bet_small": 6.7908,
+        "bet_large": 7.8278
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 6.5192,
+        "bet_small": 18.855,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "costly",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_AhQh7c__AcJc",
+      "scenario_id": "srp_btn_bb_100bb_flop_AhQh7c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Ah",
+        "Qh",
+        "7c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "Jc"
+      ],
+      "hand_class": "AJs",
+      "hand_descriptor": "top pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0,
+        "bet_large": 1.0
+      },
+      "action_ev_bb": {
+        "check": 4.8207,
+        "bet_small": 4.8381,
+        "bet_large": 5.089
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 4.8795,
+        "bet_small": 4.5621,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "costly",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_AhQh7c__AcTc",
+      "scenario_id": "srp_btn_bb_100bb_flop_AhQh7c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Ah",
+        "Qh",
+        "7c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "Tc"
+      ],
+      "hand_class": "ATs",
+      "hand_descriptor": "top pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0,
+        "bet_large": 1.0
+      },
+      "action_ev_bb": {
+        "check": 4.5948,
+        "bet_small": 4.6165,
+        "bet_large": 4.7853
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 3.4634,
+        "bet_small": 3.068,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "costly",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_AhQh7c__KcQc",
+      "scenario_id": "srp_btn_bb_100bb_flop_AhQh7c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Ah",
+        "Qh",
+        "7c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Kc",
+        "Qc"
+      ],
+      "hand_class": "KQs",
+      "hand_descriptor": "middle/bottom pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.1352,
+        "bet_small": 0.8648,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 3.339,
+        "bet_small": 3.3401,
+        "bet_large": 2.8802
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.0198,
+        "bet_small": 0.0,
+        "bet_large": 8.3604
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "check",
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_AhQh7c__QcJc",
+      "scenario_id": "srp_btn_bb_100bb_flop_AhQh7c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Ah",
+        "Qh",
+        "7c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Qc",
+        "Jc"
+      ],
+      "hand_class": "QJs",
+      "hand_descriptor": "middle/bottom pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 1.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 2.9094,
+        "bet_small": 2.9491,
+        "bet_large": 2.3258
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.7219,
+        "bet_small": 0.0,
+        "bet_large": 11.3325
+      },
+      "action_grade": {
+        "check": "acceptable",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_AhQh7c__JcTc",
+      "scenario_id": "srp_btn_bb_100bb_flop_AhQh7c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Ah",
+        "Qh",
+        "7c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Jc",
+        "Tc"
+      ],
+      "hand_class": "JTs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.9991,
+        "bet_large": 0.0009
+      },
+      "action_ev_bb": {
+        "check": 0.813,
+        "bet_small": 0.9388,
+        "bet_large": 0.9039
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 2.2864,
+        "bet_small": 0.0,
+        "bet_large": 0.6338
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "acceptable"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_AhQh7c__Tc9c",
+      "scenario_id": "srp_btn_bb_100bb_flop_AhQh7c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Ah",
+        "Qh",
+        "7c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Tc",
+        "9c"
+      ],
+      "hand_class": "T9s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.9998,
+        "bet_small": 0.0001,
+        "bet_large": 0.0001
+      },
+      "action_ev_bb": {
+        "check": 0.0,
+        "bet_small": -0.0568,
+        "bet_large": -0.2835
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.0,
+        "bet_small": 1.0335,
+        "bet_large": 5.1551
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "acceptable",
+        "bet_large": "costly"
+      },
+      "recommended_action": "check",
+      "acceptable_actions": [
+        "check"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_AhQh7c__9c8c",
+      "scenario_id": "srp_btn_bb_100bb_flop_AhQh7c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Ah",
+        "Qh",
+        "7c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "9c",
+        "8c"
+      ],
+      "hand_class": "98s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.9999,
+        "bet_small": 0.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 0.0,
+        "bet_small": -0.0995,
+        "bet_large": -0.3811
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.0,
+        "bet_small": 1.81,
+        "bet_large": 6.9294
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "acceptable",
+        "bet_large": "costly"
+      },
+      "recommended_action": "check",
+      "acceptable_actions": [
+        "check"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_AhQh7c__7d6d",
+      "scenario_id": "srp_btn_bb_100bb_flop_AhQh7c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Ah",
+        "Qh",
+        "7c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "7d",
+        "6d"
+      ],
+      "hand_class": "76s",
+      "hand_descriptor": "middle/bottom pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 1.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 0.6274,
+        "bet_small": 1.4284,
+        "bet_large": 0.7733
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 14.5634,
+        "bet_small": 0.0,
+        "bet_large": 11.9107
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_AhQh7c__5c4c",
+      "scenario_id": "srp_btn_bb_100bb_flop_AhQh7c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Ah",
+        "Qh",
+        "7c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "5c",
+        "4c"
+      ],
+      "hand_class": "54s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 1.0,
+        "bet_small": 0.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 0.0,
+        "bet_small": -0.2924,
+        "bet_large": -0.4203
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.0,
+        "bet_small": 5.3158,
+        "bet_large": 7.6426
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "costly",
+        "bet_large": "costly"
+      },
+      "recommended_action": "check",
+      "acceptable_actions": [
+        "check"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_AhQh7c__Ac5c",
+      "scenario_id": "srp_btn_bb_100bb_flop_AhQh7c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Ah",
+        "Qh",
+        "7c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "5c"
+      ],
+      "hand_class": "A5s",
+      "hand_descriptor": "top pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0001,
+        "bet_small": 0.9834,
+        "bet_large": 0.0165
+      },
+      "action_ev_bb": {
+        "check": 4.1134,
+        "bet_small": 4.1468,
+        "bet_large": 4.1366
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.6065,
+        "bet_small": 0.0,
+        "bet_large": 0.1856
+      },
+      "action_grade": {
+        "check": "acceptable",
+        "bet_small": "good",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small",
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Jd8d3s__AcJc",
+      "scenario_id": "srp_btn_bb_100bb_flop_Jd8d3s",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Jd",
+        "8d",
+        "3s"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "Jc"
+      ],
+      "hand_class": "AJs",
+      "hand_descriptor": "top pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0,
+        "bet_large": 1.0
+      },
+      "action_ev_bb": {
+        "check": 5.018,
+        "bet_small": 4.8318,
+        "bet_large": 5.2637
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 4.4683,
+        "bet_small": 7.8541,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "costly",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Jd8d3s__AcTc",
+      "scenario_id": "srp_btn_bb_100bb_flop_Jd8d3s",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Jd",
+        "8d",
+        "3s"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "Tc"
+      ],
+      "hand_class": "ATs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 1.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 0.778,
+        "bet_small": 1.2396,
+        "bet_large": 0.9899
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 8.3933,
+        "bet_small": 0.0,
+        "bet_large": 4.5398
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Jd8d3s__KcQc",
+      "scenario_id": "srp_btn_bb_100bb_flop_Jd8d3s",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Jd",
+        "8d",
+        "3s"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Kc",
+        "Qc"
+      ],
+      "hand_class": "KQs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0001,
+        "bet_small": 0.9997,
+        "bet_large": 0.0002
+      },
+      "action_ev_bb": {
+        "check": 0.1246,
+        "bet_small": 0.5117,
+        "bet_large": 0.4582
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 7.0376,
+        "bet_small": 0.0,
+        "bet_large": 0.9727
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "acceptable"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Jd8d3s__QcJc",
+      "scenario_id": "srp_btn_bb_100bb_flop_Jd8d3s",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Jd",
+        "8d",
+        "3s"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Qc",
+        "Jc"
+      ],
+      "hand_class": "QJs",
+      "hand_descriptor": "top pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0,
+        "bet_large": 1.0
+      },
+      "action_ev_bb": {
+        "check": 4.3376,
+        "bet_small": 4.2818,
+        "bet_large": 4.4692
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 2.392,
+        "bet_small": 3.4064,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "costly",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Jd8d3s__JcTc",
+      "scenario_id": "srp_btn_bb_100bb_flop_Jd8d3s",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Jd",
+        "8d",
+        "3s"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Jc",
+        "Tc"
+      ],
+      "hand_class": "JTs",
+      "hand_descriptor": "top pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0001,
+        "bet_small": 0.0,
+        "bet_large": 0.9999
+      },
+      "action_ev_bb": {
+        "check": 3.9744,
+        "bet_small": 3.9729,
+        "bet_large": 4.0298
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 1.0073,
+        "bet_small": 1.0342,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "acceptable",
+        "bet_small": "acceptable",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Jd8d3s__Tc9c",
+      "scenario_id": "srp_btn_bb_100bb_flop_Jd8d3s",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Jd",
+        "8d",
+        "3s"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Tc",
+        "9c"
+      ],
+      "hand_class": "T9s",
+      "hand_descriptor": "high card + straight draw",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0001,
+        "bet_large": 0.9999
+      },
+      "action_ev_bb": {
+        "check": 1.7223,
+        "bet_small": 1.9585,
+        "bet_large": 2.0264
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 5.53,
+        "bet_small": 1.2349,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "acceptable",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Jd8d3s__9c8c",
+      "scenario_id": "srp_btn_bb_100bb_flop_Jd8d3s",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Jd",
+        "8d",
+        "3s"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "9c",
+        "8c"
+      ],
+      "hand_class": "98s",
+      "hand_descriptor": "middle/bottom pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0001,
+        "bet_small": 0.9999,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 3.2689,
+        "bet_small": 3.3257,
+        "bet_large": 3.1087
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 1.033,
+        "bet_small": 0.0,
+        "bet_large": 3.9463
+      },
+      "action_grade": {
+        "check": "acceptable",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Jd8d3s__7c6c",
+      "scenario_id": "srp_btn_bb_100bb_flop_Jd8d3s",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Jd",
+        "8d",
+        "3s"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "7c",
+        "6c"
+      ],
+      "hand_class": "76s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 1.0,
+        "bet_small": 0.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 0.0001,
+        "bet_small": -0.1942,
+        "bet_large": -0.6887
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.0,
+        "bet_small": 3.5313,
+        "bet_large": 12.5223
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "costly",
+        "bet_large": "costly"
+      },
+      "recommended_action": "check",
+      "acceptable_actions": [
+        "check"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Jd8d3s__5c4c",
+      "scenario_id": "srp_btn_bb_100bb_flop_Jd8d3s",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Jd",
+        "8d",
+        "3s"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "5c",
+        "4c"
+      ],
+      "hand_class": "54s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 1.0,
+        "bet_small": 0.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 0.0001,
+        "bet_small": -0.3337,
+        "bet_large": -0.7629
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.0,
+        "bet_small": 6.0676,
+        "bet_large": 13.8726
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "costly",
+        "bet_large": "costly"
+      },
+      "recommended_action": "check",
+      "acceptable_actions": [
+        "check"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Jd8d3s__Ac5c",
+      "scenario_id": "srp_btn_bb_100bb_flop_Jd8d3s",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Jd",
+        "8d",
+        "3s"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "5c"
+      ],
+      "hand_class": "A5s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.9999,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 0.0912,
+        "bet_small": 0.4649,
+        "bet_large": 0.1017
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 6.7947,
+        "bet_small": 0.0,
+        "bet_large": 6.6053
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Qh8h3h__AcJc",
+      "scenario_id": "srp_btn_bb_100bb_flop_Qh8h3h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Qh",
+        "8h",
+        "3h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "Jc"
+      ],
+      "hand_class": "AJs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 1.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 0.9313,
+        "bet_small": 1.0218,
+        "bet_large": 0.4268
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 1.645,
+        "bet_small": 0.0,
+        "bet_large": 10.8189
+      },
+      "action_grade": {
+        "check": "acceptable",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Qh8h3h__AcTc",
+      "scenario_id": "srp_btn_bb_100bb_flop_Qh8h3h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Qh",
+        "8h",
+        "3h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "Tc"
+      ],
+      "hand_class": "ATs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 1.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 0.6583,
+        "bet_small": 0.6997,
+        "bet_large": 0.0227
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.7535,
+        "bet_small": 0.0,
+        "bet_large": 12.3085
+      },
+      "action_grade": {
+        "check": "acceptable",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Qh8h3h__KcQc",
+      "scenario_id": "srp_btn_bb_100bb_flop_Qh8h3h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Qh",
+        "8h",
+        "3h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Kc",
+        "Qc"
+      ],
+      "hand_class": "KQs",
+      "hand_descriptor": "top pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0001,
+        "bet_small": 0.9998,
+        "bet_large": 0.0001
+      },
+      "action_ev_bb": {
+        "check": 3.6532,
+        "bet_small": 3.8215,
+        "bet_large": 3.6048
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 3.06,
+        "bet_small": 0.0,
+        "bet_large": 3.9391
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Qh8h3h__QcJc",
+      "scenario_id": "srp_btn_bb_100bb_flop_Qh8h3h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Qh",
+        "8h",
+        "3h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Qc",
+        "Jc"
+      ],
+      "hand_class": "QJs",
+      "hand_descriptor": "top pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0001,
+        "bet_small": 0.9999,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 3.2828,
+        "bet_small": 3.4675,
+        "bet_large": 3.1069
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 3.3594,
+        "bet_small": 0.0,
+        "bet_large": 6.5562
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Qh8h3h__JcTc",
+      "scenario_id": "srp_btn_bb_100bb_flop_Qh8h3h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Qh",
+        "8h",
+        "3h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Jc",
+        "Tc"
+      ],
+      "hand_class": "JTs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0001,
+        "bet_small": 0.0139,
+        "bet_large": 0.9861
+      },
+      "action_ev_bb": {
+        "check": 0.5784,
+        "bet_small": 0.6572,
+        "bet_large": 0.6703
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 1.6698,
+        "bet_small": 0.2371,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "acceptable",
+        "bet_small": "good",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_small",
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Qh8h3h__Tc9c",
+      "scenario_id": "srp_btn_bb_100bb_flop_Qh8h3h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Qh",
+        "8h",
+        "3h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Tc",
+        "9c"
+      ],
+      "hand_class": "T9s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0001,
+        "bet_small": 0.0041,
+        "bet_large": 0.9959
+      },
+      "action_ev_bb": {
+        "check": 0.5478,
+        "bet_small": 0.5867,
+        "bet_large": 0.6005
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.9575,
+        "bet_small": 0.2505,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "acceptable",
+        "bet_small": "good",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_small",
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Qh8h3h__9c8c",
+      "scenario_id": "srp_btn_bb_100bb_flop_Qh8h3h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Qh",
+        "8h",
+        "3h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "9c",
+        "8c"
+      ],
+      "hand_class": "98s",
+      "hand_descriptor": "middle/bottom pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 1.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 2.3236,
+        "bet_small": 2.5366,
+        "bet_large": 2.0525
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 3.8726,
+        "bet_small": 0.0,
+        "bet_large": 8.8021
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Qh8h3h__7c6c",
+      "scenario_id": "srp_btn_bb_100bb_flop_Qh8h3h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Qh",
+        "8h",
+        "3h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "7c",
+        "6c"
+      ],
+      "hand_class": "76s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 1.0,
+        "bet_small": 0.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 0.0,
+        "bet_small": -0.3488,
+        "bet_large": -0.3079
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.0,
+        "bet_small": 6.343,
+        "bet_large": 5.599
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "costly",
+        "bet_large": "costly"
+      },
+      "recommended_action": "check",
+      "acceptable_actions": [
+        "check"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Qh8h3h__5c4c",
+      "scenario_id": "srp_btn_bb_100bb_flop_Qh8h3h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Qh",
+        "8h",
+        "3h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "5c",
+        "4c"
+      ],
+      "hand_class": "54s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 1.0,
+        "bet_small": 0.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 0.0,
+        "bet_small": -0.4218,
+        "bet_large": -0.3481
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.0,
+        "bet_small": 7.6696,
+        "bet_large": 6.3302
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "costly",
+        "bet_large": "costly"
+      },
+      "recommended_action": "check",
+      "acceptable_actions": [
+        "check"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_Qh8h3h__Ac5c",
+      "scenario_id": "srp_btn_bb_100bb_flop_Qh8h3h",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Qh",
+        "8h",
+        "3h"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "5c"
+      ],
+      "hand_class": "A5s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0108,
+        "bet_small": 0.9892,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 0.1528,
+        "bet_small": 0.1636,
+        "bet_large": -0.1716
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.1957,
+        "bet_small": 0.0,
+        "bet_large": 6.0939
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "check",
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_7s5s2s__AcJc",
+      "scenario_id": "srp_btn_bb_100bb_flop_7s5s2s",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "7s",
+        "5s",
+        "2s"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "Jc"
+      ],
+      "hand_class": "AJs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0001,
+        "bet_small": 0.9999,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 1.3814,
+        "bet_small": 1.3956,
+        "bet_large": 0.6305
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.2571,
+        "bet_small": 0.0,
+        "bet_large": 13.9105
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "check",
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_7s5s2s__AcTc",
+      "scenario_id": "srp_btn_bb_100bb_flop_7s5s2s",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "7s",
+        "5s",
+        "2s"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "Tc"
+      ],
+      "hand_class": "ATs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 1.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 1.0677,
+        "bet_small": 1.0798,
+        "bet_large": 0.3148
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.22,
+        "bet_small": 0.0,
+        "bet_large": 13.909
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "check",
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_7s5s2s__KcQc",
+      "scenario_id": "srp_btn_bb_100bb_flop_7s5s2s",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "7s",
+        "5s",
+        "2s"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Kc",
+        "Qc"
+      ],
+      "hand_class": "KQs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0009,
+        "bet_small": 0.9991,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 0.5108,
+        "bet_small": 0.5155,
+        "bet_large": 0.0347
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.0855,
+        "bet_small": 0.0,
+        "bet_large": 8.7428
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "check",
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_7s5s2s__QcJc",
+      "scenario_id": "srp_btn_bb_100bb_flop_7s5s2s",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "7s",
+        "5s",
+        "2s"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Qc",
+        "Jc"
+      ],
+      "hand_class": "QJs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 1.0,
+        "bet_small": 0.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 0.0,
+        "bet_small": -0.1931,
+        "bet_large": -0.3606
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.0,
+        "bet_small": 3.5104,
+        "bet_large": 6.5574
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "costly",
+        "bet_large": "costly"
+      },
+      "recommended_action": "check",
+      "acceptable_actions": [
+        "check"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_7s5s2s__JcTc",
+      "scenario_id": "srp_btn_bb_100bb_flop_7s5s2s",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "7s",
+        "5s",
+        "2s"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Jc",
+        "Tc"
+      ],
+      "hand_class": "JTs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 1.0,
+        "bet_small": 0.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 0.0,
+        "bet_small": -0.2384,
+        "bet_large": -0.3645
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.0,
+        "bet_small": 4.3357,
+        "bet_large": 6.6267
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "costly",
+        "bet_large": "costly"
+      },
+      "recommended_action": "check",
+      "acceptable_actions": [
+        "check"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_7s5s2s__Tc9c",
+      "scenario_id": "srp_btn_bb_100bb_flop_7s5s2s",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "7s",
+        "5s",
+        "2s"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Tc",
+        "9c"
+      ],
+      "hand_class": "T9s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.9999,
+        "bet_small": 0.0,
+        "bet_large": 0.0001
+      },
+      "action_ev_bb": {
+        "check": 0.0,
+        "bet_small": -0.1289,
+        "bet_large": -0.1821
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.0,
+        "bet_small": 2.3443,
+        "bet_large": 3.3108
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "costly",
+        "bet_large": "costly"
+      },
+      "recommended_action": "check",
+      "acceptable_actions": [
+        "check"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_7s5s2s__9c8c",
+      "scenario_id": "srp_btn_bb_100bb_flop_7s5s2s",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "7s",
+        "5s",
+        "2s"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "9c",
+        "8c"
+      ],
+      "hand_class": "98s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0001,
+        "bet_small": 0.0001,
+        "bet_large": 0.9998
+      },
+      "action_ev_bb": {
+        "check": 0.6083,
+        "bet_small": 0.7554,
+        "bet_large": 0.7849
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 3.2111,
+        "bet_small": 0.5367,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "acceptable",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_7s5s2s__7c6c",
+      "scenario_id": "srp_btn_bb_100bb_flop_7s5s2s",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "7s",
+        "5s",
+        "2s"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "7c",
+        "6c"
+      ],
+      "hand_class": "76s",
+      "hand_descriptor": "top pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.9999,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 2.8054,
+        "bet_small": 2.9774,
+        "bet_large": 2.8829
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 3.1282,
+        "bet_small": 0.0,
+        "bet_large": 1.7183
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "acceptable"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_7s5s2s__5c4c",
+      "scenario_id": "srp_btn_bb_100bb_flop_7s5s2s",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "7s",
+        "5s",
+        "2s"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "5c",
+        "4c"
+      ],
+      "hand_class": "54s",
+      "hand_descriptor": "middle/bottom pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 1.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 2.449,
+        "bet_small": 2.6574,
+        "bet_large": 2.4286
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 3.7907,
+        "bet_small": 0.0,
+        "bet_large": 4.16
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_7s5s2s__Ac5c",
+      "scenario_id": "srp_btn_bb_100bb_flop_7s5s2s",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "7s",
+        "5s",
+        "2s"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "5c"
+      ],
+      "hand_class": "A5s",
+      "hand_descriptor": "middle/bottom pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 1.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 2.5319,
+        "bet_small": 2.7469,
+        "bet_large": 2.506
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 3.9079,
+        "bet_small": 0.0,
+        "bet_large": 4.38
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_6h4d2c__AcJc",
+      "scenario_id": "srp_btn_bb_100bb_flop_6h4d2c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "6h",
+        "4d",
+        "2c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "Jc"
+      ],
+      "hand_class": "AJs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 1.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 2.3048,
+        "bet_small": 2.6035,
+        "bet_large": 2.1622
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 5.4315,
+        "bet_small": 0.0,
+        "bet_large": 8.0239
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_6h4d2c__AcTc",
+      "scenario_id": "srp_btn_bb_100bb_flop_6h4d2c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "6h",
+        "4d",
+        "2c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "Tc"
+      ],
+      "hand_class": "ATs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 1.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 1.0245,
+        "bet_small": 2.2064,
+        "bet_large": 1.8484
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 21.4891,
+        "bet_small": 0.0,
+        "bet_large": 6.5076
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_6h4d2c__KcQc",
+      "scenario_id": "srp_btn_bb_100bb_flop_6h4d2c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "6h",
+        "4d",
+        "2c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Kc",
+        "Qc"
+      ],
+      "hand_class": "KQs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 1.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 0.6814,
+        "bet_small": 1.5298,
+        "bet_large": 1.132
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 15.4254,
+        "bet_small": 0.0,
+        "bet_large": 7.2317
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_6h4d2c__QcJc",
+      "scenario_id": "srp_btn_bb_100bb_flop_6h4d2c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "6h",
+        "4d",
+        "2c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Qc",
+        "Jc"
+      ],
+      "hand_class": "QJs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.9998,
+        "bet_large": 0.0002
+      },
+      "action_ev_bb": {
+        "check": 0.2118,
+        "bet_small": 0.656,
+        "bet_large": 0.5068
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 8.075,
+        "bet_small": 0.0,
+        "bet_large": 2.7119
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_6h4d2c__JcTc",
+      "scenario_id": "srp_btn_bb_100bb_flop_6h4d2c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "6h",
+        "4d",
+        "2c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Jc",
+        "Tc"
+      ],
+      "hand_class": "JTs",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.9987,
+        "bet_large": 0.0012
+      },
+      "action_ev_bb": {
+        "check": 0.0198,
+        "bet_small": 0.3374,
+        "bet_large": 0.3112
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 5.7744,
+        "bet_small": 0.0,
+        "bet_large": 0.4769
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small",
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_6h4d2c__Tc9c",
+      "scenario_id": "srp_btn_bb_100bb_flop_6h4d2c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "6h",
+        "4d",
+        "2c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Tc",
+        "9c"
+      ],
+      "hand_class": "T9s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0362,
+        "bet_large": 0.9638
+      },
+      "action_ev_bb": {
+        "check": 0.1299,
+        "bet_small": 0.449,
+        "bet_large": 0.4599
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 6.001,
+        "bet_small": 0.1989,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_small",
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_6h4d2c__9c8c",
+      "scenario_id": "srp_btn_bb_100bb_flop_6h4d2c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "6h",
+        "4d",
+        "2c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "9c",
+        "8c"
+      ],
+      "hand_class": "98s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0019,
+        "bet_large": 0.9981
+      },
+      "action_ev_bb": {
+        "check": 0.2082,
+        "bet_small": 0.4859,
+        "bet_large": 0.5462
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 6.1456,
+        "bet_small": 1.0962,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "acceptable",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_6h4d2c__7c6c",
+      "scenario_id": "srp_btn_bb_100bb_flop_6h4d2c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "6h",
+        "4d",
+        "2c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "7c",
+        "6c"
+      ],
+      "hand_class": "76s",
+      "hand_descriptor": "top pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0,
+        "bet_large": 1.0
+      },
+      "action_ev_bb": {
+        "check": 4.2405,
+        "bet_small": 4.0549,
+        "bet_large": 4.4364
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 3.5633,
+        "bet_small": 6.9376,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "costly",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_6h4d2c__5c4c",
+      "scenario_id": "srp_btn_bb_100bb_flop_6h4d2c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "6h",
+        "4d",
+        "2c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "5c",
+        "4c"
+      ],
+      "hand_class": "54s",
+      "hand_descriptor": "middle/bottom pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0,
+        "bet_large": 1.0
+      },
+      "action_ev_bb": {
+        "check": 4.3421,
+        "bet_small": 4.1941,
+        "bet_large": 4.6043
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 4.7675,
+        "bet_small": 7.4578,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "costly",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_6h4d2c__Ac5c",
+      "scenario_id": "srp_btn_bb_100bb_flop_6h4d2c",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "6h",
+        "4d",
+        "2c"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "5c"
+      ],
+      "hand_class": "A5s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0001,
+        "bet_small": 0.3443,
+        "bet_large": 0.6556
+      },
+      "action_ev_bb": {
+        "check": 2.4513,
+        "bet_small": 2.5154,
+        "bet_large": 2.5149
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 1.1664,
+        "bet_small": 0.0,
+        "bet_large": 0.0093
+      },
+      "action_grade": {
+        "check": "acceptable",
+        "bet_small": "good",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_small",
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_JcTs9d__AdJd",
+      "scenario_id": "srp_btn_bb_100bb_flop_JcTs9d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Jc",
+        "Ts",
+        "9d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ad",
+        "Jd"
+      ],
+      "hand_class": "AJs",
+      "hand_descriptor": "top pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0001,
+        "bet_small": 0.9999,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 3.6093,
+        "bet_small": 3.7328,
+        "bet_large": 3.4842
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 2.2446,
+        "bet_small": 0.0,
+        "bet_large": 4.5195
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_JcTs9d__AcTc",
+      "scenario_id": "srp_btn_bb_100bb_flop_JcTs9d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Jc",
+        "Ts",
+        "9d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "Tc"
+      ],
+      "hand_class": "ATs",
+      "hand_descriptor": "middle/bottom pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 1.0,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 2.7576,
+        "bet_small": 2.919,
+        "bet_large": 2.4079
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 2.9358,
+        "bet_small": 0.0,
+        "bet_large": 9.2939
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_JcTs9d__KcQc",
+      "scenario_id": "srp_btn_bb_100bb_flop_JcTs9d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Jc",
+        "Ts",
+        "9d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Kc",
+        "Qc"
+      ],
+      "hand_class": "KQs",
+      "hand_descriptor": "straight",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.0,
+        "bet_large": 1.0
+      },
+      "action_ev_bb": {
+        "check": 6.6338,
+        "bet_small": 6.2361,
+        "bet_large": 6.8205
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 3.3945,
+        "bet_small": 10.6258,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "costly",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_JcTs9d__QdJd",
+      "scenario_id": "srp_btn_bb_100bb_flop_JcTs9d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Jc",
+        "Ts",
+        "9d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Qd",
+        "Jd"
+      ],
+      "hand_class": "QJs",
+      "hand_descriptor": "top pair + straight draw",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.4353,
+        "bet_small": 0.5646,
+        "bet_large": 0.0001
+      },
+      "action_ev_bb": {
+        "check": 4.1934,
+        "bet_small": 4.1931,
+        "bet_large": 4.1199
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.0,
+        "bet_small": 0.0056,
+        "bet_large": 1.3372
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "good",
+        "bet_large": "acceptable"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "check",
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_JcTs9d__JdTd",
+      "scenario_id": "srp_btn_bb_100bb_flop_JcTs9d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Jc",
+        "Ts",
+        "9d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Jd",
+        "Td"
+      ],
+      "hand_class": "JTs",
+      "hand_descriptor": "two pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0002,
+        "bet_small": 0.0,
+        "bet_large": 0.9998
+      },
+      "action_ev_bb": {
+        "check": 4.6754,
+        "bet_small": 4.6026,
+        "bet_large": 4.7247
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.8963,
+        "bet_small": 2.2189,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "acceptable",
+        "bet_small": "costly",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_JcTs9d__Tc9c",
+      "scenario_id": "srp_btn_bb_100bb_flop_JcTs9d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Jc",
+        "Ts",
+        "9d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Tc",
+        "9c"
+      ],
+      "hand_class": "T9s",
+      "hand_descriptor": "two pair",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0018,
+        "bet_small": 0.0001,
+        "bet_large": 0.9981
+      },
+      "action_ev_bb": {
+        "check": 4.3754,
+        "bet_small": 4.3249,
+        "bet_large": 4.3819
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.1173,
+        "bet_small": 1.0359,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "acceptable",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "check",
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_JcTs9d__9c8c",
+      "scenario_id": "srp_btn_bb_100bb_flop_JcTs9d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Jc",
+        "Ts",
+        "9d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "9c",
+        "8c"
+      ],
+      "hand_class": "98s",
+      "hand_descriptor": "middle/bottom pair + straight draw",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0001,
+        "bet_small": 0.9999,
+        "bet_large": 0.0
+      },
+      "action_ev_bb": {
+        "check": 3.1932,
+        "bet_small": 3.2728,
+        "bet_large": 3.1242
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 1.4487,
+        "bet_small": 0.0,
+        "bet_large": 2.7016
+      },
+      "action_grade": {
+        "check": "acceptable",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_JcTs9d__7c6c",
+      "scenario_id": "srp_btn_bb_100bb_flop_JcTs9d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Jc",
+        "Ts",
+        "9d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "7c",
+        "6c"
+      ],
+      "hand_class": "76s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0,
+        "bet_small": 0.4476,
+        "bet_large": 0.5523
+      },
+      "action_ev_bb": {
+        "check": 0.4817,
+        "bet_small": 0.7422,
+        "bet_large": 0.7422
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 4.7377,
+        "bet_small": 0.0009,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "bet_small",
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_JcTs9d__5c4c",
+      "scenario_id": "srp_btn_bb_100bb_flop_JcTs9d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Jc",
+        "Ts",
+        "9d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "5c",
+        "4c"
+      ],
+      "hand_class": "54s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0371,
+        "bet_small": 0.0001,
+        "bet_large": 0.9628
+      },
+      "action_ev_bb": {
+        "check": 0.0169,
+        "bet_small": -0.0429,
+        "bet_large": 0.0205
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 0.0656,
+        "bet_small": 1.1526,
+        "bet_large": 0.0
+      },
+      "action_grade": {
+        "check": "good",
+        "bet_small": "acceptable",
+        "bet_large": "good"
+      },
+      "recommended_action": "bet_large",
+      "acceptable_actions": [
+        "check",
+        "bet_large"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    },
+    {
+      "id": "srp_btn_bb_100bb_flop_JcTs9d__Ac5c",
+      "scenario_id": "srp_btn_bb_100bb_flop_JcTs9d",
+      "situation": "Heads-up NLHE, single-raised pot, 100bb. You are BB (out of position) first to act on the flop.",
+      "board": [
+        "Jc",
+        "Ts",
+        "9d"
+      ],
+      "hero_position": "BB",
+      "hero_cards": [
+        "Ac",
+        "5c"
+      ],
+      "hand_class": "A5s",
+      "hand_descriptor": "high card",
+      "pot_bb": 5.5,
+      "available_actions": [
+        "check",
+        "bet_small",
+        "bet_large"
+      ],
+      "action_frequencies": {
+        "check": 0.0001,
+        "bet_small": 0.9993,
+        "bet_large": 0.0007
+      },
+      "action_ev_bb": {
+        "check": 0.3038,
+        "bet_small": 0.5146,
+        "bet_large": 0.3977
+      },
+      "action_ev_loss_pct_pot": {
+        "check": 3.8324,
+        "bet_small": 0.0,
+        "bet_large": 2.1262
+      },
+      "action_grade": {
+        "check": "costly",
+        "bet_small": "good",
+        "bet_large": "costly"
+      },
+      "recommended_action": "bet_small",
+      "acceptable_actions": [
+        "bet_small"
+      ],
+      "solver_model": "pokertrainer_cfr_plus",
+      "model_abstraction": "flop_only_realized_equity",
+      "validation_status": "passed"
+    }
+  ]
+}
