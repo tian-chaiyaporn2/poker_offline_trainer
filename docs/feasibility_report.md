@@ -98,11 +98,14 @@ internal-benchmarking permission before using it as a reference (PRD §3).
    been run** (`docs/multistreet_spike.md`): the multi-street CFR math is correct
    and converges, but a **pure-Python full-enumeration implementation is not
    practical** — cost grows ~155× per street (0.7 → 109 → 18,390 ms/iter for
-   flop → +turn → +river), making a river solve ~2.5 hours per board even at a
-   tiny 15-hand range. The fix is a **compiled inner loop** (Numba/Rust/C++/GPU;
-   the runtime is call-overhead-bound, not arithmetic-bound) plus suit
-   isomorphism on suited boards. The approach is sound; the pure-Python
-   implementation is the bottleneck.
+   flop → +turn → +river), making a *naive* river solve ~2.5 hours per board even
+   at 15 hands. A follow-up compiled-kernel spike found the fix is **not**
+   primarily "rewrite in C" — a C showdown kernel was only ~4× faster than NumPy
+   (the work is memory-bandwidth-bound and NumPy already uses BLAS). The real cost
+   is ~63,000 tiny NumPy calls per iteration from the naive recursive tree; the
+   lever is a **batched public-tree CFR rewrite (largely in NumPy, 50–250×
+   expected)**, projected to ~1–3 min/board — practical, no new dependency, still
+   permissive. The approach is sound; the naive implementation is the bottleneck.
 2. **TexasSolver benchmark.** Once (1) exists and the licence is cleared, run the
    real cross-solver comparison the PRD envisions. The adapter and normalization
    format are already in place.

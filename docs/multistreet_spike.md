@@ -7,12 +7,14 @@ rainbow flop `As7h2d`, single machine, Python 3.10 + NumPy.
 
 ## TL;DR
 
-The multi-street **method works** — the solver is correct and converges. But a
-**pure-Python full-enumeration implementation is not practical**: cost explodes
-~155× per street added, and a single river solve is already ~2.5 hours per board
-at a tiny 15-hand range. Production multi-street needs a **compiled inner loop**
-(and, for some boards, suit isomorphism). This is exactly why tools like
-TexasSolver are written in C++.
+The multi-street **method works** — the solver is correct and converges. The
+*naive* implementation is impractical (~2.5 h/board at 15 hands), but a
+compiled-kernel spike showed the fix is **not** "rewrite in C" (that gave only
+~4×, because NumPy already uses BLAS and the work is memory-bandwidth-bound). The
+real bottleneck is **~63,000 tiny NumPy calls per iteration** from a naive
+recursive tree; a **batched public-tree CFR rewrite (mostly in NumPy)** should
+reach practical runtimes — ~1–3 min/board, a full library in under an hour —
+while staying fully permissive with no new dependency. Details below.
 
 ## Correctness (not a divergence bug)
 
@@ -84,10 +86,48 @@ staying fully in-house and permissively licensed.
      real multi-street data, but re-introduces the exact licensing question the
      PRD set out to avoid (TexasSolver is copyleft; verify before relying on it).
 
-## Recommended next step
+## Compiled-kernel spike — result (this changed the recommendation)
 
-Before committing to build path (2), run one more **small spike: a compiled
-(Numba or Rust) river-showdown + CFR kernel** on a single board, to confirm the
-~100× is real and that a permissive multi-street solver can hit practical
-runtimes. That is the concrete go/no-go for an in-house optimised solver vs.
-falling back to flop-only or a licensed backend.
+We then compiled the river-showdown inner loop to a C shared library (clang
+`-O3 -march=native`, called via ctypes) and benchmarked it against NumPy on the
+full 1,176-board runout for `As7h2d` at 160×160 combos:
+
+| Showdown pass (all 1,176 boards, 1 iteration) | Time |
+|-----------------------------------------------|------|
+| NumPy, naive per-board loop (both players)    | ~258 ms |
+| NumPy, **batched** (`tensordot`, one big op)  | ~71 ms |
+| **C kernel** (fused loops)                    | ~68 ms |
+
+**The C kernel was only ~4× faster than naive NumPy, and ~equal to batched
+NumPy.** Reason: NumPy already dispatches matvecs to optimised BLAS, and the
+showdown is **memory-bandwidth-bound** (it streams the ~120 MB board tensor), so
+compiled code can't pull far ahead. **"Just rewrite the kernel in C" is not the
+100× lever we assumed.**
+
+### The real diagnosis
+
+The 18 s/iter of the naive solver is **not** showdown arithmetic (that floor is
+~70–260 ms/iter for all boards). It is Python/dispatch overhead from doing the
+showdown as **~63,000 tiny separate NumPy calls per iteration** — the recursive
+tree re-solves each river board ~54× (once per betting line reaching it). The fix
+is architectural: a **batched public-tree CFR** that carries reach vectors and
+touches each board **once** per iteration, replacing tens of thousands of tiny
+calls with a handful of large tensor ops.
+
+## Revised recommendation
+
+- The big lever is **batched vectorisation (a solver rewrite), largely in NumPy**
+  — plausibly 50–250× (18 s/iter → ~0.1–0.3 s/iter), i.e. a river solve in
+  ~1–3 min/board and a 12-board library in well under an hour. **No new
+  dependency, still fully permissive.**
+- A compiled kernel adds only ~4× on top and is **bandwidth-bound**, so it's a
+  *secondary* optimisation, not the enabler. Reach for it (or GPU/`tensordot` on
+  bigger batches) only after batching.
+- **Suit isomorphism** still helps suited boards (and shrinks the 120–290 MB
+  per-flop tensor), but not rainbow flops.
+
+**Concrete next step:** rewrite the multi-street solver as a **batched
+public-tree CFR** (vectorised over runouts), then measure a real river solve on
+one board. That — not compiling — is the go/no-go for an in-house permissive
+multi-street solver. Expected outcome: practical (minutes per board) in pure
+NumPy.
