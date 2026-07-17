@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Poker Offline Trainer</title>
+<style>
+  :root{
+    --bg:#0f1720; --panel:#17212b; --line:#2a3947; --txt:#e8eef4; --mut:#93a4b3;
+    --good:#3fb950; --acc:#d29922; --bad:#f85149; --accent:#4493f8;
+    --felt:#1c6b4a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+       background:var(--bg);color:var(--txt);line-height:1.5}
+  header{padding:14px 20px;border-bottom:1px solid var(--line);display:flex;
+         align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  h1{font-size:16px;margin:0;font-weight:650;letter-spacing:.2px}
+  .muted{color:var(--mut);font-size:13px}
+  main{max-width:760px;margin:0 auto;padding:20px}
+  .card-panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+              padding:22px;margin-bottom:16px}
+  .situation{color:var(--mut);font-size:14px;margin-bottom:16px}
+  .felt{background:radial-gradient(ellipse at center,#2a8a63,var(--felt));
+        border-radius:14px;padding:22px;text-align:center;margin-bottom:8px}
+  .cards{display:flex;gap:10px;justify-content:center;margin:6px 0}
+  .pc{width:60px;height:84px;background:#fbfbfb;border-radius:8px;color:#111;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+  .pc .r{font-size:26px;line-height:1}
+  .pc .s{font-size:22px;line-height:1}
+  .pc.red{color:#c1121f}
+  .label{font-size:12px;color:#cfe7db;letter-spacing:.12em;
+         text-transform:uppercase;margin-bottom:6px;opacity:.85}
+  .pot{margin-top:14px;font-size:14px;color:#eafff5}
+  .hero-line{margin:14px 0 4px;font-size:13px;color:var(--mut)}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+  button.act{flex:1;min-width:120px;padding:14px;border-radius:10px;border:1px solid var(--line);
+             background:#20303e;color:var(--txt);font-size:15px;font-weight:600;cursor:pointer;
+             transition:.12s}
+  button.act:hover{border-color:var(--accent);background:#26394a}
+  button.act:disabled{opacity:.5;cursor:default}
+  .feedback{display:none}
+  .verdict{padding:12px 14px;border-radius:10px;font-weight:600;margin-bottom:14px}
+  .verdict.good{background:rgba(63,185,80,.15);border:1px solid var(--good);color:#7ee787}
+  .verdict.acceptable{background:rgba(210,153,34,.15);border:1px solid var(--acc);color:#e3b341}
+  .verdict.costly{background:rgba(248,81,73,.15);border:1px solid var(--bad);color:#ff7b72}
+  .row{margin:8px 0}
+  .barlabel{display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px}
+  .bar{height:9px;background:#22303d;border-radius:5px;overflow:hidden}
+  .bar > i{display:block;height:100%;background:var(--accent)}
+  .tag{font-size:11px;padding:1px 7px;border-radius:10px;margin-left:6px;vertical-align:middle}
+  .tag.good{background:rgba(63,185,80,.2);color:#7ee787}
+  .tag.acceptable{background:rgba(210,153,34,.2);color:#e3b341}
+  .tag.costly{background:rgba(248,81,73,.2);color:#ff7b72}
+  .tag.rec{background:rgba(68,147,248,.2);color:#79c0ff}
+  .next{margin-top:16px;width:100%;padding:14px;border-radius:10px;border:none;
+        background:var(--accent);color:#fff;font-size:15px;font-weight:650;cursor:pointer}
+  .stats{display:flex;gap:16px;font-size:13px;color:var(--mut);flex-wrap:wrap}
+  .stats b{color:var(--txt)}
+  .disclaim{font-size:11.5px;color:var(--mut);margin-top:12px;border-top:1px solid var(--line);
+            padding-top:10px}
+  kbd{background:#22303d;border:1px solid var(--line);border-radius:4px;padding:0 5px;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>♠ Poker Offline Trainer <span class="muted">· BB flop decisions</span></h1>
+  <div class="stats" id="stats"></div>
+</header>
+<main>
+  <div class="card-panel">
+    <div class="situation" id="situation">Loading…</div>
+    <div class="felt">
+      <div class="label">Flop</div>
+      <div class="cards" id="board"></div>
+      <div class="pot" id="pot"></div>
+    </div>
+    <div class="hero-line" id="heroline"></div>
+    <div class="cards" id="hero"></div>
+    <div class="actions" id="actions"></div>
+  </div>
+
+  <div class="card-panel feedback" id="feedback">
+    <div class="verdict" id="verdict"></div>
+    <div id="descriptor" class="muted" style="margin-bottom:10px"></div>
+    <div id="bars"></div>
+    <button class="next" id="next">Next hand ↵</button>
+    <div class="disclaim" id="disclaim"></div>
+  </div>
+</main>
+
+<script>
+const SUIT = {s:{ch:"♠",red:false}, h:{ch:"♥",red:true},
+              d:{ch:"♦",red:true}, c:{ch:"♣",red:false}};
+const ALABEL = {check:"Check", bet_small:"Bet small (33%)", bet_large:"Bet large (75%)"};
+let current = null;
+
+function cardEl(txt){
+  const r = txt[0], s = txt[1];
+  const d = document.createElement("div");
+  d.className = "pc" + (SUIT[s].red ? " red":"");
+  d.innerHTML = `<span class="r">${r==="T"?"10":r}</span><span class="s">${SUIT[s].ch}</span>`;
+  return d;
+}
+function render(cards, el){ el.innerHTML=""; cards.forEach(c=>el.appendChild(cardEl(c))); }
+
+async function loadNext(){
+  document.getElementById("feedback").style.display="none";
+  const q = await (await fetch("/api/next")).json();
+  current = q;
+  document.getElementById("situation").textContent = q.situation;
+  render(q.board, document.getElementById("board"));
+  document.getElementById("pot").textContent = `Pot ${q.pot_bb} bb`;
+  document.getElementById("heroline").textContent =
+    `You (${q.hero_position}) hold:`;
+  render(q.hero_cards, document.getElementById("hero"));
+  const box = document.getElementById("actions"); box.innerHTML="";
+  q.available_actions.forEach(a=>{
+    const b=document.createElement("button");
+    b.className="act"; b.textContent=ALABEL[a]||a;
+    b.onclick=()=>answer(a);
+    box.appendChild(b);
+  });
+}
+
+async function answer(action){
+  document.querySelectorAll("#actions button").forEach(b=>b.disabled=true);
+  const fb = await (await fetch("/api/answer",{method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({question_id:current.id, action})})).json();
+
+  const v=document.getElementById("verdict");
+  v.className="verdict "+fb.grade; v.textContent=fb.verdict;
+  document.getElementById("descriptor").textContent =
+    "Your hand: " + fb.hand_descriptor;
+
+  const bars=document.getElementById("bars"); bars.innerHTML="";
+  current.available_actions.forEach(a=>{
+    const freq=(fb.action_frequencies[a]*100)||0;
+    const ev=fb.action_ev_bb[a];
+    const g=fb.action_grade[a];
+    const chosen = a===action ? " ← you" : "";
+    const rec = a===fb.recommended_action ? '<span class="tag rec">GTO pick</span>' : "";
+    const row=document.createElement("div"); row.className="row";
+    row.innerHTML=`<div class="barlabel"><span>${ALABEL[a]||a}
+        <span class="tag ${g}">${g}</span>${rec}<b>${chosen}</b></span>
+        <span class="muted">${freq.toFixed(0)}% · EV ${ev.toFixed(2)}bb</span></div>
+        <div class="bar"><i style="width:${freq}%"></i></div>`;
+    bars.appendChild(row);
+  });
+  document.getElementById("disclaim").textContent =
+    "Strategy from our MIT CFR+ solver, model: "+fb.model_abstraction+
+    " (flop-only realized-equity — a POC abstraction, not full multi-street GTO).";
+  document.getElementById("feedback").style.display="block";
+  loadStats();
+}
+
+async function loadStats(){
+  const s=await (await fetch("/api/stats")).json();
+  document.getElementById("stats").innerHTML =
+    `<span>Answered <b>${s.total}</b></span>
+     <span style="color:#7ee787">Good <b>${s.good}</b></span>
+     <span style="color:#e3b341">OK <b>${s.acceptable}</b></span>
+     <span style="color:#ff7b72">Costly <b>${s.costly}</b></span>
+     <span>Avg EV loss <b>${s.avg_ev_loss_pct_pot}%</b> pot</span>`;
+}
+
+document.getElementById("next").onclick=loadNext;
+document.addEventListener("keydown",e=>{
+  if(e.key==="Enter" && document.getElementById("feedback").style.display==="block") loadNext();
+});
+loadNext(); loadStats();
+</script>
+</body>
+</html>
