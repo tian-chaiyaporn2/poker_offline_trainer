@@ -102,10 +102,16 @@ internal-benchmarking permission before using it as a reference (PRD §3).
    at 15 hands. A follow-up compiled-kernel spike found the fix is **not**
    primarily "rewrite in C" — a C showdown kernel was only ~4× faster than NumPy
    (the work is memory-bandwidth-bound and NumPy already uses BLAS). The real cost
-   is ~63,000 tiny NumPy calls per iteration from the naive recursive tree; the
-   lever is a **batched public-tree CFR rewrite (largely in NumPy, 50–250×
-   expected)**, projected to ~1–3 min/board — practical, no new dependency, still
-   permissive. The approach is sound; the naive implementation is the bottleneck.
+   is ~63,000 tiny NumPy calls per iteration from the naive recursive tree. We
+   then **built the batched public-tree CFR** (`solver/batched.py`) and validated
+   it **exactly** against the naive oracle (EV diff ~1e-15). It is ~10–30× faster,
+   but the showdown einsum now dominates and scales ~n², so it is **hours/board at
+   full ranges on CPU** — good for reduced ranges, not yet a full-range library.
+   The remaining lever is **GPU** for the showdown (a batched matmul; `CuPy`/`JAX`,
+   still permissive, plausibly 50–100× → minutes/board). Net: an in-house,
+   fully-permissive multi-street solver is viable via **batched CFR + GPU**; the
+   architecture is proven, the CPU-only version is the bottleneck. See
+   `docs/multistreet_spike.md`.
 2. **TexasSolver benchmark.** Once (1) exists and the licence is cleared, run the
    real cross-solver comparison the PRD envisions. The adapter and normalization
    format are already in place.

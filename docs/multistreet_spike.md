@@ -7,14 +7,21 @@ rainbow flop `As7h2d`, single machine, Python 3.10 + NumPy.
 
 ## TL;DR
 
-The multi-street **method works** — the solver is correct and converges. The
-*naive* implementation is impractical (~2.5 h/board at 15 hands), but a
-compiled-kernel spike showed the fix is **not** "rewrite in C" (that gave only
-~4×, because NumPy already uses BLAS and the work is memory-bandwidth-bound). The
-real bottleneck is **~63,000 tiny NumPy calls per iteration** from a naive
-recursive tree; a **batched public-tree CFR rewrite (mostly in NumPy)** should
-reach practical runtimes — ~1–3 min/board, a full library in under an hour —
-while staying fully permissive with no new dependency. Details below.
+The multi-street **method works and is now built + validated** (batched
+public-tree CFR, exact to machine precision vs the oracle). Three things we
+learned, each correcting the last:
+
+1. Naive pure-Python enumeration is impractical (~2.5 h/board at 15 hands).
+2. "Just rewrite the kernel in C" is a **dead end** — only ~4×, because the
+   showdown is memory-bandwidth-bound and NumPy already uses BLAS.
+3. The real win is **batched public-tree CFR** (touch each board once/iter). We
+   built it: correct, ~10–30× faster — but the showdown einsum now dominates and
+   scales ~n², so it's **hours/board at full ranges on CPU**, not minutes.
+
+**Net:** an in-house, fully-permissive multi-street solver is viable and the
+batched CFR is the right foundation, but a practical full-range library needs
+**batched CFR + GPU** (`CuPy`/`JAX`, still zero copyleft) — the showdown is a
+batched matmul, ideal for GPU. Details below.
 
 ## Correctness (not a divergence bug)
 
@@ -129,5 +136,65 @@ calls with a handful of large tensor ops.
 **Concrete next step:** rewrite the multi-street solver as a **batched
 public-tree CFR** (vectorised over runouts), then measure a real river solve on
 one board. That — not compiling — is the go/no-go for an in-house permissive
-multi-street solver. Expected outcome: practical (minutes per board) in pure
-NumPy.
+multi-street solver.
+
+---
+
+## Batched public-tree CFR — built and measured (`solver/batched.py`)
+
+We built it. At each chance node it assembles **all** runout child-contexts as
+one batched tensor dimension and calls the next street once, so a river solve is
+9 batched passes instead of ~19,458 tiny per-board solves.
+
+### Correctness — validated exactly
+
+Building this surfaced a real bug in the naive oracle: it keyed turn/river
+infosets **by board only**, merging different flop betting lines that reach the
+same board. The batched solver keys by **full betting history** (the pot
+matters) — the game-theoretically correct partition. After fixing the oracle to
+match, the two solvers agree to **machine precision**:
+
+| | streets=1 | streets=2 |
+|---|---|---|
+| naive vs batched EV diff | 0.0 | ~1e-15 |
+
+(Regression test: `tests/test_batched.py`.) The batched solver converges and is
+deterministic. The residual "prize" gap (~3%) is the expected card-removal
+normalisation — a compatible pair co-occurs on ~45 of each player's 47 valid
+runouts (45/47 ≈ 0.957), not a leak.
+
+### Speed — a solid win, but a new (arithmetic) wall
+
+Batched **river** solve, per iteration, on `As7h2d`:
+
+| Combos/side | ms / iter | vs naive (18,390 ms) |
+|------------:|----------:|---------------------|
+| 20  | ~1,310  | ~14× faster |
+| 50  | ~2,345  | — |
+| 100 | ~6,269  | — |
+
+Batching removed the call-overhead (~14× at small ranges) — but the **showdown
+einsum now dominates and scales ~n²**, so it extrapolates to **~33 s/iter at
+~250-hand ranges** → still **hours per board** for a full-range river library on
+CPU. Batching moved us from *days/board* to *hours/board*; it is **not yet
+minutes/board** at production range sizes.
+
+### Corrected conclusion (this is the real answer)
+
+- **Architecture: solved.** Batched public-tree CFR is correct (validated to
+  machine precision) and is the right design.
+- **Pure-CPU NumPy: partial.** ~10–30× over naive — good enough for reduced
+  ranges, turn-only spots, or small batches; **not** a full-range × 12-board
+  river library (hours/board).
+- **To reach production (minutes/board), the remaining lever is the showdown
+  einsum**, which is a batched matrix multiply — ideal for:
+  1. **GPU** (`CuPy`/`JAX`, both permissive) — plausibly 50–100× on exactly this
+     op → ~0.3–0.7 s/iter at full ranges → minutes/board.
+  2. **Suit isomorphism** (shrinks the board/context count on suited flops).
+  3. **Range / card abstraction** (reduces n, quadratic payoff).
+
+**Bottom line:** an in-house, fully-permissive multi-street solver is viable, and
+the batched CFR is the correct foundation — but a practical full-range library
+needs **batched CFR + GPU** (still zero copyleft), not CPU NumPy alone. The
+compile-to-C idea was a dead end (bandwidth-bound, ~4×); the GPU path is the one
+worth spiking next (needs GPU hardware, unavailable in this environment).

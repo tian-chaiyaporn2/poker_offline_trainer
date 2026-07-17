@@ -90,14 +90,14 @@ class MultiStreetSpike:
         return r
 
     # --- advance: chance to next street, or showdown at the last street ---
-    def _advance(self, street, board, eo, ei, ro, ri):
+    def _advance(self, street, board, eo, ei, ro, ri, path):
         if street >= self.n_streets:  # showdown
             E = self._E(board)
             pot = self.P0 + eo + ei
             uo = pot * (E @ ri) - eo * (self.B @ ri)
             ui = pot * ((self.B - E).T @ ro) - ei * (self.B.T @ ro)
             return uo, ui
-        # chance node: deal next community card
+        # chance node: deal next community card (betting history carried in path)
         used = set(board)
         deck = [c for c in range(52) if c not in used]
         UO = np.zeros(self.no)
@@ -108,22 +108,24 @@ class MultiStreetSpike:
             live_o = (oc0 != c) & (oc1 != c)
             live_i = (ic0 != c) & (ic1 != c)
             uo, ui = self._solve_street(street + 1, board + [c], eo, ei,
-                                        ro * live_o, ri * live_i)
+                                        ro * live_o, ri * live_i, path)
             UO += uo * live_o
             UI += ui * live_i
         denom = len(deck) - 2  # valid next cards per combo (uniform)
         return UO / denom, UI / denom
 
     # --- one street's betting; returns (uo, ui) counterfactual values ---
-    def _solve_street(self, street, board, eo, ei, ro, ri):
-        bkey = tuple(sorted(board))
+    def _solve_street(self, street, board, eo, ei, ro, ri, path=""):
+        # Infoset key includes the betting-line path so different histories that
+        # reach the same board are distinct infosets (full-history game).
+        bkey = (path, tuple(sorted(board)))
         pot = self.P0 + eo + ei
         b = self.bet_frac * pot
 
-        k_root = (street, bkey, "root")
-        k_ipc = (street, bkey, "ipc")
-        k_ovb = (street, bkey, "ovb")
-        k_ivb = (street, bkey, "ivb")
+        k_root = (bkey, "root")
+        k_ipc = (bkey, "ipc")
+        k_ovb = (bkey, "ovb")
+        k_ivb = (bkey, "ivb")
         s_root = _strategy_from_regret(self._reg(k_root, 2))
         s_ipc = _strategy_from_regret(self._reg(k_ipc, 2))
         s_ovb = _strategy_from_regret(self._reg(k_ovb, 2))
@@ -132,15 +134,15 @@ class MultiStreetSpike:
         # Lines that reach advance (with reaches folded through strategies):
         # check-check
         uo_cc, ui_cc = self._advance(street, board, eo, ei,
-                                     ro * s_root[:, CHECK], ri * s_ipc[:, CHECK])
+                                     ro * s_root[:, CHECK], ri * s_ipc[:, CHECK], path + "1")
         # OOP check, IP bet, OOP call
         uo_ovbcall, ui_ovbcall = self._advance(
             street, board, eo + b, ei + b,
-            ro * s_root[:, CHECK] * s_ovb[:, CALL], ri * s_ipc[:, BET])
+            ro * s_root[:, CHECK] * s_ovb[:, CALL], ri * s_ipc[:, BET], path + "2")
         # OOP bet, IP call
         uo_ivbcall, ui_ivbcall = self._advance(
             street, board, eo + b, ei + b,
-            ro * s_root[:, BET], ri * s_ivb[:, CALL])
+            ro * s_root[:, BET], ri * s_ivb[:, CALL], path + "3")
 
         # --- node cfvs (fold utilities use prize convention: folder loses its
         #     prior investment; winner collects pot minus own prior investment) ---
