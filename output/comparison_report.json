@@ -1,0 +1,748 @@
+{
+  "aggregate": {
+    "boards": 12,
+    "all_pass": 12,
+    "max_root_ev_diff_pct_pot": 0.0044,
+    "min_agreement": 1.0,
+    "max_avg_freq_diff_pp": 0.536,
+    "max_mc_equity_diff": 0.0063,
+    "max_determinism_diff_bb": 0.0,
+    "total_major_disagreements": 0
+  },
+  "iterations": 1500,
+  "ref_iterations": 5000,
+  "boards": [
+    {
+      "scenario_id": "srp_btn_bb_100bb_flop_As7h2d",
+      "board": [
+        "As",
+        "7h",
+        "2d"
+      ],
+      "root_ev": {
+        "cfr_plus_bb": 1.5021,
+        "reference_bb": 1.5023,
+        "diff_bb": -0.0001,
+        "diff_pct_pot": -0.0023
+      },
+      "range_freqs": {
+        "cfr_plus": {
+          "check": 0.22664108329742555,
+          "bet_small": 0.5503247601537499,
+          "bet_large": 0.22303415654882458
+        },
+        "reference": {
+          "check": 0.22477016427455412,
+          "bet_small": 0.5507419447626456,
+          "bet_large": 0.2244878909628003
+        }
+      },
+      "hands": {
+        "shared": 265,
+        "missing_in_reference": [],
+        "missing_in_cfr_plus": []
+      },
+      "action_ev_diff_bb": {
+        "max": 1.2693,
+        "mean": 0.2498
+      },
+      "non_indifferent_decisions": 225,
+      "preferred_action_agreement": 1.0,
+      "avg_freq_diff_pp_non_indiff": 0.336,
+      "disagreements": [],
+      "major_disagreements": [],
+      "runtime_sec": {
+        "cfr_plus": 2.791959047317505,
+        "reference": 6.3875181674957275
+      },
+      "peak_mem_mb": {
+        "cfr_plus": 0.188585
+      },
+      "targets_pass": {
+        "root_ev_within_target": true,
+        "agreement_target": true,
+        "freq_diff_target": true,
+        "no_major_disagreement": true,
+        "probabilities_valid": true
+      },
+      "all_targets_pass": true,
+      "determinism_root_ev_diff_bb": 0.0,
+      "mc_equity_spotcheck": {
+        "pairs": 6,
+        "max_abs_diff": 0.0028,
+        "mean_abs_diff": 0.0015
+      }
+    },
+    {
+      "scenario_id": "srp_btn_bb_100bb_flop_Kd9c4h",
+      "board": [
+        "Kd",
+        "9c",
+        "4h"
+      ],
+      "root_ev": {
+        "cfr_plus_bb": 2.3228,
+        "reference_bb": 2.3228,
+        "diff_bb": -0.0,
+        "diff_pct_pot": -0.0003
+      },
+      "range_freqs": {
+        "cfr_plus": {
+          "check": 0.02015196071294792,
+          "bet_small": 0.6556363262720546,
+          "bet_large": 0.3242117130149975
+        },
+        "reference": {
+          "check": 0.022588736832170456,
+          "bet_small": 0.6561381784097677,
+          "bet_large": 0.3212730847580618
+        }
+      },
+      "hands": {
+        "shared": 258,
+        "missing_in_reference": [],
+        "missing_in_cfr_plus": []
+      },
+      "action_ev_diff_bb": {
+        "max": 2.8205,
+        "mean": 0.6549
+      },
+      "non_indifferent_decisions": 166,
+      "preferred_action_agreement": 1.0,
+      "avg_freq_diff_pp_non_indiff": 0.369,
+      "disagreements": [],
+      "major_disagreements": [],
+      "runtime_sec": {
+        "cfr_plus": 2.7915167808532715,
+        "reference": 6.222129821777344
+      },
+      "peak_mem_mb": {
+        "cfr_plus": 0.175808
+      },
+      "targets_pass": {
+        "root_ev_within_target": true,
+        "agreement_target": true,
+        "freq_diff_target": true,
+        "no_major_disagreement": true,
+        "probabilities_valid": true
+      },
+      "all_targets_pass": true,
+      "determinism_root_ev_diff_bb": 0.0,
+      "mc_equity_spotcheck": {
+        "pairs": 6,
+        "max_abs_diff": 0.0042,
+        "mean_abs_diff": 0.0026
+      }
+    },
+    {
+      "scenario_id": "srp_btn_bb_100bb_flop_Th9h8d",
+      "board": [
+        "Th",
+        "9h",
+        "8d"
+      ],
+      "root_ev": {
+        "cfr_plus_bb": 2.8308,
+        "reference_bb": 2.8309,
+        "diff_bb": -0.0001,
+        "diff_pct_pot": -0.0011
+      },
+      "range_freqs": {
+        "cfr_plus": {
+          "check": 0.012396580342911879,
+          "bet_small": 0.4675979765655621,
+          "bet_large": 0.5200054430915262
+        },
+        "reference": {
+          "check": 0.01272911264798748,
+          "bet_small": 0.4700935136445803,
+          "bet_large": 0.5171773737074323
+        }
+      },
+      "hands": {
+        "shared": 243,
+        "missing_in_reference": [],
+        "missing_in_cfr_plus": []
+      },
+      "action_ev_diff_bb": {
+        "max": 2.7223,
+        "mean": 0.6269
+      },
+      "non_indifferent_decisions": 189,
+      "preferred_action_agreement": 1.0,
+      "avg_freq_diff_pp_non_indiff": 0.061,
+      "disagreements": [],
+      "major_disagreements": [],
+      "runtime_sec": {
+        "cfr_plus": 2.741473913192749,
+        "reference": 6.0090532302856445
+      },
+      "peak_mem_mb": {
+        "cfr_plus": 0.171688
+      },
+      "targets_pass": {
+        "root_ev_within_target": true,
+        "agreement_target": true,
+        "freq_diff_target": true,
+        "no_major_disagreement": true,
+        "probabilities_valid": true
+      },
+      "all_targets_pass": true,
+      "determinism_root_ev_diff_bb": 0.0,
+      "mc_equity_spotcheck": {
+        "pairs": 5,
+        "max_abs_diff": 0.0037,
+        "mean_abs_diff": 0.0021
+      }
+    },
+    {
+      "scenario_id": "srp_btn_bb_100bb_flop_8s7s6c",
+      "board": [
+        "8s",
+        "7s",
+        "6c"
+      ],
+      "root_ev": {
+        "cfr_plus_bb": 2.6265,
+        "reference_bb": 2.6266,
+        "diff_bb": -0.0,
+        "diff_pct_pot": -0.0007
+      },
+      "range_freqs": {
+        "cfr_plus": {
+          "check": 0.029907782909743434,
+          "bet_small": 0.40599574149673445,
+          "bet_large": 0.564096475593522
+        },
+        "reference": {
+          "check": 0.029621059179641494,
+          "bet_small": 0.4066378333882612,
+          "bet_large": 0.5637411074320973
+        }
+      },
+      "hands": {
+        "shared": 268,
+        "missing_in_reference": [],
+        "missing_in_cfr_plus": []
+      },
+      "action_ev_diff_bb": {
+        "max": 2.7686,
+        "mean": 0.8228
+      },
+      "non_indifferent_decisions": 229,
+      "preferred_action_agreement": 1.0,
+      "avg_freq_diff_pp_non_indiff": 0.076,
+      "disagreements": [],
+      "major_disagreements": [],
+      "runtime_sec": {
+        "cfr_plus": 2.8701858520507812,
+        "reference": 6.235886812210083
+      },
+      "peak_mem_mb": {
+        "cfr_plus": 0.182608
+      },
+      "targets_pass": {
+        "root_ev_within_target": true,
+        "agreement_target": true,
+        "freq_diff_target": true,
+        "no_major_disagreement": true,
+        "probabilities_valid": true
+      },
+      "all_targets_pass": true,
+      "determinism_root_ev_diff_bb": 0.0,
+      "mc_equity_spotcheck": {
+        "pairs": 6,
+        "max_abs_diff": 0.0063,
+        "mean_abs_diff": 0.0027
+      }
+    },
+    {
+      "scenario_id": "srp_btn_bb_100bb_flop_KsKd6h",
+      "board": [
+        "Ks",
+        "Kd",
+        "6h"
+      ],
+      "root_ev": {
+        "cfr_plus_bb": 1.9369,
+        "reference_bb": 1.9367,
+        "diff_bb": 0.0002,
+        "diff_pct_pot": 0.0044
+      },
+      "range_freqs": {
+        "cfr_plus": {
+          "check": 0.004100580970180607,
+          "bet_small": 0.7368129288293783,
+          "bet_large": 0.25908649020044117
+        },
+        "reference": {
+          "check": 0.007344397264016007,
+          "bet_small": 0.7312713097530408,
+          "bet_large": 0.2613842929829432
+        }
+      },
+      "hands": {
+        "shared": 259,
+        "missing_in_reference": [],
+        "missing_in_cfr_plus": []
+      },
+      "action_ev_diff_bb": {
+        "max": 1.0351,
+        "mean": 0.3166
+      },
+      "non_indifferent_decisions": 194,
+      "preferred_action_agreement": 1.0,
+      "avg_freq_diff_pp_non_indiff": 0.536,
+      "disagreements": [],
+      "major_disagreements": [],
+      "runtime_sec": {
+        "cfr_plus": 2.724219799041748,
+        "reference": 5.755781173706055
+      },
+      "peak_mem_mb": {
+        "cfr_plus": 0.173144
+      },
+      "targets_pass": {
+        "root_ev_within_target": true,
+        "agreement_target": true,
+        "freq_diff_target": true,
+        "no_major_disagreement": true,
+        "probabilities_valid": true
+      },
+      "all_targets_pass": true,
+      "determinism_root_ev_diff_bb": 0.0,
+      "mc_equity_spotcheck": {
+        "pairs": 5,
+        "max_abs_diff": 0.0029,
+        "mean_abs_diff": 0.0015
+      }
+    },
+    {
+      "scenario_id": "srp_btn_bb_100bb_flop_5c5d2h",
+      "board": [
+        "5c",
+        "5d",
+        "2h"
+      ],
+      "root_ev": {
+        "cfr_plus_bb": 1.6888,
+        "reference_bb": 1.689,
+        "diff_bb": -0.0002,
+        "diff_pct_pot": -0.0034
+      },
+      "range_freqs": {
+        "cfr_plus": {
+          "check": 0.0002279468655809503,
+          "bet_small": 0.7249745003668581,
+          "bet_large": 0.274797552767561
+        },
+        "reference": {
+          "check": 0.00017299798605188704,
+          "bet_small": 0.7258051339062667,
+          "bet_large": 0.27402186810768137
+        }
+      },
+      "hands": {
+        "shared": 277,
+        "missing_in_reference": [],
+        "missing_in_cfr_plus": []
+      },
+      "action_ev_diff_bb": {
+        "max": 2.4974,
+        "mean": 0.6368
+      },
+      "non_indifferent_decisions": 253,
+      "preferred_action_agreement": 1.0,
+      "avg_freq_diff_pp_non_indiff": 0.158,
+      "disagreements": [],
+      "major_disagreements": [],
+      "runtime_sec": {
+        "cfr_plus": 3.0562098026275635,
+        "reference": 6.755343675613403
+      },
+      "peak_mem_mb": {
+        "cfr_plus": 0.1866
+      },
+      "targets_pass": {
+        "root_ev_within_target": true,
+        "agreement_target": true,
+        "freq_diff_target": true,
+        "no_major_disagreement": true,
+        "probabilities_valid": true
+      },
+      "all_targets_pass": true,
+      "determinism_root_ev_diff_bb": 0.0,
+      "mc_equity_spotcheck": {
+        "pairs": 6,
+        "max_abs_diff": 0.0023,
+        "mean_abs_diff": 0.0012
+      }
+    },
+    {
+      "scenario_id": "srp_btn_bb_100bb_flop_AhQh7c",
+      "board": [
+        "Ah",
+        "Qh",
+        "7c"
+      ],
+      "root_ev": {
+        "cfr_plus_bb": 1.7148,
+        "reference_bb": 1.7148,
+        "diff_bb": -0.0,
+        "diff_pct_pot": -0.0002
+      },
+      "range_freqs": {
+        "cfr_plus": {
+          "check": 0.21319985693080157,
+          "bet_small": 0.552436613799725,
+          "bet_large": 0.2343635292694735
+        },
+        "reference": {
+          "check": 0.21145850717576042,
+          "bet_small": 0.5548298792882247,
+          "bet_large": 0.2337116135360149
+        }
+      },
+      "hands": {
+        "shared": 256,
+        "missing_in_reference": [],
+        "missing_in_cfr_plus": []
+      },
+      "action_ev_diff_bb": {
+        "max": 3.1449,
+        "mean": 0.4056
+      },
+      "non_indifferent_decisions": 192,
+      "preferred_action_agreement": 1.0,
+      "avg_freq_diff_pp_non_indiff": 0.157,
+      "disagreements": [],
+      "major_disagreements": [],
+      "runtime_sec": {
+        "cfr_plus": 2.684335947036743,
+        "reference": 5.88850998878479
+      },
+      "peak_mem_mb": {
+        "cfr_plus": 0.168672
+      },
+      "targets_pass": {
+        "root_ev_within_target": true,
+        "agreement_target": true,
+        "freq_diff_target": true,
+        "no_major_disagreement": true,
+        "probabilities_valid": true
+      },
+      "all_targets_pass": true,
+      "determinism_root_ev_diff_bb": 0.0,
+      "mc_equity_spotcheck": {
+        "pairs": 6,
+        "max_abs_diff": 0.0063,
+        "mean_abs_diff": 0.0023
+      }
+    },
+    {
+      "scenario_id": "srp_btn_bb_100bb_flop_Jd8d3s",
+      "board": [
+        "Jd",
+        "8d",
+        "3s"
+      ],
+      "root_ev": {
+        "cfr_plus_bb": 2.3427,
+        "reference_bb": 2.3428,
+        "diff_bb": -0.0001,
+        "diff_pct_pot": -0.0019
+      },
+      "range_freqs": {
+        "cfr_plus": {
+          "check": 0.02350391999281507,
+          "bet_small": 0.5458867329612118,
+          "bet_large": 0.4306093470459732
+        },
+        "reference": {
+          "check": 0.023600326995231322,
+          "bet_small": 0.5453641477403613,
+          "bet_large": 0.43103552526440736
+        }
+      },
+      "hands": {
+        "shared": 257,
+        "missing_in_reference": [],
+        "missing_in_cfr_plus": []
+      },
+      "action_ev_diff_bb": {
+        "max": 3.507,
+        "mean": 0.7755
+      },
+      "non_indifferent_decisions": 223,
+      "preferred_action_agreement": 1.0,
+      "avg_freq_diff_pp_non_indiff": 0.11,
+      "disagreements": [],
+      "major_disagreements": [],
+      "runtime_sec": {
+        "cfr_plus": 2.8707828521728516,
+        "reference": 6.8111841678619385
+      },
+      "peak_mem_mb": {
+        "cfr_plus": 0.175736
+      },
+      "targets_pass": {
+        "root_ev_within_target": true,
+        "agreement_target": true,
+        "freq_diff_target": true,
+        "no_major_disagreement": true,
+        "probabilities_valid": true
+      },
+      "all_targets_pass": true,
+      "determinism_root_ev_diff_bb": 0.0,
+      "mc_equity_spotcheck": {
+        "pairs": 5,
+        "max_abs_diff": 0.0051,
+        "mean_abs_diff": 0.0016
+      }
+    },
+    {
+      "scenario_id": "srp_btn_bb_100bb_flop_Qh8h3h",
+      "board": [
+        "Qh",
+        "8h",
+        "3h"
+      ],
+      "root_ev": {
+        "cfr_plus_bb": 2.196,
+        "reference_bb": 2.1961,
+        "diff_bb": -0.0001,
+        "diff_pct_pot": -0.0016
+      },
+      "range_freqs": {
+        "cfr_plus": {
+          "check": 0.11918165799618725,
+          "bet_small": 0.6124419812008641,
+          "bet_large": 0.26837636080294863
+        },
+        "reference": {
+          "check": 0.11702881455759286,
+          "bet_small": 0.6124690729382358,
+          "bet_large": 0.2705021125041712
+        }
+      },
+      "hands": {
+        "shared": 264,
+        "missing_in_reference": [],
+        "missing_in_cfr_plus": []
+      },
+      "action_ev_diff_bb": {
+        "max": 1.6344,
+        "mean": 0.4753
+      },
+      "non_indifferent_decisions": 210,
+      "preferred_action_agreement": 1.0,
+      "avg_freq_diff_pp_non_indiff": 0.124,
+      "disagreements": [],
+      "major_disagreements": [],
+      "runtime_sec": {
+        "cfr_plus": 3.054204225540161,
+        "reference": 7.038182020187378
+      },
+      "peak_mem_mb": {
+        "cfr_plus": 0.178368
+      },
+      "targets_pass": {
+        "root_ev_within_target": true,
+        "agreement_target": true,
+        "freq_diff_target": true,
+        "no_major_disagreement": true,
+        "probabilities_valid": true
+      },
+      "all_targets_pass": true,
+      "determinism_root_ev_diff_bb": 0.0,
+      "mc_equity_spotcheck": {
+        "pairs": 6,
+        "max_abs_diff": 0.004,
+        "mean_abs_diff": 0.0019
+      }
+    },
+    {
+      "scenario_id": "srp_btn_bb_100bb_flop_7s5s2s",
+      "board": [
+        "7s",
+        "5s",
+        "2s"
+      ],
+      "root_ev": {
+        "cfr_plus_bb": 2.028,
+        "reference_bb": 2.028,
+        "diff_bb": 0.0,
+        "diff_pct_pot": 0.0007
+      },
+      "range_freqs": {
+        "cfr_plus": {
+          "check": 0.16398247791874143,
+          "bet_small": 0.5101178021913022,
+          "bet_large": 0.3258997198899565
+        },
+        "reference": {
+          "check": 0.16882981969743568,
+          "bet_small": 0.5069672231429724,
+          "bet_large": 0.32420295715959185
+        }
+      },
+      "hands": {
+        "shared": 275,
+        "missing_in_reference": [],
+        "missing_in_cfr_plus": []
+      },
+      "action_ev_diff_bb": {
+        "max": 1.8341,
+        "mean": 0.4559
+      },
+      "non_indifferent_decisions": 212,
+      "preferred_action_agreement": 1.0,
+      "avg_freq_diff_pp_non_indiff": 0.214,
+      "disagreements": [],
+      "major_disagreements": [],
+      "runtime_sec": {
+        "cfr_plus": 2.9947969913482666,
+        "reference": 6.938004970550537
+      },
+      "peak_mem_mb": {
+        "cfr_plus": 0.185544
+      },
+      "targets_pass": {
+        "root_ev_within_target": true,
+        "agreement_target": true,
+        "freq_diff_target": true,
+        "no_major_disagreement": true,
+        "probabilities_valid": true
+      },
+      "all_targets_pass": true,
+      "determinism_root_ev_diff_bb": 0.0,
+      "mc_equity_spotcheck": {
+        "pairs": 6,
+        "max_abs_diff": 0.0024,
+        "mean_abs_diff": 0.0011
+      }
+    },
+    {
+      "scenario_id": "srp_btn_bb_100bb_flop_6h4d2c",
+      "board": [
+        "6h",
+        "4d",
+        "2c"
+      ],
+      "root_ev": {
+        "cfr_plus_bb": 1.7695,
+        "reference_bb": 1.7697,
+        "diff_bb": -0.0001,
+        "diff_pct_pot": -0.0025
+      },
+      "range_freqs": {
+        "cfr_plus": {
+          "check": 0.050598151370935124,
+          "bet_small": 0.6152383333592051,
+          "bet_large": 0.33416351526985977
+        },
+        "reference": {
+          "check": 0.049347360969434796,
+          "bet_small": 0.616334454055806,
+          "bet_large": 0.3343181849747592
+        }
+      },
+      "hands": {
+        "shared": 276,
+        "missing_in_reference": [],
+        "missing_in_cfr_plus": []
+      },
+      "action_ev_diff_bb": {
+        "max": 2.5616,
+        "mean": 0.5839
+      },
+      "non_indifferent_decisions": 224,
+      "preferred_action_agreement": 1.0,
+      "avg_freq_diff_pp_non_indiff": 0.218,
+      "disagreements": [],
+      "major_disagreements": [],
+      "runtime_sec": {
+        "cfr_plus": 2.8942410945892334,
+        "reference": 6.512240886688232
+      },
+      "peak_mem_mb": {
+        "cfr_plus": 0.186224
+      },
+      "targets_pass": {
+        "root_ev_within_target": true,
+        "agreement_target": true,
+        "freq_diff_target": true,
+        "no_major_disagreement": true,
+        "probabilities_valid": true
+      },
+      "all_targets_pass": true,
+      "determinism_root_ev_diff_bb": 0.0,
+      "mc_equity_spotcheck": {
+        "pairs": 6,
+        "max_abs_diff": 0.0023,
+        "mean_abs_diff": 0.0008
+      }
+    },
+    {
+      "scenario_id": "srp_btn_bb_100bb_flop_JcTs9d",
+      "board": [
+        "Jc",
+        "Ts",
+        "9d"
+      ],
+      "root_ev": {
+        "cfr_plus_bb": 2.6528,
+        "reference_bb": 2.6528,
+        "diff_bb": -0.0001,
+        "diff_pct_pot": -0.0013
+      },
+      "range_freqs": {
+        "cfr_plus": {
+          "check": 0.034492706089000034,
+          "bet_small": 0.6871748895857901,
+          "bet_large": 0.27833240432520995
+        },
+        "reference": {
+          "check": 0.03579660899727935,
+          "bet_small": 0.6862340413771348,
+          "bet_large": 0.27796934962558595
+        }
+      },
+      "hands": {
+        "shared": 234,
+        "missing_in_reference": [],
+        "missing_in_cfr_plus": []
+      },
+      "action_ev_diff_bb": {
+        "max": 1.546,
+        "mean": 0.5046
+      },
+      "non_indifferent_decisions": 160,
+      "preferred_action_agreement": 1.0,
+      "avg_freq_diff_pp_non_indiff": 0.134,
+      "disagreements": [],
+      "major_disagreements": [],
+      "runtime_sec": {
+        "cfr_plus": 2.669766902923584,
+        "reference": 6.083590745925903
+      },
+      "peak_mem_mb": {
+        "cfr_plus": 0.16496
+      },
+      "targets_pass": {
+        "root_ev_within_target": true,
+        "agreement_target": true,
+        "freq_diff_target": true,
+        "no_major_disagreement": true,
+        "probabilities_valid": true
+      },
+      "all_targets_pass": true,
+      "determinism_root_ev_diff_bb": 0.0,
+      "mc_equity_spotcheck": {
+        "pairs": 6,
+        "max_abs_diff": 0.0044,
+        "mean_abs_diff": 0.003
+      }
+    }
+  ]
+}
