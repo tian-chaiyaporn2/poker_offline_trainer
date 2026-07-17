@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Solver output (large, regenerable) — keep the directory, ignore contents
+output/*.json
+output/*.db
+output/*.sqlite
+output/**/*.json
+!output/.gitkeep
+
+# TexasSolver reference workspace — MUST stay out of the distributable
+reference/texassolver/
+reference/**/output/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/

@@ -1,0 +1,5 @@
+# Distributable runtime dependencies (all permissive — see docs/licenses.md)
+numpy>=1.24          # BSD-3-Clause
+
+# Dev-only (not shipped)
+pytest>=7.0          # MIT
