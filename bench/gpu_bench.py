@@ -15,6 +15,7 @@ matrix multiply. On CPU it is ~n²-bound (see docs/multistreet_spike.md); on GPU
 it should drop sharply. Compare the printed ms/iter across backends.
 """
 
+import os
 import sys
 import time
 
@@ -38,9 +39,11 @@ def main():
     streets = int(sys.argv[1]) if len(sys.argv) > 1 else 3
     sizes = [int(x) for x in sys.argv[2:]] or [40, 80, 160]
 
-    backend = get_backend()[4]
+    # POKER_BACKEND=cupy|numpy|auto lets the Colab notebook compare GPU vs CPU.
+    prefer = os.environ.get("POKER_BACKEND", "auto")
+    backend = get_backend(prefer)[4]
     print(f"backend: {backend}"
-          + ("" if backend == "cupy" else "   (CPU fallback — install cupy on a GPU box)"))
+          + ("" if backend == "cupy" else "   (CPU — install cupy on a GPU box for GPU)"))
     print(f"streets={streets}\n")
 
     flop = parse_cards("As7h2d")
@@ -51,9 +54,9 @@ def main():
     for n in sizes:
         oop, ip = subsample(oop_full, n), subsample(ip_full, n)
         wo, wi = np.ones(len(oop)), np.ones(len(ip))
-        s = BatchedGPUCFR(flop, oop, ip, wo, wi, 5.5, 0.66, streets=streets)
+        s = BatchedGPUCFR(flop, oop, ip, wo, wi, 5.5, 0.66, streets=streets, backend=prefer)
         t = time.time(); s.run(1); build = time.time() - t
-        s2 = BatchedGPUCFR(flop, oop, ip, wo, wi, 5.5, 0.66, streets=streets)
+        s2 = BatchedGPUCFR(flop, oop, ip, wo, wi, 5.5, 0.66, streets=streets, backend=prefer)
         K = 11
         t = time.time(); r = s2.run(K); steady = (r["runtime_sec"] - 0) / K
         # subtract first-iter cache build for a cleaner steady figure
