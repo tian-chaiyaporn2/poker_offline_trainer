@@ -105,8 +105,9 @@ def evaluate5(cards: Sequence[int]) -> int:
     return _pack(HIGH_CARD, ranks)
 
 
-def evaluate(cards: Sequence[int]) -> int:
-    """Evaluate 5, 6, or 7 cards -> best 5-card score (higher better)."""
+def evaluate_ref(cards: Sequence[int]) -> int:
+    """Reference evaluator: best 5-card score by brute force. Used to validate
+    the fast path in tests. Correct but slow."""
     n = len(cards)
     if n == 5:
         return evaluate5(cards)
@@ -118,6 +119,106 @@ def evaluate(cards: Sequence[int]) -> int:
         if score > best:
             best = score
     return best
+
+
+# --- Fast bitmask evaluator (hot path for the solver) ---------------------
+
+# Straight windows over rank bits 0..12; value is the straight-high rank index.
+_STRAIGHT_WINDOWS = [(0b11111 << (high - 4), high) for high in range(12, 3, -1)]
+_WHEEL_MASK = (1 << 12) | (1 << 3) | (1 << 2) | (1 << 1) | (1 << 0)  # A-2-3-4-5
+
+
+def _straight_high_from_mask(mask: int) -> int:
+    """Highest straight-high rank present in a 13-bit rank mask, or -1."""
+    for window, high in _STRAIGHT_WINDOWS:
+        if (mask & window) == window:
+            return high
+    if (mask & _WHEEL_MASK) == _WHEEL_MASK:
+        return 3  # five-high wheel
+    return -1
+
+
+def _top_bits(mask: int, k: int) -> List[int]:
+    """The k highest set bit positions (ranks), descending."""
+    out: List[int] = []
+    for r in range(12, -1, -1):
+        if mask & (1 << r):
+            out.append(r)
+            if len(out) == k:
+                break
+    return out
+
+
+def evaluate(cards: Sequence[int]) -> int:
+    """Evaluate 5, 6, or 7 cards -> best 5-card score (higher better).
+
+    Fast path using rank/suit bitmasks; no per-combination looping.
+    Produces the same packed scores as `evaluate5`/`evaluate_ref`.
+    """
+    if len(cards) < 5:
+        raise ValueError("need at least 5 cards")
+
+    rank_count = [0] * 13
+    suit_masks = [0, 0, 0, 0]
+    all_mask = 0
+    for c in cards:
+        r = c >> 2          # card // 4
+        s = c & 3           # card % 4
+        rank_count[r] += 1
+        suit_masks[s] |= 1 << r
+        all_mask |= 1 << r
+
+    # Flush / straight flush.
+    flush_suit = -1
+    for s in range(4):
+        if suit_masks[s].bit_count() >= 5:
+            flush_suit = s
+            break
+    if flush_suit >= 0:
+        sf_high = _straight_high_from_mask(suit_masks[flush_suit])
+        if sf_high >= 0:
+            return _pack(STRAIGHT_FLUSH, [sf_high])
+
+    # Group ranks by multiplicity.
+    quads = [r for r in range(12, -1, -1) if rank_count[r] == 4]
+    trips = [r for r in range(12, -1, -1) if rank_count[r] == 3]
+    pairs = [r for r in range(12, -1, -1) if rank_count[r] == 2]
+
+    if quads:
+        q = quads[0]
+        kicker = _top_bits(all_mask & ~(1 << q), 1)[0]
+        return _pack(QUADS, [q, kicker])
+
+    if trips and (len(trips) >= 2 or pairs):
+        t = trips[0]
+        # best available pair: a second trip counts as a pair.
+        pair_candidates = [r for r in trips[1:]] + pairs
+        p = max(pair_candidates)
+        return _pack(FULL_HOUSE, [t, p])
+
+    if flush_suit >= 0:
+        return _pack(FLUSH, _top_bits(suit_masks[flush_suit], 5))
+
+    straight_high = _straight_high_from_mask(all_mask)
+    if straight_high >= 0:
+        return _pack(STRAIGHT, [straight_high])
+
+    if trips:
+        t = trips[0]
+        kickers = _top_bits(all_mask & ~(1 << t), 2)
+        return _pack(TRIPS, [t, *kickers])
+
+    if len(pairs) >= 2:
+        hi, lo = pairs[0], pairs[1]
+        kicker = _top_bits(all_mask & ~(1 << hi) & ~(1 << lo), 1)[0]
+        return _pack(TWO_PAIR, [hi, lo, kicker])
+
+    if pairs:
+        p = pairs[0]
+        kickers = _top_bits(all_mask & ~(1 << p), 3)
+        return _pack(ONE_PAIR, [p, *kickers])
+
+    return _pack(HIGH_CARD, _top_bits(all_mask, 5))
 
 
 def category_of(score: int) -> int:
