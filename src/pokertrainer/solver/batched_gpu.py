@@ -105,17 +105,15 @@ class BatchedGPUCFR:
         boards = [list(self.flop) + list(extra)
                   for extra in combinations(deck, self.n_streets - 1)]
         self._board_id = {frozenset(b): k for k, b in enumerate(boards)}
+        Bh = self.to_host(self.B)                    # host copy of B, once
         E = np.empty((len(boards), self.no, self.ni), np.float32)
         for k, b5 in enumerate(boards):
             ro = np.array([evaluate((a, b, *b5)) for a, b in self.oc])
             ri = np.array([evaluate((a, b, *b5)) for a, b in self.ic])
-            gt = ro[:, None] > ri[None, :]
-            E[k] = self.B_host_win(gt, ro, ri)
+            win = np.where(ro[:, None] > ri[None, :], 1.0,
+                           np.where(ro[:, None] == ri[None, :], 0.5, 0.0))
+            E[k] = Bh * win
         self.E_all = self.xp.asarray(E)
-
-    def B_host_win(self, gt, ro, ri):
-        Bh = self.to_host(self.B) if self.backend == "cupy" else np.asarray(self.B)
-        return Bh * np.where(gt, 1.0, np.where(ro[:, None] == ri[None, :], 0.5, 0.0))
 
     def _reg(self, key, C, player_o, na):
         r = self.R.get(key)
