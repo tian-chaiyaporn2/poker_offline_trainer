@@ -69,6 +69,17 @@ def extract_records(flop_str, oop, ip, iters, make, pot, bet_frac) -> List[Dict]
         # Accepted: practically reached (unstable/reduced-range handled elsewhere).
         r["accepted"] = r["reach_mass"] >= MIN_REACH
         r["explanation"] = explain(r, board_favored)
+    # free GPU memory between roots (prevents pool accumulation / OOM)
+    xp = getattr(s, "xp", None)
+    backend = getattr(s, "backend", "")
+    del s
+    if xp is not None and backend == "cupy":
+        try:
+            import gc
+            gc.collect()
+            xp.get_default_memory_pool().free_all_blocks()
+        except Exception:
+            pass
     return recs
 
 
