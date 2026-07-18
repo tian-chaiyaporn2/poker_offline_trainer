@@ -22,7 +22,7 @@ from ..cards import hand_str
 from ..evaluator import evaluate
 
 CHECK, BET = 0, 1
-FOLD, CALL = 0, 1
+FOLD, CALL, RAISE = 0, 1, 2
 
 
 def _strat(reg: np.ndarray) -> np.ndarray:
@@ -34,7 +34,8 @@ def _strat(reg: np.ndarray) -> np.ndarray:
 
 class BatchedCFR:
     def __init__(self, flop: List[int], oop, ip, w_oop, w_ip, pot_bb,
-                 bet_frac: float = 0.66, streets: int = 3, bet_streets=None):
+                 bet_frac: float = 0.66, streets: int = 3, bet_streets=None,
+                 raise_x=None):
         self.flop = list(flop)
         self.oc = np.array(oop, dtype=np.int64)
         self.ic = np.array(ip, dtype=np.int64)
@@ -46,6 +47,7 @@ class BatchedCFR:
         # chance runouts (both check) that still realize equity to showdown. So
         # flop-only-with-runout = streets=3, bet_streets=1; full = bet_streets=3.
         self.bet_streets = streets if bet_streets is None else bet_streets
+        self.raise_x = raise_x       # raise-to multiple of the bet; None = no raise
         self.w_o = (w_oop / w_oop.sum()).astype(np.float64)
         self.w_i = (w_ip / w_ip.sum()).astype(np.float64)
         # combo card lookup for fast "combo contains card c" masks
@@ -86,8 +88,9 @@ class BatchedCFR:
         key = path + node
         r = self.R.get(key)
         if r is None:
-            r = np.zeros((C, self.no if node in ("R", "V") else self.ni, na))
-            # node letter: R=root(OOP), P=ipc(IP), V=ovb(OOP), I=ivb(IP)
+            r = np.zeros((C, self.no if node in ("R", "V", "W") else self.ni, na))
+            # node letter: R=root(OOP), P=ipc(IP), V=ovb(OOP), I=ivb(IP),
+            #              O=orip(IP vs OOP raise), W=iroop(OOP vs IP raise)
             self.R[key] = r
             self.S[key] = np.zeros_like(r)
         return r
@@ -146,6 +149,71 @@ class BatchedCFR:
             return np.where(tot > 0, s / np.where(tot > 0, tot, 1.0), 1.0 / na)
         return _strat(self.R[path + node])
 
+    def _solve_raise(self, street, boards, eo, ei, ro, ri, path):
+        """Flop betting with a raise facing a bet (fold/call/raise, one raise per
+        street). Batched mirror of MultiStreetSpike._solve_street_raise."""
+        C = len(boards)
+        b = self.bet_frac * (self.P0 + eo + ei)              # [C]
+        Rz = self.raise_x * b                                 # raise-to
+        s_root = self._get_strat(path, "R", C, 2)
+        s_ipc = self._get_strat(path, "P", C, 2)
+        s_ovb = self._get_strat(path, "V", C, 3)
+        s_ivb = self._get_strat(path, "I", C, 3)
+        s_orip = self._get_strat(path, "O", C, 2)
+        s_iroop = self._get_strat(path, "W", C, 2)
+
+        ro_ck = ro * s_root[:, :, CHECK]; ro_bt = ro * s_root[:, :, BET]
+        ri_ck = ri * s_ipc[:, :, CHECK]; ri_bt = ri * s_ipc[:, :, BET]
+        if street >= self.n_streets:
+            adv = lambda bd, e1, e2, r1, r2, p: self._showdown(bd, e1, e2, r1, r2)
+        else:
+            adv = lambda bd, e1, e2, r1, r2, p: self._chance(street, bd, e1, e2, r1, r2, p)
+
+        uo_cc, ui_cc = adv(boards, eo, ei, ro_ck, ri_ck, path + "1")
+        uo_L2c, ui_L2c = adv(boards, eo + b, ei + b, ro_ck * s_ovb[:, :, CALL], ri_bt, path + "2c")
+        uo_L2r, ui_L2r = adv(boards, eo + Rz, ei + Rz, ro_ck * s_ovb[:, :, RAISE],
+                             ri_bt * s_orip[:, :, CALL], path + "2r")
+        uo_L3c, ui_L3c = adv(boards, eo + b, ei + b, ro_bt, ri * s_ivb[:, :, CALL], path + "3c")
+        uo_L3r, ui_L3r = adv(boards, eo + Rz, ei + Rz, ro_bt * s_iroop[:, :, CALL],
+                             ri * s_ivb[:, :, RAISE], path + "3r")
+
+        oppmass_orip = (ro_ck * s_ovb[:, :, RAISE]) @ self.B          # [C,ni]
+        u_orip = np.stack([-(ei + b)[:, None] * oppmass_orip, ui_L2r], axis=2)
+        oppmass_iroop = (ri * s_ivb[:, :, RAISE]) @ self.B.T          # [C,no]
+        u_iroop = np.stack([-(eo + b)[:, None] * oppmass_iroop, uo_L3r], axis=2)
+
+        oppmass_ovb = ri_bt @ self.B.T
+        ovb_raise = (self.P0 + ei + b)[:, None] * ((ri_bt * s_orip[:, :, FOLD]) @ self.B.T) + uo_L2r
+        u_ovb = np.stack([-eo[:, None] * oppmass_ovb, uo_L2c, ovb_raise], axis=2)
+        oppmass_ivb = ro_bt @ self.B
+        ivb_raise = (self.P0 + eo + b)[:, None] * ((ro_bt * s_iroop[:, :, FOLD]) @ self.B) + ui_L3r
+        u_ivb = np.stack([-ei[:, None] * oppmass_ivb, ui_L3c, ivb_raise], axis=2)
+
+        u_ipc_bet = ((self.P0 + eo)[:, None] * ((ro_ck * s_ovb[:, :, FOLD]) @ self.B)
+                     + ui_L2c + (s_orip * u_orip).sum(axis=2))
+        u_ipc = np.stack([ui_cc, u_ipc_bet], axis=2)
+
+        u_check = uo_cc + (s_ovb * u_ovb).sum(axis=2)
+        u_bet = ((self.P0 + ei)[:, None] * ((ri * s_ivb[:, :, FOLD]) @ self.B.T)
+                 + uo_L3c + (s_iroop * u_iroop).sum(axis=2))
+        u_root = np.stack([u_check, u_bet], axis=2)
+
+        if self._eval and street == 1 and path == "":
+            self._cap = {"s_root": s_root.copy(), "u_root": u_root.copy(),
+                         "s_ipc": s_ipc.copy(), "u_ipc": u_ipc.copy(),
+                         "s_ovb": s_ovb.copy(), "u_ovb": u_ovb.copy(),
+                         "s_ivb": s_ivb.copy(), "u_ivb": u_ivb.copy()}
+        self._update(path + "R", s_root, u_root, ro)
+        self._update(path + "P", s_ipc, u_ipc, ri)
+        self._update(path + "V", s_ovb, u_ovb, ro_ck)
+        self._update(path + "I", s_ivb, u_ivb, ri)
+        self._update(path + "O", s_orip, u_orip, ri_bt)
+        self._update(path + "W", s_iroop, u_iroop, ro_bt)
+
+        uo = (s_root * u_root).sum(axis=2)
+        ui = (s_ipc * u_ipc).sum(axis=2) + (s_ivb * u_ivb).sum(axis=2)
+        return uo, ui
+
     def _solve(self, street, boards, eo, ei, ro, ri, path):
         C = len(boards)
         if street > self.bet_streets:
@@ -153,6 +221,8 @@ class BatchedCFR:
             if street >= self.n_streets:
                 return self._showdown(boards, eo, ei, ro, ri)
             return self._chance(street, boards, eo, ei, ro, ri, path + "c")
+        if self.raise_x is not None:
+            return self._solve_raise(street, boards, eo, ei, ro, ri, path)
         b = self.bet_frac * (self.P0 + eo + ei)          # [C]
         s_root = self._get_strat(path, "R", C, 2)
         s_ipc = self._get_strat(path, "P", C, 2)
@@ -243,40 +313,9 @@ class BatchedCFR:
 
     def flop_decisions_report(self) -> List[Dict]:
         """All four flop decision nodes (both players, root + facing a bet) under
-        the averaged profile. One record per (node, acting-player hand): actions,
-        per-action conditional EV (bb), frequencies, preferred action, and the
-        opponent reach mass into that node (0 => rarely reached)."""
-        cap = self._eval_capture()
-        s_root = cap["s_root"]; s_ipc = cap["s_ipc"]
-        ro_ck = self.w_o * s_root[0, :, CHECK]         # OOP checked reach
-        ro_bt = self.w_o * s_root[0, :, BET]           # OOP bet reach
-        ri_bt = self.w_i * s_ipc[0, :, BET]            # IP bet (vs check) reach
-
-        nodes = [
-            # (key, acting hands, oc?, actions, cfv, strat, opp reach mass per hand)
-            ("bb_first",    self.oc, "check", "bet", cap["u_root"], s_root, self.B @ self.w_i),
-            ("btn_vs_check", self.ic, "check", "bet", cap["u_ipc"], s_ipc, self.B.T @ ro_ck),
-            ("bb_vs_bet",   self.oc, "fold", "call", cap["u_ovb"], cap["s_ovb"], self.B @ ri_bt),
-            ("btn_vs_bet",  self.ic, "fold", "call", cap["u_ivb"], cap["s_ivb"], self.B.T @ ro_bt),
-        ]
-        acting = {"bb_first": "BB", "btn_vs_check": "BTN", "bb_vs_bet": "BB", "btn_vs_bet": "BTN"}
-        recs: List[Dict] = []
-        for key, combos, a0, a1, u, s, opp_mass in nodes:
-            safe = np.where(opp_mass > 1e-12, opp_mass, 1.0)
-            for i in range(len(combos)):
-                ev0 = float(u[0, i, 0] / safe[i])
-                ev1 = float(u[0, i, 1] / safe[i])
-                recs.append({
-                    "node": key,
-                    "acting_player": acting[key],
-                    "hand": hand_str((int(combos[i, 0]), int(combos[i, 1]))),
-                    "actions": [a0, a1],
-                    "ev": {a0: ev0, a1: ev1},
-                    "freq": {a0: float(s[0, i, 0]), a1: float(s[0, i, 1])},
-                    "preferred": a0 if ev0 >= ev1 else a1,
-                    "reach_mass": float(opp_mass[i]),
-                })
-        return recs
+        the averaged profile. Response nodes carry the raise action when raise_x is
+        set. Shared with the GPU solver so CPU/GPU records are identical."""
+        return _flop_decisions_from_cap(self)
 
     def run(self, iterations: int) -> Dict:
         tracemalloc.start()
@@ -306,3 +345,36 @@ class BatchedCFR:
             "streets": self.n_streets,
             "combos": f"{self.no}x{self.ni}",
         }
+
+
+def _flop_decisions_from_cap(solver) -> List[Dict]:
+    """Build per-hand records for all four flop decision nodes from an eval-mode
+    capture. Works for both CPU (NumPy) and GPU (CuPy) solvers via to_host, and
+    handles the raise action (3-action response nodes) when raise_x is set."""
+    to_host = getattr(solver, "to_host", np.asarray)
+    cap = solver._eval_capture()                       # host arrays
+    B = to_host(solver.B); w_o = to_host(solver.w_o); w_i = to_host(solver.w_i)
+    s_root = cap["s_root"]; s_ipc = cap["s_ipc"]
+    ro_ck = w_o * s_root[0, :, CHECK]
+    ro_bt = w_o * s_root[0, :, BET]
+    ri_bt = w_i * s_ipc[0, :, BET]
+    resp = ["fold", "call", "raise"] if solver.raise_x is not None else ["fold", "call"]
+    nodes = [
+        ("bb_first",     "BB",  solver.oc, ["check", "bet"], cap["u_root"], cap["s_root"], B @ w_i),
+        ("btn_vs_check", "BTN", solver.ic, ["check", "bet"], cap["u_ipc"], cap["s_ipc"], B.T @ ro_ck),
+        ("bb_vs_bet",    "BB",  solver.oc, resp, cap["u_ovb"], cap["s_ovb"], B @ ri_bt),
+        ("btn_vs_bet",   "BTN", solver.ic, resp, cap["u_ivb"], cap["s_ivb"], B.T @ ro_bt),
+    ]
+    recs: List[Dict] = []
+    for key, player, combos, actions, u, s, opp_mass in nodes:
+        safe = np.where(opp_mass > 1e-12, opp_mass, 1.0)
+        for i in range(len(combos)):
+            ev = {a: float(u[0, i, k] / safe[i]) for k, a in enumerate(actions)}
+            freq = {a: float(s[0, i, k]) for k, a in enumerate(actions)}
+            recs.append({
+                "node": key, "acting_player": player,
+                "hand": hand_str((int(combos[i, 0]), int(combos[i, 1]))),
+                "actions": list(actions), "ev": ev, "freq": freq,
+                "preferred": max(ev, key=ev.get), "reach_mass": float(opp_mass[i]),
+            })
+    return recs

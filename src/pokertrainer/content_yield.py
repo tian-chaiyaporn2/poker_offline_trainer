@@ -63,8 +63,8 @@ def extract_records(flop_str, oop, ip, iters, make, pot, bet_frac) -> List[Dict]
         r["board_favored"] = board_favored
         r["hand_category"] = hand_category(describe_hand(parse_hand(r["hand"]), flop))
         r["decision_type"] = "first_action" if r["node"] in ("bb_first", "btn_vs_check") else "vs_bet"
-        evs = list(r["ev"].values())
-        r["ev_sep_pct"] = round(100 * abs(evs[0] - evs[1]) / pot, 3)
+        top2 = sorted(r["ev"].values(), reverse=True)[:2]     # best vs 2nd-best action
+        r["ev_sep_pct"] = round(100 * (top2[0] - top2[1]) / pot, 3)
         r["mixed"] = r["ev_sep_pct"] < CLEAR_SEP_PCT
         # Accepted: practically reached (unstable/reduced-range handled elsewhere).
         r["accepted"] = r["reach_mass"] >= MIN_REACH

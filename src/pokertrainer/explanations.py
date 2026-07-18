@@ -28,6 +28,9 @@ HEADLINES = {
     "value_call":    "Call — you're ahead of enough of their betting range to continue.",
     "bluff_catch":   "Call to catch bluffs — you beat the hands they'd bluff with.",
     "call_odds":     "Call — your draw has the equity and pot odds to continue.",
+    "raise_value":   "Raise for value — you're strong, so build the pot against worse.",
+    "raise_semibluff": "Raise as a semi-bluff — fold out better hands now and improve if called.",
+    "raise_bluff":   "Raise as a bluff — represent strength and pressure their bets.",
     "fold":          "Fold — not enough equity or showdown value against this bet.",
     "mixed":         "Both actions are close here — either is acceptable.",
 }
@@ -67,7 +70,13 @@ def classify_reason(rec: Dict) -> str:
         if hc in ("top_pair", "weak_pair"):
             return "pot_control"
         return "realization"          # draw or air checking
-    # response node (fold / call)
+    # response node (fold / call / raise)
+    if act == "raise":
+        if hc in ("strong_made", "top_pair"):
+            return "raise_value"
+        if hc == "draw":
+            return "raise_semibluff"
+        return "raise_bluff"          # weak_pair / air raising
     if act == "call":
         if hc in ("strong_made", "top_pair"):
             return "value_call"

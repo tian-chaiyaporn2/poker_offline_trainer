@@ -30,19 +30,20 @@ from .cfr import _strategy_from_regret
 
 Combo = Tuple[int, int]
 CHECK, BET = 0, 1
-FOLD, CALL = 0, 1
+FOLD, CALL, RAISE = 0, 1, 2
 
 
 class MultiStreetSpike:
     def __init__(self, flop: List[int], oop: List[Combo], ip: List[Combo],
                  w_oop: np.ndarray, w_ip: np.ndarray, pot_bb: float,
-                 bet_frac: float = 0.66, streets: int = 3):
+                 bet_frac: float = 0.66, streets: int = 3, raise_x=None):
         self.flop = list(flop)
         self.oc = np.array(oop, dtype=np.int64)
         self.ic = np.array(ip, dtype=np.int64)
         self.no, self.ni = len(oop), len(ip)
         self.P0 = float(pot_bb)
         self.bet_frac = bet_frac
+        self.raise_x = raise_x       # raise-to multiple of the bet; None = no raise
         self.n_streets = streets  # 1=flop only(showdown after flop), 2=+turn, 3=+river
         self.w_o = w_oop / w_oop.sum()
         self.w_i = w_ip / w_ip.sum()
@@ -116,6 +117,8 @@ class MultiStreetSpike:
 
     # --- one street's betting; returns (uo, ui) counterfactual values ---
     def _solve_street(self, street, board, eo, ei, ro, ri, path=""):
+        if self.raise_x is not None:
+            return self._solve_street_raise(street, board, eo, ei, ro, ri, path)
         # Infoset key includes the betting-line path so different histories that
         # reach the same board are distinct infosets (full-history game).
         bkey = (path, tuple(sorted(board)))
@@ -178,6 +181,72 @@ class MultiStreetSpike:
         uo = (s_root * u_root).sum(axis=1)
         # IP's value at entry = over its infosets reached: but IP only acts after
         # OOP's move; combine ipc (OOP checked) and ivb (OOP bet):
+        ui = (s_ipc * u_ipc).sum(axis=1) + (s_ivb * u_ivb).sum(axis=1)
+        return uo, ui
+
+    # --- betting with a raise facing a bet: fold/call/raise, one raise/street ---
+    def _solve_street_raise(self, street, board, eo, ei, ro, ri, path=""):
+        bkey = (path, tuple(sorted(board)))
+        pot = self.P0 + eo + ei
+        b = self.bet_frac * pot
+        R = self.raise_x * b                     # raise-to (raiser's street investment)
+
+        s_root = _strategy_from_regret(self._reg((bkey, "root"), 2))
+        s_ipc = _strategy_from_regret(self._reg((bkey, "ipc"), 2))
+        s_ovb = _strategy_from_regret(self._reg((bkey, "ovb"), 3))    # fold/call/raise
+        s_ivb = _strategy_from_regret(self._reg((bkey, "ivb"), 3))
+        s_orip = _strategy_from_regret(self._reg((bkey, "orip"), 2))  # IP vs OOP raise
+        s_iroop = _strategy_from_regret(self._reg((bkey, "iroop"), 2))  # OOP vs IP raise
+
+        ro_ck = ro * s_root[:, CHECK]; ro_bt = ro * s_root[:, BET]
+        ri_ck = ri * s_ipc[:, CHECK]; ri_bt = ri * s_ipc[:, BET]
+
+        # advance lines (uo uses opp=IP reach, ui uses opp=OOP reach passed in)
+        uo_cc, ui_cc = self._advance(street, board, eo, ei, ro_ck, ri_ck, path + "1")
+        uo_L2c, ui_L2c = self._advance(street, board, eo + b, ei + b,
+                                       ro_ck * s_ovb[:, CALL], ri_bt, path + "2c")
+        uo_L2r, ui_L2r = self._advance(street, board, eo + R, ei + R,
+                                       ro_ck * s_ovb[:, RAISE], ri_bt * s_orip[:, CALL], path + "2r")
+        uo_L3c, ui_L3c = self._advance(street, board, eo + b, ei + b,
+                                       ro_bt, ri * s_ivb[:, CALL], path + "3c")
+        uo_L3r, ui_L3r = self._advance(street, board, eo + R, ei + R,
+                                       ro_bt * s_iroop[:, CALL], ri * s_ivb[:, RAISE], path + "3r")
+
+        # orip: IP facing OOP raise (line check-bet-raise). opp = OOP that raised.
+        oppmass_orip = self.B.T @ (ro_ck * s_ovb[:, RAISE])
+        u_orip = np.stack([-(ei + b) * oppmass_orip, ui_L2r], axis=1)
+        # iroop: OOP facing IP raise (line bet-raise). opp = IP that raised.
+        oppmass_iroop = self.B @ (ri * s_ivb[:, RAISE])
+        u_iroop = np.stack([-(eo + b) * oppmass_iroop, uo_L3r], axis=1)
+
+        # ovb: OOP facing IP bet (fold/call/raise). opp = IP that bet = ri_bt.
+        oppmass_ovb = self.B @ ri_bt
+        ovb_raise = (self.P0 + ei + b) * (self.B @ (ri_bt * s_orip[:, FOLD])) + uo_L2r
+        u_ovb = np.stack([-eo * oppmass_ovb, uo_L2c, ovb_raise], axis=1)
+        # ivb: IP facing OOP bet (fold/call/raise). opp = OOP that bet = ro_bt.
+        oppmass_ivb = self.B.T @ ro_bt
+        ivb_raise = (self.P0 + eo + b) * (self.B.T @ (ro_bt * s_iroop[:, FOLD])) + ui_L3r
+        u_ivb = np.stack([-ei * oppmass_ivb, ui_L3c, ivb_raise], axis=1)
+
+        # ipc: IP after OOP check (check/bet)
+        u_ipc_bet = ((self.P0 + eo) * (self.B.T @ (ro_ck * s_ovb[:, FOLD]))
+                     + ui_L2c + (s_orip * u_orip).sum(axis=1))
+        u_ipc = np.stack([ui_cc, u_ipc_bet], axis=1)
+
+        # root: OOP (check/bet)
+        u_check = uo_cc + (s_ovb * u_ovb).sum(axis=1)
+        u_bet = ((self.P0 + ei) * (self.B @ (ri * s_ivb[:, FOLD]))
+                 + uo_L3c + (s_iroop * u_iroop).sum(axis=1))
+        u_root = np.stack([u_check, u_bet], axis=1)
+
+        self._t_update((bkey, "root"), s_root, u_root, ro)
+        self._t_update((bkey, "ipc"), s_ipc, u_ipc, ri)
+        self._t_update((bkey, "ovb"), s_ovb, u_ovb, ro_ck)
+        self._t_update((bkey, "ivb"), s_ivb, u_ivb, ri)
+        self._t_update((bkey, "orip"), s_orip, u_orip, ri_bt)
+        self._t_update((bkey, "iroop"), s_iroop, u_iroop, ro_bt)
+
+        uo = (s_root * u_root).sum(axis=1)
         ui = (s_ipc * u_ipc).sum(axis=1) + (s_ivb * u_ivb).sum(axis=1)
         return uo, ui
 

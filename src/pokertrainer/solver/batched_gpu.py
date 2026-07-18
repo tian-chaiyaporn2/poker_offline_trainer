@@ -29,7 +29,7 @@ import numpy as np
 from ..evaluator import evaluate
 
 CHECK, BET = 0, 1
-FOLD, CALL = 0, 1
+FOLD, CALL, RAISE = 0, 1, 2
 
 
 def get_backend(prefer: str = "auto"):
@@ -63,7 +63,7 @@ def _strat(xp, reg):
 class BatchedGPUCFR:
     def __init__(self, flop, oop, ip, w_oop, w_ip, pot_bb,
                  bet_frac=0.66, streets=3, backend="auto", dtype="float64",
-                 bet_streets=None):
+                 bet_streets=None, raise_x=None):
         self.xp, self.scatter_add, self.to_dev, self.to_host, self.backend = get_backend(backend)
         xp = self.xp
         # Compute dtype for reaches/regrets/showdown. float32 is much faster on
@@ -77,6 +77,7 @@ class BatchedGPUCFR:
         self.bet_frac = bet_frac
         self.n_streets = streets
         self.bet_streets = streets if bet_streets is None else bet_streets
+        self.raise_x = raise_x
 
         # host "alive" masks: combo does NOT contain card c
         o_alive = np.ones((52, self.no), np.float64)
@@ -187,6 +188,66 @@ class BatchedGPUCFR:
             return xp.where(tot > 0, s / xp.where(tot > 0, tot, 1.0), 1.0 / na)
         return _strat(xp, self.R[path + node])
 
+    def _solve_raise(self, street, boards, eo, ei, ro, ri, path):
+        xp = self.xp
+        C = len(boards)
+        b = self.bet_frac * (self.P0 + eo + ei)
+        Rz = self.raise_x * b
+        s_root = self._get_strat(path, "R", C, True)
+        s_ipc = self._get_strat(path, "P", C, False)
+        s_ovb = self._get_strat(path, "V", C, True, 3)
+        s_ivb = self._get_strat(path, "I", C, False, 3)
+        s_orip = self._get_strat(path, "O", C, False)
+        s_iroop = self._get_strat(path, "W", C, True)
+
+        ro_ck = ro * s_root[:, :, CHECK]; ro_bt = ro * s_root[:, :, BET]
+        ri_ck = ri * s_ipc[:, :, CHECK]; ri_bt = ri * s_ipc[:, :, BET]
+        if street >= self.n_streets:
+            adv = lambda bd, e1, e2, r1, r2, p: self._showdown(bd, e1, e2, r1, r2, p)
+        else:
+            adv = lambda bd, e1, e2, r1, r2, p: self._chance(street, bd, e1, e2, r1, r2, p)
+
+        uo_cc, ui_cc = adv(boards, eo, ei, ro_ck, ri_ck, path + "1")
+        uo_L2c, ui_L2c = adv(boards, eo + b, ei + b, ro_ck * s_ovb[:, :, CALL], ri_bt, path + "2c")
+        uo_L2r, ui_L2r = adv(boards, eo + Rz, ei + Rz, ro_ck * s_ovb[:, :, RAISE],
+                             ri_bt * s_orip[:, :, CALL], path + "2r")
+        uo_L3c, ui_L3c = adv(boards, eo + b, ei + b, ro_bt, ri * s_ivb[:, :, CALL], path + "3c")
+        uo_L3r, ui_L3r = adv(boards, eo + Rz, ei + Rz, ro_bt * s_iroop[:, :, CALL],
+                             ri * s_ivb[:, :, RAISE], path + "3r")
+
+        oppmass_orip = (ro_ck * s_ovb[:, :, RAISE]) @ self.B
+        u_orip = xp.stack([-(ei + b)[:, None] * oppmass_orip, ui_L2r], axis=2)
+        oppmass_iroop = (ri * s_ivb[:, :, RAISE]) @ self.B.T
+        u_iroop = xp.stack([-(eo + b)[:, None] * oppmass_iroop, uo_L3r], axis=2)
+
+        oppmass_ovb = ri_bt @ self.B.T
+        ovb_raise = (self.P0 + ei + b)[:, None] * ((ri_bt * s_orip[:, :, FOLD]) @ self.B.T) + uo_L2r
+        u_ovb = xp.stack([-eo[:, None] * oppmass_ovb, uo_L2c, ovb_raise], axis=2)
+        oppmass_ivb = ro_bt @ self.B
+        ivb_raise = (self.P0 + eo + b)[:, None] * ((ro_bt * s_iroop[:, :, FOLD]) @ self.B) + ui_L3r
+        u_ivb = xp.stack([-ei[:, None] * oppmass_ivb, ui_L3c, ivb_raise], axis=2)
+
+        u_ipc_bet = ((self.P0 + eo)[:, None] * ((ro_ck * s_ovb[:, :, FOLD]) @ self.B)
+                     + ui_L2c + (s_orip * u_orip).sum(axis=2))
+        u_ipc = xp.stack([ui_cc, u_ipc_bet], axis=2)
+        u_check = uo_cc + (s_ovb * u_ovb).sum(axis=2)
+        u_bet = ((self.P0 + ei)[:, None] * ((ri * s_ivb[:, :, FOLD]) @ self.B.T)
+                 + uo_L3c + (s_iroop * u_iroop).sum(axis=2))
+        u_root = xp.stack([u_check, u_bet], axis=2)
+
+        if self._eval and street == 1 and path == "":
+            self._cap = {"s_root": s_root, "u_root": u_root, "s_ipc": s_ipc, "u_ipc": u_ipc,
+                         "s_ovb": s_ovb, "u_ovb": u_ovb, "s_ivb": s_ivb, "u_ivb": u_ivb}
+        self._update(path + "R", s_root, u_root, ro)
+        self._update(path + "P", s_ipc, u_ipc, ri)
+        self._update(path + "V", s_ovb, u_ovb, ro_ck)
+        self._update(path + "I", s_ivb, u_ivb, ri)
+        self._update(path + "O", s_orip, u_orip, ri_bt)
+        self._update(path + "W", s_iroop, u_iroop, ro_bt)
+        uo = (s_root * u_root).sum(axis=2)
+        ui = (s_ipc * u_ipc).sum(axis=2) + (s_ivb * u_ivb).sum(axis=2)
+        return uo, ui
+
     def _solve(self, street, boards, eo, ei, ro, ri, path):
         xp = self.xp
         C = len(boards)
@@ -196,6 +257,8 @@ class BatchedGPUCFR:
             if street >= self.n_streets:
                 return self._showdown(boards, eo, ei, ro, ri, path + "s")
             return self._chance(street, boards, eo, ei, ro, ri, path + "c")
+        if self.raise_x is not None:
+            return self._solve_raise(street, boards, eo, ei, ro, ri, path)
         b = self.bet_frac * (self.P0 + eo + ei)
         s_root = self._get_strat(path, "R", C, True)
         s_ipc = self._get_strat(path, "P", C, False)
@@ -226,7 +289,8 @@ class BatchedGPUCFR:
         u_root = xp.stack([u_check, oop_bet_fold + uo_L3], axis=2)
 
         if self._eval and street == 1 and path == "":
-            self._cap = (s_root, u_root)
+            self._cap = {"s_root": s_root, "u_root": u_root, "s_ipc": s_ipc, "u_ipc": u_ipc,
+                         "s_ovb": s_ovb, "u_ovb": u_ovb, "s_ivb": s_ivb, "u_ivb": u_ivb}
 
         self._update(path + "R", s_root, u_root, ro)
         self._update(path + "P", s_ipc, u_ipc, ri)
@@ -243,10 +307,7 @@ class BatchedGPUCFR:
         self.R[key] = self.xp.maximum(self.R[key] + (u - base), 0.0)
         self.S[key] += self._t * reach[:, :, None] * s
 
-    def flop_root_report(self):
-        """Per-OOP-hand flop-root decision under the averaged profile: conditional
-        EV (bb) of check/bet, frequencies, and preferred action. Matches the CPU
-        solver's report (same extraction, average strategy)."""
+    def _eval_capture(self):
         xp = self.xp
         self._eval = True
         self._cap = None
@@ -254,10 +315,14 @@ class BatchedGPUCFR:
                     xp.zeros(1, dtype=self.dtype), self.w_o[None, :] + 0,
                     self.w_i[None, :] + 0, "")
         self._eval = False
-        s_root, u_root = self._cap
-        s_root = self.to_host(s_root); u_root = self.to_host(u_root)
-        opp = self.to_host(self.B @ self.w_i)
-        opp = np.where(opp > 1e-12, opp, 1.0)
+        return {k: self.to_host(v) for k, v in self._cap.items()}
+
+    def flop_root_report(self):
+        """Per-OOP-hand flop-root (BB check/bet) decision under the averaged
+        profile. Matches the CPU solver's report."""
+        cap = self._eval_capture()
+        s_root, u_root = cap["s_root"], cap["u_root"]
+        opp = np.where((o := self.to_host(self.B @ self.w_i)) > 1e-12, o, 1.0)
         from ..cards import hand_str
         out = {}
         for i in range(self.no):
@@ -269,6 +334,13 @@ class BatchedGPUCFR:
                 "preferred": "check" if ev_ch >= ev_bt else "bet",
             }
         return out
+
+    def flop_decisions_report(self):
+        """All four flop decision nodes (both players, root + facing bet) under the
+        averaged profile. Matches CPU solver; response nodes carry the raise action
+        when raise_x is set."""
+        from .batched import _flop_decisions_from_cap
+        return _flop_decisions_from_cap(self)
 
     def run(self, iterations: int) -> Dict:
         xp = self.xp
