@@ -1,0 +1,115 @@
+"""Explanation generation (PRD v1.3 §10.1, §6.4, FR-012) — MIT.
+
+Turns a validated flop decision record into a plain-language reason. Casual
+language first: one practical headline; EVs/frequencies are expandable detail.
+The `reason` tag is drawn from the app's reason-classification set so it can
+drive the "identify the main reason" question (FR-012).
+
+Nothing here invents strategy — the recommended action and EVs come from the
+full-street solve; this only *labels and phrases* them with poker-standard
+heuristics (hand strength × action × board texture × node).
+"""
+
+from __future__ import annotations
+
+from typing import Dict, List, Optional
+
+# Reason tags. First-action (bet/check) reasons align with FR-012's set;
+# response (fold/call) nodes add bluff-catch / odds / fold.
+HEADLINES = {
+    "value":         "Bet for value — you're ahead of the hands that call, so get money in.",
+    "protection":    "Bet to protect — likely ahead but vulnerable, so charge the draws.",
+    "bluff":         "Bet as a bluff — little showdown value, so pressure better hands to fold.",
+    "semi_bluff":    "Bet as a semi-bluff — you can fold out better hands now and still improve.",
+    "range_advantage": "Bet — your range hits this board harder, so you can apply pressure.",
+    "pot_control":   "Check to keep the pot small — decent showdown value, but don't bloat it.",
+    "trap":          "Check to trap — you're very strong; let them catch up or bluff.",
+    "realization":   "Check — weak holding; take a free card and try to improve.",
+    "value_call":    "Call — you're ahead of enough of their betting range to continue.",
+    "bluff_catch":   "Call to catch bluffs — you beat the hands they'd bluff with.",
+    "call_odds":     "Call — your draw has the equity and pot odds to continue.",
+    "fold":          "Fold — not enough equity or showdown value against this bet.",
+    "mixed":         "Both actions are close here — either is acceptable.",
+}
+
+# Casual board-texture phrasing (§6.4 style).
+_TEXTURE = {
+    "monotone": "all one suit", "two_tone": "two of a suit", "rainbow": "three suits",
+    "paired": "a paired board", "connected": "a connected board",
+}
+
+
+def _wet(texture: List[str]) -> bool:
+    return any(t in texture for t in ("two_tone", "monotone", "connected"))
+
+
+def classify_reason(rec: Dict) -> str:
+    hc = rec["hand_category"]
+    act = rec["preferred"]
+    first_action = rec["node"] in ("bb_first", "btn_vs_check")
+    wet = _wet(rec.get("board_texture", []))
+    if rec.get("mixed"):
+        return "mixed"
+    if first_action:
+        if act == "bet":
+            if hc == "strong_made":
+                return "value"
+            if hc == "draw":
+                return "semi_bluff"
+            if hc == "air":
+                return "bluff"
+            if hc in ("top_pair", "weak_pair"):
+                return "protection" if wet else "value"
+            return "value"
+        # check
+        if hc == "strong_made":
+            return "trap"
+        if hc in ("top_pair", "weak_pair"):
+            return "pot_control"
+        return "realization"          # draw or air checking
+    # response node (fold / call)
+    if act == "call":
+        if hc in ("strong_made", "top_pair"):
+            return "value_call"
+        if hc == "draw":
+            return "call_odds"
+        return "bluff_catch"          # weak_pair / air continuing
+    return "fold"
+
+
+def explain(rec: Dict, board_favored: Optional[str] = None) -> Dict:
+    """Return {reason, headline, detail:[...]} for a decision record."""
+    reason = classify_reason(rec)
+    pref = rec["preferred"]
+    headline = HEADLINES[reason].format(pref=_action_word(pref))
+
+    # EV detail (expandable): how much better the preferred action is.
+    evs = rec["ev"]
+    ranked = sorted(evs, key=lambda a: evs[a], reverse=True)
+    best, second = ranked[0], ranked[1]
+    gap_pct = rec.get("ev_sep_pct")
+    freq = rec.get("freq", {})
+    detail: List[str] = []
+    if reason == "mixed":
+        detail.append(f"{_action_word(best)} and {_action_word(second)} are within "
+                      f"{gap_pct}% of the pot — treat both as acceptable.")
+    else:
+        detail.append(f"{_action_word(best).capitalize()} is best; "
+                      f"{_action_word(second)} gives up ~{gap_pct}% of the pot.")
+    if freq:
+        fp = {a: round(100 * freq[a]) for a in freq}
+        detail.append("Solver frequency: " + ", ".join(f"{_action_word(a)} {fp[a]}%" for a in ranked))
+    # board-level range-advantage note where relevant
+    if board_favored and rec["node"] in ("bb_first", "btn_vs_check") and pref == "bet":
+        if board_favored == rec["acting_player"]:
+            detail.append(f"{rec['acting_player']}'s range is stronger on this board, "
+                          f"which supports betting.")
+    tex = rec.get("board_texture", [])
+    tex_words = [ _TEXTURE[t] for t in tex if t in _TEXTURE ]
+    if tex_words:
+        detail.append("Board: " + ", ".join(tex_words) + ".")
+    return {"reason": reason, "headline": headline, "detail": detail}
+
+
+def _action_word(a: str) -> str:
+    return {"bet": "bet", "check": "check", "call": "call", "fold": "fold"}.get(a, a)

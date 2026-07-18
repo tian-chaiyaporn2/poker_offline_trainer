@@ -23,6 +23,7 @@ from typing import Dict, List
 import numpy as np
 
 from .cards import card_rank, card_suit, parse_cards, parse_hand
+from .explanations import explain
 from .handinfo import describe_hand
 from .presets import BOARDS
 from .ranges import expand_range
@@ -51,12 +52,15 @@ def board_texture(flop: List[int]) -> List[str]:
 def extract_records(flop_str, oop, ip, iters, make, pot, bet_frac) -> List[Dict]:
     flop = parse_cards(flop_str)
     s = make(flop, oop, ip, np.ones(len(oop)), np.ones(len(ip)), pot, bet_frac, 3)
-    s.run(iters)
+    res = s.run(iters)
+    ev_pct = res.get("root_ev_pct_pot", 50.0)     # BB (OOP) share of pot
+    board_favored = "BTN" if ev_pct < 45 else ("BB" if ev_pct > 55 else None)
     recs = s.flop_decisions_report()
     btags = board_texture(flop)
     for r in recs:
         r["board"] = flop_str
         r["board_texture"] = btags
+        r["board_favored"] = board_favored
         r["hand_category"] = hand_category(describe_hand(parse_hand(r["hand"]), flop))
         r["decision_type"] = "first_action" if r["node"] in ("bb_first", "btn_vs_check") else "vs_bet"
         evs = list(r["ev"].values())
@@ -64,6 +68,7 @@ def extract_records(flop_str, oop, ip, iters, make, pot, bet_frac) -> List[Dict]
         r["mixed"] = r["ev_sep_pct"] < CLEAR_SEP_PCT
         # Accepted: practically reached (unstable/reduced-range handled elsewhere).
         r["accepted"] = r["reach_mass"] >= MIN_REACH
+        r["explanation"] = explain(r, board_favored)
     return recs
 
 
@@ -117,6 +122,8 @@ def yield_report(all_recs, n_solved, roots, hands_per_side, full_range_size) -> 
             "by_board_texture": dict(Counter(t for r in deduped for t in r["board_texture"])),
             "by_hand_category": dict(Counter(r["hand_category"] for r in deduped)),
             "by_decision_type": dict(Counter(r["decision_type"] for r in deduped)),
+            "by_reason": dict(Counter(r["explanation"]["reason"] for r in deduped
+                                      if "explanation" in r)),
         },
     }
 
