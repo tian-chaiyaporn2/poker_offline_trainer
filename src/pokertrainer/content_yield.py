@@ -140,9 +140,10 @@ def yield_report(all_recs, n_solved, roots, hands_per_side, full_range_size) -> 
 
 
 def run(n=40, iters=300, roots=None, solver="cpu", dtype="float64",
-        out="output/content_yield", full_range_size=250, pot=5.5, bet_frac=0.66):
+        out="output/content_yield", full_range_size=250, pot=5.5, bet_frac=0.66,
+        raise_x=None):
     os.makedirs(out, exist_ok=True)
-    make = _make_solver(solver, dtype)
+    make = _make_solver(solver, dtype, raise_x=raise_x)
     board_list = [BOARDS[i]["board"] for i in roots] if roots else [b["board"] for b in BOARDS]
     all_recs: List[Dict] = []
     t0 = time.time()
@@ -175,8 +176,10 @@ if __name__ == "__main__":
     ap.add_argument("--solver", choices=["cpu", "gpu"], default="cpu")
     ap.add_argument("--dtype", default="float64")
     ap.add_argument("--full-range-size", type=int, default=250)
+    ap.add_argument("--raise-x", type=float, default=None,
+                    help="enable fold/call/raise; raise-to multiple of the bet, e.g. 3")
     ap.add_argument("--out", default="output/content_yield")
     a = ap.parse_args()
     roots = [int(x) for x in a.roots.split(",")] if a.roots else None
     run(n=a.n, iters=a.iters, roots=roots, solver=a.solver, dtype=a.dtype,
-        out=a.out, full_range_size=a.full_range_size)
+        out=a.out, full_range_size=a.full_range_size, raise_x=a.raise_x)

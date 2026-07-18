@@ -77,15 +77,15 @@ def classify(agree, regret_pct, indiff, freq_pp, clear_disagree, unstable):
     return "amber"
 
 
-def _make_solver(solver, dtype):
+def _make_solver(solver, dtype, raise_x=None):
     """Return a factory building a flop-root-reporting solver on cpu or gpu.
-    bet_streets controls which streets have betting (later streets = pure runout)."""
+    bet_streets controls which streets have betting; raise_x enables fold/call/raise."""
     if solver == "gpu":
         return lambda f, o, i, wo, wi, pot, bf, bet_streets: BatchedGPUCFR(
             f, o, i, wo, wi, pot, bf, streets=3, bet_streets=bet_streets,
-            backend="auto", dtype=dtype)
+            backend="auto", dtype=dtype, raise_x=raise_x)
     return lambda f, o, i, wo, wi, pot, bf, bet_streets: BatchedCFR(
-        f, o, i, wo, wi, pot, bf, streets=3, bet_streets=bet_streets)
+        f, o, i, wo, wi, pot, bf, streets=3, bet_streets=bet_streets, raise_x=raise_x)
 
 
 def solve_board(flop, oop, ip, pot, bet_frac, iters, make):
