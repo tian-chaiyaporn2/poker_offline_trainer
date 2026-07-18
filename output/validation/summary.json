@@ -1,0 +1,318 @@
+{
+  "config": {
+    "n": 20,
+    "iters": 400,
+    "pot": 5.5,
+    "bet_frac": 0.66,
+    "boards_done": 6
+  },
+  "totals": {
+    "hand_decisions": 120,
+    "non_indifferent": 115,
+    "agreement_all_pct": 50.0,
+    "agreement_non_indiff_pct": 50.4,
+    "green": 28,
+    "amber": 20,
+    "red": 72,
+    "green_pct": 23.3,
+    "amber_pct": 16.7,
+    "red_pct": 60.0,
+    "median_regret_pct_pot": 0.006,
+    "mean_regret_pct_pot": 3.465,
+    "p90_regret_pct_pot": 10.42,
+    "max_regret_pct_pot": 24.029,
+    "unstable_count": 41,
+    "unstable_pct": 34.2,
+    "betting_freq_bias_pp": 14.3,
+    "flop_only_avg_bet_freq": 0.338,
+    "full_street_avg_bet_freq": 0.195
+  },
+  "by_board_category": {
+    "dry": {
+      "n": 40,
+      "agree_ni": 20,
+      "ni": 39,
+      "green": 6,
+      "amber": 5,
+      "red": 29,
+      "agreement_ni_pct": 51.3,
+      "green_pct": 15.0,
+      "median_regret_pct": 0.0
+    },
+    "high_card": {
+      "n": 60,
+      "agree_ni": 34,
+      "ni": 57,
+      "green": 17,
+      "amber": 10,
+      "red": 33,
+      "agreement_ni_pct": 59.6,
+      "green_pct": 28.3,
+      "median_regret_pct": 0.0
+    },
+    "rainbow": {
+      "n": 40,
+      "agree_ni": 20,
+      "ni": 39,
+      "green": 6,
+      "amber": 5,
+      "red": 29,
+      "agreement_ni_pct": 51.3,
+      "green_pct": 15.0,
+      "median_regret_pct": 0.0
+    },
+    "connected": {
+      "n": 40,
+      "agree_ni": 19,
+      "ni": 39,
+      "green": 7,
+      "amber": 8,
+      "red": 25,
+      "agreement_ni_pct": 48.7,
+      "green_pct": 17.5,
+      "median_regret_pct": 1.134
+    },
+    "two_suit": {
+      "n": 40,
+      "agree_ni": 19,
+      "ni": 39,
+      "green": 7,
+      "amber": 8,
+      "red": 25,
+      "agreement_ni_pct": 48.7,
+      "green_pct": 17.5,
+      "median_regret_pct": 1.134
+    },
+    "draw_heavy": {
+      "n": 20,
+      "agree_ni": 14,
+      "ni": 20,
+      "green": 6,
+      "amber": 7,
+      "red": 7,
+      "agreement_ni_pct": 70.0,
+      "green_pct": 30.0,
+      "median_regret_pct": 0.0
+    },
+    "low": {
+      "n": 40,
+      "agree_ni": 10,
+      "ni": 38,
+      "green": 5,
+      "amber": 3,
+      "red": 32,
+      "agreement_ni_pct": 26.3,
+      "green_pct": 12.5,
+      "median_regret_pct": 5.592
+    },
+    "paired": {
+      "n": 40,
+      "agree_ni": 19,
+      "ni": 37,
+      "green": 15,
+      "amber": 7,
+      "red": 18,
+      "agreement_ni_pct": 51.4,
+      "green_pct": 37.5,
+      "median_regret_pct": 0.085
+    }
+  },
+  "by_hand_category": {
+    "weak_pair": {
+      "n": 45,
+      "agree_ni": 30,
+      "ni": 42,
+      "green": 20,
+      "amber": 8,
+      "red": 17,
+      "agreement_ni_pct": 71.4,
+      "green_pct": 44.4,
+      "median_regret_pct": 0.0
+    },
+    "top_pair": {
+      "n": 10,
+      "agree_ni": 6,
+      "ni": 10,
+      "green": 1,
+      "amber": 4,
+      "red": 5,
+      "agreement_ni_pct": 60.0,
+      "green_pct": 10.0,
+      "median_regret_pct": 0.0
+    },
+    "air": {
+      "n": 34,
+      "agree_ni": 12,
+      "ni": 34,
+      "green": 5,
+      "amber": 1,
+      "red": 28,
+      "agreement_ni_pct": 35.3,
+      "green_pct": 14.7,
+      "median_regret_pct": 3.379
+    },
+    "strong_made": {
+      "n": 31,
+      "agree_ni": 10,
+      "ni": 29,
+      "green": 2,
+      "amber": 7,
+      "red": 22,
+      "agreement_ni_pct": 34.5,
+      "green_pct": 6.5,
+      "median_regret_pct": 2.656
+    }
+  },
+  "top_disagreements": [
+    {
+      "board": "8s7s6c",
+      "hand": "Td9s",
+      "hand_category": "strong_made",
+      "flop_only_preferred_action": "bet",
+      "full_street_preferred_action": "check",
+      "full_street_regret_pct_pot": 24.0292,
+      "stability_flag": "unstable",
+      "classification": "red"
+    },
+    {
+      "board": "5c5d2h",
+      "hand": "JdJc",
+      "hand_category": "strong_made",
+      "flop_only_preferred_action": "bet",
+      "full_street_preferred_action": "check",
+      "full_street_regret_pct_pot": 20.9586,
+      "stability_flag": "stable",
+      "classification": "red"
+    },
+    {
+      "board": "8s7s6c",
+      "hand": "Th9h",
+      "hand_category": "strong_made",
+      "flop_only_preferred_action": "bet",
+      "full_street_preferred_action": "check",
+      "full_street_regret_pct_pot": 20.8893,
+      "stability_flag": "unstable",
+      "classification": "red"
+    },
+    {
+      "board": "5c5d2h",
+      "hand": "Ac6c",
+      "hand_category": "weak_pair",
+      "flop_only_preferred_action": "check",
+      "full_street_preferred_action": "bet",
+      "full_street_regret_pct_pot": 14.1004,
+      "stability_flag": "stable",
+      "classification": "red"
+    },
+    {
+      "board": "5c5d2h",
+      "hand": "9s9c",
+      "hand_category": "strong_made",
+      "flop_only_preferred_action": "bet",
+      "full_street_preferred_action": "check",
+      "full_street_regret_pct_pot": 14.0174,
+      "stability_flag": "stable",
+      "classification": "red"
+    },
+    {
+      "board": "Th9h8d",
+      "hand": "Ac4c",
+      "hand_category": "air",
+      "flop_only_preferred_action": "bet",
+      "full_street_preferred_action": "check",
+      "full_street_regret_pct_pot": 12.8094,
+      "stability_flag": "stable",
+      "classification": "red"
+    },
+    {
+      "board": "5c5d2h",
+      "hand": "7s7h",
+      "hand_category": "strong_made",
+      "flop_only_preferred_action": "bet",
+      "full_street_preferred_action": "check",
+      "full_street_regret_pct_pot": 12.4765,
+      "stability_flag": "stable",
+      "classification": "red"
+    },
+    {
+      "board": "5c5d2h",
+      "hand": "KhQd",
+      "hand_category": "weak_pair",
+      "flop_only_preferred_action": "check",
+      "full_street_preferred_action": "bet",
+      "full_street_regret_pct_pot": 11.4659,
+      "stability_flag": "stable",
+      "classification": "red"
+    },
+    {
+      "board": "5c5d2h",
+      "hand": "QdTc",
+      "hand_category": "weak_pair",
+      "flop_only_preferred_action": "check",
+      "full_street_preferred_action": "bet",
+      "full_street_regret_pct_pot": 11.3609,
+      "stability_flag": "stable",
+      "classification": "red"
+    },
+    {
+      "board": "Kd9c4h",
+      "hand": "4s4c",
+      "hand_category": "strong_made",
+      "flop_only_preferred_action": "check",
+      "full_street_preferred_action": "bet",
+      "full_street_regret_pct_pot": 11.0441,
+      "stability_flag": "unstable",
+      "classification": "red"
+    },
+    {
+      "board": "8s7s6c",
+      "hand": "AdTd",
+      "hand_category": "air",
+      "flop_only_preferred_action": "check",
+      "full_street_preferred_action": "bet",
+      "full_street_regret_pct_pot": 10.5793,
+      "stability_flag": "unstable",
+      "classification": "red"
+    },
+    {
+      "board": "8s7s6c",
+      "hand": "JdTc",
+      "hand_category": "air",
+      "flop_only_preferred_action": "check",
+      "full_street_preferred_action": "bet",
+      "full_street_regret_pct_pot": 10.4202,
+      "stability_flag": "unstable",
+      "classification": "red"
+    },
+    {
+      "board": "As7h2d",
+      "hand": "Ks9s",
+      "hand_category": "air",
+      "flop_only_preferred_action": "bet",
+      "full_street_preferred_action": "check",
+      "full_street_regret_pct_pot": 9.8845,
+      "stability_flag": "stable",
+      "classification": "red"
+    },
+    {
+      "board": "5c5d2h",
+      "hand": "Kc9c",
+      "hand_category": "weak_pair",
+      "flop_only_preferred_action": "check",
+      "full_street_preferred_action": "bet",
+      "full_street_regret_pct_pot": 9.2916,
+      "stability_flag": "stable",
+      "classification": "red"
+    },
+    {
+      "board": "As7h2d",
+      "hand": "JhTd",
+      "hand_category": "air",
+      "flop_only_preferred_action": "bet",
+      "full_street_preferred_action": "check",
+      "full_street_regret_pct_pot": 9.18,
+      "stability_flag": "stable",
+      "classification": "red"
+    }
+  ]
+}

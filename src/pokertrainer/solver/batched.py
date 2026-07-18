@@ -55,6 +55,7 @@ class BatchedCFR:
         self.S: Dict[str, np.ndarray] = {}
         self._Ecache: Dict[frozenset, np.ndarray] = {}
         self._t = 0
+        self._done = 0               # total iterations run (persists across run() calls)
         self._eval = False           # evaluation pass: no regret/strategy updates
         self._cap = None             # captured (s_root, u_root) at the flop root
 
@@ -129,13 +130,25 @@ class BatchedCFR:
         denom = (52 - (street + 2)) - 2
         return UO / denom, UI / denom
 
+    def _get_strat(self, path, node, C, na):
+        """Regret-matched current strategy while training; the iteration-averaged
+        strategy (from the strategy-sum S) in eval mode. The average is the stable
+        equilibrium readout — CFR+ last-iterate oscillates, so per-hand preferred
+        actions must be read from the average."""
+        self._reg(path, node, C, na)          # ensure R and S exist
+        if self._eval:
+            s = self.S[path + node]
+            tot = s.sum(axis=-1, keepdims=True)
+            return np.where(tot > 0, s / np.where(tot > 0, tot, 1.0), 1.0 / na)
+        return _strat(self.R[path + node])
+
     def _solve(self, street, boards, eo, ei, ro, ri, path):
         C = len(boards)
         b = self.bet_frac * (self.P0 + eo + ei)          # [C]
-        s_root = _strat(self._reg(path, "R", C, 2))
-        s_ipc = _strat(self._reg(path, "P", C, 2))
-        s_ovb = _strat(self._reg(path, "V", C, 2))
-        s_ivb = _strat(self._reg(path, "I", C, 2))
+        s_root = self._get_strat(path, "R", C, 2)
+        s_ipc = self._get_strat(path, "P", C, 2)
+        s_ovb = self._get_strat(path, "V", C, 2)
+        s_ivb = self._get_strat(path, "I", C, 2)
 
         # line reaches
         ro_ck = ro * s_root[:, :, CHECK]
@@ -218,11 +231,12 @@ class BatchedCFR:
         ro0 = self.w_o[None, :].copy()
         ri0 = self.w_i[None, :].copy()
         for t in range(1, iterations + 1):
-            self._t = t
+            self._t = self._done + t          # persistent weight for linear averaging
             uo, ui = self._solve(1, [list(self.flop)], np.zeros(1), np.zeros(1),
                                  ro0.copy(), ri0.copy(), "")
             if t % max(1, iterations // 12) == 0 or t == iterations:
                 ev.append((t, float((self.w_o * uo[0]).sum())))
+        self._done += iterations
         rt = time.time() - t0
         _, peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
