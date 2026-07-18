@@ -1,0 +1,76 @@
+{
+  "config": {
+    "roots_solved": 3,
+    "hands_per_side": 20,
+    "full_range_size": 250,
+    "note": "reduced-range projection"
+  },
+  "records_raw": 240,
+  "accepted": 200,
+  "accepted_deduped": 200,
+  "accepted_rate": 0.833,
+  "mixed_share": 0.115,
+  "per_node_accepted": {
+    "bb_first": 60,
+    "btn_vs_check": 60,
+    "bb_vs_bet": 60,
+    "btn_vs_bet": 20
+  },
+  "mean_reach_by_node": {
+    "bb_first": 0.892,
+    "btn_vs_check": 0.855,
+    "bb_vs_bet": 0.696,
+    "btn_vs_bet": 0.071
+  },
+  "accepted_per_root_deduped": 66.7,
+  "projected_accepted_per_root_full_range": 833.3,
+  "projection": {
+    "at_40_roots": 33333,
+    "at_60_roots": 50000,
+    "target_1200_met_at_40": true,
+    "target_1200_met_at_60": true
+  },
+  "distinct_concepts": 51,
+  "est_10q_sessions_at_60_roots": 5000,
+  "coverage": {
+    "by_node": {
+      "bb_first": 60,
+      "btn_vs_check": 60,
+      "bb_vs_bet": 60,
+      "btn_vs_bet": 20
+    },
+    "by_board_texture": {
+      "unpaired": 200,
+      "rainbow": 60,
+      "high_card": 200,
+      "disconnected": 120,
+      "two_tone": 80,
+      "connected": 80,
+      "monotone": 60
+    },
+    "by_hand_category": {
+      "weak_pair": 43,
+      "top_pair": 27,
+      "air": 67,
+      "strong_made": 63
+    },
+    "by_decision_type": {
+      "first_action": 120,
+      "vs_bet": 80
+    },
+    "by_reason": {
+      "pot_control": 23,
+      "realization": 24,
+      "value": 25,
+      "bluff": 12,
+      "bluff_catch": 4,
+      "fold": 36,
+      "value_call": 22,
+      "mixed": 23,
+      "trap": 17,
+      "raise_value": 8,
+      "raise_bluff": 2,
+      "protection": 4
+    }
+  }
+}

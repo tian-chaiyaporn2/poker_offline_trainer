@@ -1,0 +1,35 @@
+{
+  "pack_id": "flop_srp_btn_bb_v1_raise_demo",
+  "version": "v1_raise_demo",
+  "config": {
+    "positions": {
+      "ip": "BTN",
+      "oop": "BB"
+    },
+    "stack_bb": 100,
+    "pot_bb": 5.5,
+    "bet_pct_pot": 66,
+    "rake": 0,
+    "solver_model": "full_street_cfr_plus",
+    "raise_x": 3,
+    "range_note": "DEMO: n=20, 3 boards, with raise (reduced-range demo, not launch authority)"
+  },
+  "provenance": {
+    "git_commit": "5e72a650fbfaed8fc28295f018b493faaae37bb9",
+    "solver_model": "full_street_cfr_plus"
+  },
+  "grade_thresholds_pct_pot": {
+    "best": 0.25,
+    "good": 1.0,
+    "acceptable": 3.0,
+    "costly": 10.0
+  },
+  "record_count": "200",
+  "content_hash": "396c3c64750514d3a20f39321fb891da78dbab0ed5dc764c6da4bd28dd2931c4",
+  "signature": "c9f82e1c1707a37a12ada949f50cc8344b1f0fcc5e9e8c9e6e516c3a3df4aa93",
+  "signing_scheme": "hmac-sha256-dev",
+  "db_bytes": 188416,
+  "gz_bytes": 39552,
+  "records_accepted": 200,
+  "records_after_dedup": 200
+}
