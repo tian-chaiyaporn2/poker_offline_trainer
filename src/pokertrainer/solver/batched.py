@@ -191,7 +191,13 @@ class BatchedCFR:
         u_root = np.stack([u_check, u_bet], axis=2)
 
         if self._eval and street == 1 and path == "":
-            self._cap = (s_root.copy(), u_root.copy())      # flop-root snapshot
+            # snapshot all four flop decision nodes (both players, root + facing bet)
+            self._cap = {
+                "s_root": s_root.copy(), "u_root": u_root.copy(),   # BB check/bet
+                "s_ipc": s_ipc.copy(), "u_ipc": u_ipc.copy(),       # BTN check/bet (vs check)
+                "s_ovb": s_ovb.copy(), "u_ovb": u_ovb.copy(),       # BB fold/call (vs bet)
+                "s_ivb": s_ivb.copy(), "u_ivb": u_ivb.copy(),       # BTN fold/call (vs bet)
+            }
 
         self._update(path + "R", s_root, u_root, ro)
         self._update(path + "P", s_ipc, u_ipc, ri)
@@ -209,18 +215,20 @@ class BatchedCFR:
         self.R[key] = np.maximum(self.R[key] + (u - base), 0.0)
         self.S[key] += self._t * reach[:, :, None] * s
 
-    def flop_root_report(self) -> Dict[str, Dict]:
-        """Per-OOP-hand flop-root decision under the trained (CFR+ last-iterate)
-        profile: conditional EV (bb) of check/bet, their frequencies, and the
-        preferred (highest-EV) action. Same extraction for streets=1 and =3, so
-        the two are directly comparable."""
+    def _eval_capture(self):
         self._eval = True
         self._cap = None
         self._solve(1, [list(self.flop)], np.zeros(1), np.zeros(1),
                     self.w_o[None, :].copy(), self.w_i[None, :].copy(), "")
         self._eval = False
-        s_root, u_root = self._cap                       # each [1, no, 2]
-        opp = self.B @ self.w_i                           # compatible IP mass per OOP hand
+        return self._cap
+
+    def flop_root_report(self) -> Dict[str, Dict]:
+        """Per-OOP-hand flop-root (BB check/bet) decision under the averaged
+        profile: conditional EV (bb), frequencies, preferred action."""
+        cap = self._eval_capture()
+        s_root, u_root = cap["s_root"], cap["u_root"]
+        opp = self.B @ self.w_i
         opp = np.where(opp > 1e-12, opp, 1.0)
         out = {}
         for i in range(self.no):
@@ -232,6 +240,43 @@ class BatchedCFR:
                 "preferred": "check" if ev_ch >= ev_bt else "bet",
             }
         return out
+
+    def flop_decisions_report(self) -> List[Dict]:
+        """All four flop decision nodes (both players, root + facing a bet) under
+        the averaged profile. One record per (node, acting-player hand): actions,
+        per-action conditional EV (bb), frequencies, preferred action, and the
+        opponent reach mass into that node (0 => rarely reached)."""
+        cap = self._eval_capture()
+        s_root = cap["s_root"]; s_ipc = cap["s_ipc"]
+        ro_ck = self.w_o * s_root[0, :, CHECK]         # OOP checked reach
+        ro_bt = self.w_o * s_root[0, :, BET]           # OOP bet reach
+        ri_bt = self.w_i * s_ipc[0, :, BET]            # IP bet (vs check) reach
+
+        nodes = [
+            # (key, acting hands, oc?, actions, cfv, strat, opp reach mass per hand)
+            ("bb_first",    self.oc, "check", "bet", cap["u_root"], s_root, self.B @ self.w_i),
+            ("btn_vs_check", self.ic, "check", "bet", cap["u_ipc"], s_ipc, self.B.T @ ro_ck),
+            ("bb_vs_bet",   self.oc, "fold", "call", cap["u_ovb"], cap["s_ovb"], self.B @ ri_bt),
+            ("btn_vs_bet",  self.ic, "fold", "call", cap["u_ivb"], cap["s_ivb"], self.B.T @ ro_bt),
+        ]
+        acting = {"bb_first": "BB", "btn_vs_check": "BTN", "bb_vs_bet": "BB", "btn_vs_bet": "BTN"}
+        recs: List[Dict] = []
+        for key, combos, a0, a1, u, s, opp_mass in nodes:
+            safe = np.where(opp_mass > 1e-12, opp_mass, 1.0)
+            for i in range(len(combos)):
+                ev0 = float(u[0, i, 0] / safe[i])
+                ev1 = float(u[0, i, 1] / safe[i])
+                recs.append({
+                    "node": key,
+                    "acting_player": acting[key],
+                    "hand": hand_str((int(combos[i, 0]), int(combos[i, 1]))),
+                    "actions": [a0, a1],
+                    "ev": {a0: ev0, a1: ev1},
+                    "freq": {a0: float(s[0, i, 0]), a1: float(s[0, i, 1])},
+                    "preferred": a0 if ev0 >= ev1 else a1,
+                    "reach_mass": float(opp_mass[i]),
+                })
+        return recs
 
     def run(self, iterations: int) -> Dict:
         tracemalloc.start()
