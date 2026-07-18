@@ -1,0 +1,245 @@
+"""Flop-only vs full-street validation (MIT).
+
+Executes the team's validation plan (docs/flop_training_validation_plan.md):
+does the flop-only abstraction change the flop recommendation vs a full
+flop->turn->river solve under IDENTICAL assumptions?
+
+Design: the flop-only model is `BatchedCFR(streets=1)` and the full-street
+reference is `BatchedCFR(streets=3)`. They share the exact same betting tree,
+ranges, pot, stacks, bet size, and acting player — the ONLY difference is whether
+turn/river betting follows the flop. This is the assumption-matched comparison
+the plan's Configuration Freeze (§5) demands (no bet-size or tree mismatch).
+
+Stability (§7.5): the full-street model is snapshotted at a mid checkpoint and at
+the end (same solve); any hand whose full-street preferred action flips between
+them is marked unstable -> Red. This detects non-convergence per-hand.
+
+Outputs: per-hand CSV (§11) + a JSON aggregate for the findings report.
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import os
+import statistics
+import time
+from typing import Dict, List
+
+import numpy as np
+
+from .cards import parse_cards
+from .handinfo import describe_hand
+from .presets import BOARDS
+from .ranges import expand_range
+from .presets import BB_SRP, BTN_SRP
+from .solver.batched import BatchedCFR
+
+# Classification thresholds (§8; engineering starting points).
+GREEN_REGRET_PCT = 0.25
+AMBER_REGRET_PCT = 1.0
+INDIFF_PCT = 0.25          # full-street EV gap below this -> indifferent
+CLEAR_GAP_PCT = 0.5        # each model's EV gap above this -> a "clear" preference
+FREQ_MATERIAL_PP = 25.0    # bet-freq difference above this (pp) -> material
+
+
+def subsample(lst, n):
+    if n >= len(lst):
+        return lst
+    idx = np.linspace(0, len(lst) - 1, n).astype(int)
+    return [lst[i] for i in idx]
+
+
+def hand_category(descriptor: str) -> str:
+    d = descriptor
+    if any(k in d for k in ("two pair", "three of", "straight", "flush", "full", "quads", "overpair")):
+        return "strong_made"
+    if "top pair" in d:
+        return "top_pair"
+    if "pair" in d:                      # middle/bottom/pocket underpair
+        return "weak_pair"
+    if "draw" in d:
+        return "draw"
+    return "air"
+
+
+def classify(agree, regret_pct, indiff, freq_pp, clear_disagree, unstable):
+    if unstable:
+        return "red"
+    if regret_pct > AMBER_REGRET_PCT:
+        return "red"
+    if clear_disagree:
+        return "red"
+    if agree and regret_pct <= GREEN_REGRET_PCT and not indiff and freq_pp < FREQ_MATERIAL_PP:
+        return "green"
+    return "amber"
+
+
+def solve_board(flop, oop, ip, pot, bet_frac, iters):
+    wo, wi = np.ones(len(oop)), np.ones(len(ip))
+    # flop-only
+    s1 = BatchedCFR(flop, oop, ip, wo, wi, pot, bet_frac, streets=1)
+    s1.run(max(200, iters))
+    r1 = s1.flop_root_report()
+    # full-street: snapshot at mid and end for a stability check
+    s3 = BatchedCFR(flop, oop, ip, wo, wi, pot, bet_frac, streets=3)
+    half = iters // 2
+    s3.run(half)
+    r3_mid = s3.flop_root_report()
+    s3.run(iters - half)
+    r3 = s3.flop_root_report()
+    return r1, r3, r3_mid
+
+
+def validate(n=20, iters=280, pot=5.5, bet_frac=0.66, out="output/validation"):
+    os.makedirs(out, exist_ok=True)
+    oop_full = [c for c, _ in expand_range(BB_SRP, parse_cards("As7h2d"))]  # size ref only
+    rows: List[Dict] = []
+    t0 = time.time()
+
+    for bi, entry in enumerate(BOARDS, 1):
+        board_str = entry["board"]
+        flop = parse_cards(board_str)
+        oop = subsample([c for c, _ in expand_range(BB_SRP, flop)], n)
+        ip = subsample([c for c, _ in expand_range(BTN_SRP, flop)], n)
+        r1, r3, r3_mid = solve_board(flop, oop, ip, pot, bet_frac, iters)
+
+        for h in r1:
+            fo, fs, fm = r1[h], r3[h], r3_mid[h]
+            fo_pref, fs_pref = fo["preferred"], fs["preferred"]
+            regret_bb = fs["ev"][fs_pref] - fs["ev"][fo_pref]
+            regret_pct = 100 * regret_bb / pot
+            fs_gap = abs(fs["ev"]["check"] - fs["ev"]["bet"])
+            fo_gap = abs(fo["ev"]["check"] - fo["ev"]["bet"])
+            indiff = (100 * fs_gap / pot) <= INDIFF_PCT
+            agree = fo_pref == fs_pref
+            clear_disagree = (not agree and not indiff
+                              and 100 * fo_gap / pot > CLEAR_GAP_PCT
+                              and 100 * fs_gap / pot > CLEAR_GAP_PCT)
+            freq_pp = abs(fo["freq"]["bet"] - fs["freq"]["bet"]) * 100
+            # Unstable = preferred action flipped between the mid and final
+            # snapshots AND the decision is non-indifferent (a flip between two
+            # near-equal actions is expected noise, not instability).
+            unstable = (fm["preferred"] != fs_pref) and not indiff
+            cls = classify(agree, regret_pct, indiff, freq_pp, clear_disagree, unstable)
+            desc = describe_hand((parse_cards(h)[0], parse_cards(h)[1]), flop)
+            rows.append({
+                "scenario_id": f"srp_btn_bb_100bb_flop_{board_str}",
+                "board": board_str,
+                "hand": h,
+                "board_category": ";".join(entry["categories"]),
+                "hand_category": hand_category(desc),
+                "hand_descriptor": desc,
+                "flop_only_preferred_action": fo_pref,
+                "full_street_preferred_action": fs_pref,
+                "flop_only_bet_freq": round(fo["freq"]["bet"], 4),
+                "full_street_bet_freq": round(fs["freq"]["bet"], 4),
+                "flop_only_ev_check": round(fo["ev"]["check"], 4),
+                "flop_only_ev_bet": round(fo["ev"]["bet"], 4),
+                "full_street_ev_check": round(fs["ev"]["check"], 4),
+                "full_street_ev_bet": round(fs["ev"]["bet"], 4),
+                "full_street_regret_bb": round(regret_bb, 4),
+                "full_street_regret_pct_pot": round(regret_pct, 4),
+                "preferred_action_agreement": agree,
+                "indifference_flag": indiff,
+                "stability_flag": "unstable" if unstable else "stable",
+                "suit_isomorphism_flag": "validated_globally",
+                "classification": cls,
+                "reviewer_status": "pending",
+                "reviewer_notes": "",
+                "publishable": cls == "green",
+            })
+        # Incremental write after each board so a long run survives interruption.
+        _write(rows, out, dict(n=n, iters=iters, pot=pot, bet_frac=bet_frac,
+                               boards_done=bi))
+        print(f"[{bi:2d}/12] {board_str:8s} done ({time.time()-t0:.0f}s elapsed, "
+              f"{len(rows)} rows)", flush=True)
+
+    print(f"\nTotal: {len(rows)} hand-decisions across 12 boards in {time.time()-t0:.0f}s")
+
+
+def _write(rows, out, cfg):
+    # CSV (§11)
+    csv_path = os.path.join(out, "flop_validation.csv")
+    with open(csv_path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        w.writeheader(); w.writerows(rows)
+
+    # Aggregate summary for the findings report
+    def pct(sub, tot):
+        return round(100 * sub / tot, 1) if tot else 0.0
+    tot = len(rows)
+    non_indiff = [r for r in rows if not r["indifference_flag"]]
+    agree_ni = sum(r["preferred_action_agreement"] for r in non_indiff)
+    greens = [r for r in rows if r["classification"] == "green"]
+    ambers = [r for r in rows if r["classification"] == "amber"]
+    reds = [r for r in rows if r["classification"] == "red"]
+    regrets = [r["full_street_regret_pct_pot"] for r in rows]
+    unstable = [r for r in rows if r["stability_flag"] == "unstable"]
+
+    def by(key):
+        cats = {}
+        for r in rows:
+            for c in (r[key].split(";") if key == "board_category" else [r[key]]):
+                d = cats.setdefault(c, {"n": 0, "agree_ni": 0, "ni": 0, "green": 0,
+                                        "amber": 0, "red": 0, "regrets": []})
+                d["n"] += 1
+                d["regrets"].append(r["full_street_regret_pct_pot"])
+                d[r["classification"]] += 1
+                if not r["indifference_flag"]:
+                    d["ni"] += 1
+                    d["agree_ni"] += int(r["preferred_action_agreement"])
+        for c, d in cats.items():
+            d["agreement_ni_pct"] = pct(d["agree_ni"], d["ni"])
+            d["green_pct"] = pct(d["green"], d["n"])
+            d["median_regret_pct"] = round(statistics.median(d["regrets"]), 3)
+            d.pop("regrets")
+        return cats
+
+    bias_flop = statistics.mean(r["flop_only_bet_freq"] for r in rows)
+    bias_full = statistics.mean(r["full_street_bet_freq"] for r in rows)
+
+    summary = {
+        "config": cfg,
+        "totals": {
+            "hand_decisions": tot,
+            "non_indifferent": len(non_indiff),
+            "agreement_all_pct": pct(sum(r["preferred_action_agreement"] for r in rows), tot),
+            "agreement_non_indiff_pct": pct(agree_ni, len(non_indiff)),
+            "green": len(greens), "amber": len(ambers), "red": len(reds),
+            "green_pct": pct(len(greens), tot),
+            "amber_pct": pct(len(ambers), tot),
+            "red_pct": pct(len(reds), tot),
+            "median_regret_pct_pot": round(statistics.median(regrets), 3),
+            "mean_regret_pct_pot": round(statistics.mean(regrets), 3),
+            "p90_regret_pct_pot": round(sorted(regrets)[int(0.9 * len(regrets))], 3),
+            "max_regret_pct_pot": round(max(regrets), 3),
+            "unstable_count": len(unstable),
+            "unstable_pct": pct(len(unstable), tot),
+            "betting_freq_bias_pp": round(100 * (bias_flop - bias_full), 1),
+            "flop_only_avg_bet_freq": round(bias_flop, 3),
+            "full_street_avg_bet_freq": round(bias_full, 3),
+        },
+        "by_board_category": by("board_category"),
+        "by_hand_category": by("hand_category"),
+        # largest disagreements
+        "top_disagreements": [
+            {k: r[k] for k in ("board", "hand", "hand_category",
+                               "flop_only_preferred_action", "full_street_preferred_action",
+                               "full_street_regret_pct_pot", "stability_flag", "classification")}
+            for r in sorted(rows, key=lambda r: -r["full_street_regret_pct_pot"])[:15]
+        ],
+    }
+    with open(os.path.join(out, "summary.json"), "w") as f:
+        json.dump(summary, f, indent=2)
+    print(f"wrote {csv_path} and summary.json")
+
+
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--n", type=int, default=20)
+    ap.add_argument("--iters", type=int, default=280)
+    ap.add_argument("--out", default="output/validation")
+    a = ap.parse_args()
+    validate(n=a.n, iters=a.iters, out=a.out)

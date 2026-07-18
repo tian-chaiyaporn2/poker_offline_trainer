@@ -18,6 +18,7 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 
+from ..cards import hand_str
 from ..evaluator import evaluate
 
 CHECK, BET = 0, 1
@@ -54,6 +55,8 @@ class BatchedCFR:
         self.S: Dict[str, np.ndarray] = {}
         self._Ecache: Dict[frozenset, np.ndarray] = {}
         self._t = 0
+        self._eval = False           # evaluation pass: no regret/strategy updates
+        self._cap = None             # captured (s_root, u_root) at the flop root
 
     def _compat(self):
         B = np.ones((self.no, self.ni))
@@ -165,6 +168,9 @@ class BatchedCFR:
         u_bet = oop_bet_fold + uo_L3
         u_root = np.stack([u_check, u_bet], axis=2)
 
+        if self._eval and street == 1 and path == "":
+            self._cap = (s_root.copy(), u_root.copy())      # flop-root snapshot
+
         self._update(path + "R", s_root, u_root, ro)
         self._update(path + "P", s_ipc, u_ipc, ri)
         self._update(path + "V", s_ovb, u_ovb, ro_ck)
@@ -175,9 +181,35 @@ class BatchedCFR:
         return uo, ui
 
     def _update(self, key, s, u, reach):
+        if self._eval:
+            return
         base = (s * u).sum(axis=2, keepdims=True)
         self.R[key] = np.maximum(self.R[key] + (u - base), 0.0)
         self.S[key] += self._t * reach[:, :, None] * s
+
+    def flop_root_report(self) -> Dict[str, Dict]:
+        """Per-OOP-hand flop-root decision under the trained (CFR+ last-iterate)
+        profile: conditional EV (bb) of check/bet, their frequencies, and the
+        preferred (highest-EV) action. Same extraction for streets=1 and =3, so
+        the two are directly comparable."""
+        self._eval = True
+        self._cap = None
+        self._solve(1, [list(self.flop)], np.zeros(1), np.zeros(1),
+                    self.w_o[None, :].copy(), self.w_i[None, :].copy(), "")
+        self._eval = False
+        s_root, u_root = self._cap                       # each [1, no, 2]
+        opp = self.B @ self.w_i                           # compatible IP mass per OOP hand
+        opp = np.where(opp > 1e-12, opp, 1.0)
+        out = {}
+        for i in range(self.no):
+            ev_ch = float(u_root[0, i, CHECK] / opp[i])
+            ev_bt = float(u_root[0, i, BET] / opp[i])
+            out[hand_str((int(self.oc[i, 0]), int(self.oc[i, 1])))] = {
+                "ev": {"check": ev_ch, "bet": ev_bt},
+                "freq": {"check": float(s_root[0, i, CHECK]), "bet": float(s_root[0, i, BET])},
+                "preferred": "check" if ev_ch >= ev_bt else "bet",
+            }
+        return out
 
     def run(self, iterations: int) -> Dict:
         tracemalloc.start()
