@@ -103,12 +103,13 @@ def solve_board(flop, oop, ip, pot, bet_frac, iters, make):
 
 
 def validate(n=20, iters=280, pot=5.5, bet_frac=0.66, out="output/validation",
-             solver="cpu", dtype="float64", max_boards=len(BOARDS)):
+             solver="cpu", dtype="float64", max_boards=len(BOARDS), board_indices=None):
     os.makedirs(out, exist_ok=True)
     make = _make_solver(solver, dtype)
     rows: List[Dict] = []
     t0 = time.time()
-    boards = BOARDS[:max_boards]
+    boards = ([BOARDS[i] for i in board_indices] if board_indices
+              else BOARDS[:max_boards])
 
     for bi, entry in enumerate(boards, 1):
         board_str = entry["board"]
@@ -257,6 +258,9 @@ if __name__ == "__main__":
     ap.add_argument("--solver", choices=["cpu", "gpu"], default="cpu")
     ap.add_argument("--dtype", default="float64")
     ap.add_argument("--max-boards", type=int, default=len(BOARDS))
+    ap.add_argument("--board-indices", default=None,
+                    help="comma-separated board indices, e.g. 0,2,4,8")
     a = ap.parse_args()
+    bidx = [int(x) for x in a.board_indices.split(",")] if a.board_indices else None
     validate(n=a.n, iters=a.iters, out=a.out, solver=a.solver, dtype=a.dtype,
-             max_boards=a.max_boards)
+             max_boards=a.max_boards, board_indices=bidx)
