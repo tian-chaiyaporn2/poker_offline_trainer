@@ -1,0 +1,182 @@
+"""Offline trainer for the full-street content pack (PRD v1.3) — MIT, stdlib only.
+
+Serves flop decision questions from a signed content pack (output/packs/*.db):
+all four decision nodes (BB/BTN, first action + facing a bet), graded on-device
+using the pack's precomputed action grades, with the plain-language explanation.
+
+Run:  python trainer/pack_server.py   → http://127.0.0.1:8000
+"""
+
+from __future__ import annotations
+
+import datetime as dt
+import glob
+import json
+import os
+import random
+import sqlite3
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlparse
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+RESULTS_DB = os.path.join(HERE, "pack_results.db")
+INDEX = os.path.join(HERE, "pack_index.html")
+
+SITUATION = {
+    "bb_first": "You are the BB (out of position), first to act on the flop.",
+    "btn_vs_check": "You are the BTN. The BB checked to you.",
+    "bb_vs_bet": "You are the BB. You checked; the BTN bet 66% of the pot.",
+    "btn_vs_bet": "You are the BTN. The BB bet 66% of the pot into you.",
+}
+ACTION_LABEL = {"check": "Check", "bet": "Bet 66%", "fold": "Fold",
+                "call": "Call", "raise": "Raise 3x"}
+QUESTIONS = {}
+PACK_META = {}
+
+
+def find_pack() -> str:
+    packs = sorted(glob.glob(os.path.join(ROOT, "output", "packs", "flop_pack_*.db")))
+    if not packs:
+        raise SystemExit("No content pack found. Build one:\n"
+                         "  PYTHONPATH=src python -m pokertrainer.content_pack "
+                         "--records output/content_yield_preview/records.json --version v0_preview")
+    return packs[-1]
+
+
+def load_pack():
+    path = find_pack()
+    conn = sqlite3.connect(path)
+    meta = dict(conn.execute("SELECT key, value FROM pack_meta").fetchall())
+    rows = conn.execute(
+        "SELECT id, board, node, acting_player, hand, actions, ev, freq, "
+        "preferred_action, action_grades, reason, headline, detail, mixed, ev_sep_pct "
+        "FROM flop_decision").fetchall()
+    conn.close()
+    q = {}
+    for (rid, board, node, actor, hand, actions, ev, freq, pref, grades,
+         reason, headline, detail, mixed, sep) in rows:
+        cards = board.split() if " " in board else [board[i:i + 2] for i in range(0, len(board), 2)]
+        q[rid] = {
+            "id": rid, "board": cards, "node": node, "acting_player": actor,
+            "hero_cards": [hand[0:2], hand[2:4]],
+            "situation": SITUATION.get(node, node),
+            "actions": json.loads(actions), "ev": json.loads(ev), "freq": json.loads(freq),
+            "preferred_action": pref, "action_grades": json.loads(grades),
+            "reason": reason, "headline": headline, "detail": json.loads(detail),
+            "mixed": bool(mixed), "ev_sep_pct": sep,
+        }
+    return os.path.basename(path), meta, q
+
+
+def public_question(q):
+    return {"id": q["id"], "board": q["board"], "node": q["node"],
+            "acting_player": q["acting_player"], "hero_cards": q["hero_cards"],
+            "situation": q["situation"],
+            "actions": [{"key": a, "label": ACTION_LABEL.get(a, a)} for a in q["actions"]]}
+
+
+def grade_answer(q, action):
+    grade = q["action_grades"].get(action, "major_error")
+    verdicts = {
+        "best": "Best — top action (or effectively tied).",
+        "good": "Good — a small concession.",
+        "acceptable": "Acceptable — playable, not preferred.",
+        "costly": "Costly — a meaningful recurring leak.",
+        "major_error": "Major error — clearly dominated here.",
+    }
+    return {
+        "grade": grade, "verdict": verdicts[grade],
+        "recommended_action": q["preferred_action"], "mixed": q["mixed"],
+        "headline": q["headline"], "detail": q["detail"], "reason": q["reason"],
+        "action_grades": q["action_grades"],
+        "ev_bb": {a: round(q["ev"][a], 2) for a in q["actions"]},
+        "freq_pct": {a: round(100 * q["freq"][a]) for a in q["actions"]},
+        "labels": {a: ACTION_LABEL.get(a, a) for a in q["actions"]},
+    }
+
+
+def init_results():
+    conn = sqlite3.connect(RESULTS_DB)
+    conn.execute("CREATE TABLE IF NOT EXISTS results (id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                 "question_id TEXT, node TEXT, chosen TEXT, grade TEXT, ts TEXT)")
+    conn.commit(); conn.close()
+
+
+def record(qid, node, action, grade):
+    conn = sqlite3.connect(RESULTS_DB)
+    conn.execute("INSERT INTO results (question_id,node,chosen,grade,ts) VALUES (?,?,?,?,?)",
+                 (qid, node, action, grade, dt.datetime.now().isoformat(timespec="seconds")))
+    conn.commit(); conn.close()
+
+
+def stats():
+    conn = sqlite3.connect(RESULTS_DB)
+    rows = dict(conn.execute("SELECT grade, COUNT(*) FROM results GROUP BY grade").fetchall())
+    total = conn.execute("SELECT COUNT(*) FROM results").fetchone()[0]
+    conn.close()
+    good = rows.get("best", 0) + rows.get("good", 0)
+    return {"total": total, "best": rows.get("best", 0), "good": good,
+            "costly": rows.get("costly", 0) + rows.get("major_error", 0)}
+
+
+class Handler(BaseHTTPRequestHandler):
+    def log_message(self, *a):
+        pass
+
+    def _json(self, obj, code=200):
+        body = json.dumps(obj).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers(); self.wfile.write(body)
+
+    def do_GET(self):
+        p = urlparse(self.path).path
+        if p in ("/", "/index.html"):
+            with open(INDEX, "rb") as f:
+                body = f.read()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers(); self.wfile.write(body)
+        elif p == "/api/next":
+            self._json(public_question(random.choice(list(QUESTIONS.values()))))
+        elif p == "/api/stats":
+            self._json({**stats(), "pack": PACK_META})
+        else:
+            self._json({"error": "not found"}, 404)
+
+    def do_POST(self):
+        length = int(self.headers.get("Content-Length", 0))
+        data = json.loads(self.rfile.read(length) or b"{}")
+        if urlparse(self.path).path == "/api/answer":
+            q = QUESTIONS.get(data.get("question_id"))
+            action = data.get("action")
+            if not q or action not in q["actions"]:
+                self._json({"error": "bad request"}, 400); return
+            fb = grade_answer(q, action)
+            record(q["id"], q["node"], action, fb["grade"])
+            self._json(fb)
+        else:
+            self._json({"error": "not found"}, 404)
+
+
+def main():
+    global QUESTIONS, PACK_META
+    name, meta, QUESTIONS = load_pack()
+    PACK_META = {"file": name, "version": meta.get("version"),
+                 "records": meta.get("record_count"), "signed": bool(meta.get("signature"))}
+    init_results()
+    port = int(os.environ.get("PORT", "8000"))
+    srv = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    print(f"Full-street trainer — pack {name} ({len(QUESTIONS)} questions).")
+    print(f"Open http://127.0.0.1:{port}  (Ctrl+C to stop)")
+    try:
+        srv.serve_forever()
+    except KeyboardInterrupt:
+        print("\nbye")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Full-Street Flop Trainer</title>
+<style>
+  :root{--bg:#0f1720;--panel:#17212b;--line:#2a3947;--txt:#e8eef4;--mut:#93a4b3;
+        --good:#3fb950;--acc:#d29922;--bad:#f85149;--accent:#4493f8;--felt:#1c6b4a;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt);line-height:1.5}
+  header{padding:12px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+  h1{font-size:15px;margin:0;font-weight:650}
+  .muted{color:var(--mut);font-size:12.5px}
+  main{max-width:720px;margin:0 auto;padding:18px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:14px}
+  .sit{color:var(--mut);font-size:14px;margin-bottom:14px}
+  .who{display:inline-block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:#20303e;border:1px solid var(--line);border-radius:10px;padding:2px 9px;margin-bottom:10px;color:#cfe0f0}
+  .felt{background:radial-gradient(ellipse at center,#2a8a63,var(--felt));border-radius:14px;padding:20px;text-align:center;margin-bottom:8px}
+  .label{font-size:11px;color:#cfe7db;letter-spacing:.12em;text-transform:uppercase;opacity:.85;margin-bottom:6px}
+  .cards{display:flex;gap:9px;justify-content:center;margin:6px 0}
+  .pc{width:56px;height:78px;background:#fbfbfb;border-radius:8px;color:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+  .pc .r{font-size:24px;line-height:1}.pc .s{font-size:20px;line-height:1}.pc.red{color:#c1121f}
+  .heroline{margin:12px 0 4px;font-size:13px;color:var(--mut)}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+  button.act{flex:1;min-width:110px;padding:14px;border-radius:10px;border:1px solid var(--line);background:#20303e;color:var(--txt);font-size:15px;font-weight:600;cursor:pointer}
+  button.act:hover{border-color:var(--accent);background:#26394a}button.act:disabled{opacity:.5}
+  .feedback{display:none}
+  .verdict{padding:12px 14px;border-radius:10px;font-weight:650;margin-bottom:12px}
+  .g-best,.g-good{background:rgba(63,185,80,.15);border:1px solid var(--good);color:#7ee787}
+  .g-acceptable{background:rgba(210,153,34,.15);border:1px solid var(--acc);color:#e3b341}
+  .g-costly,.g-major_error{background:rgba(248,81,73,.15);border:1px solid var(--bad);color:#ff7b72}
+  .why{font-size:15px;margin:2px 0 8px}
+  .detail{font-size:13px;color:var(--mut);margin:0 0 12px;padding-left:16px}
+  .detail li{margin:2px 0}
+  .row{margin:8px 0}
+  .barlabel{display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px}
+  .bar{height:9px;background:#22303d;border-radius:5px;overflow:hidden}.bar>i{display:block;height:100%}
+  .tag{font-size:10.5px;padding:1px 7px;border-radius:10px;margin-left:6px}
+  .t-best,.t-good{background:rgba(63,185,80,.2);color:#7ee787}
+  .t-acceptable{background:rgba(210,153,34,.2);color:#e3b341}
+  .t-costly,.t-major_error{background:rgba(248,81,73,.2);color:#ff7b72}
+  .t-rec{background:rgba(68,147,248,.2);color:#79c0ff}
+  .next{margin-top:14px;width:100%;padding:14px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:15px;font-weight:650;cursor:pointer}
+  .stats{display:flex;gap:14px;font-size:12.5px;color:var(--mut);flex-wrap:wrap}.stats b{color:var(--txt)}
+  .reason{display:inline-block;font-size:11px;background:#20303e;border:1px solid var(--line);border-radius:10px;padding:1px 8px;color:#9fd0a8;margin-left:6px}
+</style></head>
+<body>
+<header>
+  <h1>♠ Full-Street Flop Trainer</h1>
+  <div class="stats" id="stats"></div>
+</header>
+<main>
+  <div class="panel">
+    <span class="who" id="who"></span>
+    <div class="sit" id="sit">Loading…</div>
+    <div class="felt"><div class="label">Flop</div><div class="cards" id="board"></div></div>
+    <div class="heroline" id="heroline"></div>
+    <div class="cards" id="hero"></div>
+    <div class="actions" id="acts"></div>
+  </div>
+  <div class="panel feedback" id="fb">
+    <div class="verdict" id="verdict"></div>
+    <div class="why" id="why"></div>
+    <ul class="detail" id="detail"></ul>
+    <div id="bars"></div>
+    <button class="next" id="next">Next hand ↵</button>
+  </div>
+</main>
+<script>
+const SUIT={s:{c:"♠",r:0},h:{c:"♥",r:1},d:{c:"♦",r:1},c:{c:"♣",r:0}};
+let cur=null;
+function cardEl(t){const r=t[0],s=t[1],d=document.createElement("div");
+  d.className="pc"+(SUIT[s].r?" red":"");d.innerHTML=`<span class="r">${r==="T"?"10":r}</span><span class="s">${SUIT[s].c}</span>`;return d;}
+function render(cs,el){el.innerHTML="";cs.forEach(c=>el.appendChild(cardEl(c)));}
+async function loadNext(){
+  document.getElementById("fb").style.display="none";
+  const q=await(await fetch("/api/next")).json();cur=q;
+  document.getElementById("who").textContent=q.acting_player+" to act · "+q.node.replace(/_/g," ");
+  document.getElementById("sit").textContent=q.situation;
+  render(q.board,document.getElementById("board"));
+  document.getElementById("heroline").textContent="You hold:";
+  render(q.hero_cards,document.getElementById("hero"));
+  const box=document.getElementById("acts");box.innerHTML="";
+  q.actions.forEach(a=>{const b=document.createElement("button");b.className="act";b.textContent=a.label;b.onclick=()=>answer(a.key);box.appendChild(b);});
+}
+async function answer(action){
+  document.querySelectorAll("#acts button").forEach(b=>b.disabled=true);
+  const fb=await(await fetch("/api/answer",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({question_id:cur.id,action})})).json();
+  const v=document.getElementById("verdict");v.className="verdict g-"+fb.grade;v.textContent=fb.verdict;
+  document.getElementById("why").innerHTML=fb.headline+`<span class="reason">${fb.reason}</span>`;
+  const dl=document.getElementById("detail");dl.innerHTML="";fb.detail.forEach(d=>{const li=document.createElement("li");li.textContent=d;dl.appendChild(li);});
+  const bars=document.getElementById("bars");bars.innerHTML="";
+  cur.actions.forEach(a=>{const k=a.key,fr=fb.freq_pct[k]||0,ev=fb.ev_bb[k],g=fb.action_grades[k];
+    const chosen=k===action?" ← you":"";const rec=k===fb.recommended_action?'<span class="tag t-rec">recommended</span>':"";
+    const col=(g==="best"||g==="good")?"#3fb950":(g==="acceptable"?"#d29922":"#f85149");
+    const row=document.createElement("div");row.className="row";
+    row.innerHTML=`<div class="barlabel"><span>${a.label}<span class="tag t-${g}">${g.replace("_"," ")}</span>${rec}<b>${chosen}</b></span>
+      <span class="muted">${fr}% · EV ${ev}bb</span></div><div class="bar"><i style="width:${fr}%;background:${col}"></i></div>`;
+    bars.appendChild(row);});
+  document.getElementById("fb").style.display="block";loadStats();
+}
+async function loadStats(){const s=await(await fetch("/api/stats")).json();
+  document.getElementById("stats").innerHTML=
+   `<span>${s.pack.file} · ${s.pack.records} recs ${s.pack.signed?"· 🔏 signed":""}</span>
+    <span>Answered <b>${s.total}</b></span><span style="color:#7ee787">Good <b>${s.good}</b></span>
+    <span style="color:#ff7b72">Costly <b>${s.costly}</b></span>`;}
+document.getElementById("next").onclick=loadNext;
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&document.getElementById("fb").style.display==="block")loadNext();});
+loadNext();loadStats();
+</script></body></html>
