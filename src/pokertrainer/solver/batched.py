@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import time
 import tracemalloc
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 import numpy as np
 

@@ -59,14 +59,11 @@ def _straight_high(rank_set: frozenset) -> int:
     present = set(rank_set)
     if 12 in present:
         present.add(-1)  # ace-low sentinel, one below the deuce (0)
-    high = -1
-    for top in range(12, 2, -1):  # top of a 5-straight ranges 12..3
+    # top ranges 12..3; top==3 covers the wheel A-2-3-4-5 via the -1 sentinel.
+    for top in range(12, 2, -1):
         if all((top - i) in present for i in range(5)):
             return top
-    # explicit wheel check (top == 3 uses -1 sentinel)
-    if all(r in present for r in (-1, 0, 1, 2, 3)):
-        high = 3
-    return high
+    return -1
 
 
 def evaluate5(cards: Sequence[int]) -> int:

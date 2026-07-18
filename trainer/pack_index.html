@@ -70,12 +70,14 @@
 <script>
 const SUIT={s:{c:"♠",r:0},h:{c:"♥",r:1},d:{c:"♦",r:1},c:{c:"♣",r:0}};
 let cur=null;
-function cardEl(t){const r=t[0],s=t[1],d=document.createElement("div");
-  d.className="pc"+(SUIT[s].r?" red":"");d.innerHTML=`<span class="r">${r==="T"?"10":r}</span><span class="s">${SUIT[s].c}</span>`;return d;}
+function cardEl(t){const r=t[0],s=(t[1]||"").toLowerCase(),su=SUIT[s]||{c:s,r:0};
+  const d=document.createElement("div");d.className="pc"+(su.r?" red":"");
+  d.innerHTML=`<span class="r">${r==="T"?"10":r}</span><span class="s">${su.c}</span>`;return d;}
 function render(cs,el){el.innerHTML="";cs.forEach(c=>el.appendChild(cardEl(c)));}
 async function loadNext(){
   document.getElementById("fb").style.display="none";
-  const q=await(await fetch("/api/next")).json();cur=q;
+  let q; try{q=await(await fetch("/api/next")).json();}catch(e){document.getElementById("sit").textContent="Can't reach the trainer server. Is it running?";return;}
+  cur=q;
   document.getElementById("who").textContent=q.acting_player+" to act · "+q.node.replace(/_/g," ");
   document.getElementById("sit").textContent=q.situation;
   render(q.board,document.getElementById("board"));
@@ -105,6 +107,7 @@ async function loadStats(){const s=await(await fetch("/api/stats")).json();
   document.getElementById("stats").innerHTML=
    `<span>${s.pack.file} · ${s.pack.records} recs ${s.pack.signed?"· 🔏 signed":""}</span>
     <span>Answered <b>${s.total}</b></span><span style="color:#7ee787">Good <b>${s.good}</b></span>
+    <span style="color:#e3b341">OK <b>${s.acceptable||0}</b></span>
     <span style="color:#ff7b72">Costly <b>${s.costly}</b></span>`;}
 document.getElementById("next").onclick=loadNext;
 document.addEventListener("keydown",e=>{if(e.key==="Enter"&&document.getElementById("fb").style.display==="block")loadNext();});

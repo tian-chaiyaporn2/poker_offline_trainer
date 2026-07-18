@@ -54,7 +54,8 @@ def subsample(lst, n):
 
 def hand_category(descriptor: str) -> str:
     d = descriptor
-    if any(k in d for k in ("two pair", "three of", "straight", "flush", "full", "quads", "overpair")):
+    if any(k in d for k in ("two pair", "three of", "straight", "flush", "full",
+                            "four of", "overpair")):   # "four of a kind" (evaluator name)
         return "strong_made"
     if "top pair" in d:
         return "top_pair"
@@ -139,7 +140,8 @@ def validate(n=20, iters=280, pot=5.5, bet_frac=0.66, out="output/validation",
             # near-equal actions is expected noise, not instability).
             unstable = (fm["preferred"] != fs_pref) and not indiff
             cls = classify(agree, regret_pct, indiff, freq_pp, clear_disagree, unstable)
-            desc = describe_hand((parse_cards(h)[0], parse_cards(h)[1]), flop)
+            hc0, hc1 = parse_cards(h)
+            desc = describe_hand((hc0, hc1), flop)
             rows.append({
                 "scenario_id": f"srp_btn_bb_100bb_flop_{board_str}",
                 "board": board_str,

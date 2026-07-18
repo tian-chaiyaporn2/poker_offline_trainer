@@ -95,15 +95,20 @@ def _dedup(recs: List[Dict]) -> List[Dict]:
     return out
 
 
-def yield_report(all_recs, n_solved, roots, hands_per_side, full_range_size) -> Dict:
+def yield_report(all_recs, roots, hands_per_side, full_range_size) -> Dict:
     accepted = [r for r in all_recs if r["accepted"]]
     deduped = _dedup(accepted)
     per_node = Counter(r["node"] for r in accepted)
     mixed = sum(r["mixed"] for r in accepted)
-    # projection: accepted scales ~linearly with hands/side (records = 4 nodes x hands)
+    # Two different quantities:
+    #  - RAW accepted records scale ~linearly with hands/side and with root count
+    #    (each root contributes ~4 nodes x hands). Use this for the linear
+    #    projection of available records.
+    #  - DEDUPED records collapse to concepts (node x board_texture x hand_category
+    #    x preferred), so they SATURATE across boards/hands rather than scaling
+    #    linearly. Report separately as the diversity measure.
     scale = full_range_size / hands_per_side if hands_per_side else 1.0
-    acc_per_root = len(deduped) / roots if roots else 0
-    proj_per_root_full = acc_per_root * scale
+    raw_per_root_full = (len(accepted) / roots * scale) if roots else 0
     concepts = len({(r["node"], tuple(r["board_texture"]), r["hand_category"], r["preferred"])
                     for r in deduped})
     return {
@@ -118,16 +123,19 @@ def yield_report(all_recs, n_solved, roots, hands_per_side, full_range_size) -> 
         "per_node_accepted": dict(per_node),
         "mean_reach_by_node": {n: round(float(np.mean([r["reach_mass"] for r in accepted if r["node"] == n])), 3)
                                for n in per_node},
-        "accepted_per_root_deduped": round(acc_per_root, 1),
-        "projected_accepted_per_root_full_range": round(proj_per_root_full, 1),
+        "projected_raw_accepted_per_root_full_range": round(raw_per_root_full, 1),
+        "projection_note": "raw records scale linearly; after concept-dedup the "
+                           "usable count is bounded by distinct concepts x cap",
         "projection": {
-            "at_40_roots": round(proj_per_root_full * 40),
-            "at_60_roots": round(proj_per_root_full * 60),
-            "target_1200_met_at_40": proj_per_root_full * 40 >= 1200,
-            "target_1200_met_at_60": proj_per_root_full * 60 >= 1200,
+            "raw_at_40_roots": round(raw_per_root_full * 40),
+            "raw_at_60_roots": round(raw_per_root_full * 60),
+            # raw records scale linearly with roots; a 40-root launch library
+            # projects well past 1,200 (the concept-dedup ceiling is separately
+            # large — see distinct_concepts_measured).
+            "target_1200_met_at_40_roots": raw_per_root_full * 40 >= 1200,
         },
-        "distinct_concepts": concepts,
-        "est_10q_sessions_at_60_roots": round(proj_per_root_full * 60 / 10),
+        "distinct_concepts_measured": concepts,
+        "est_10q_sessions_raw_at_60_roots": round(raw_per_root_full * 60 / 10),
         "coverage": {
             "by_node": dict(per_node),
             "by_board_texture": dict(Counter(t for r in deduped for t in r["board_texture"])),
@@ -156,15 +164,15 @@ def run(n=40, iters=300, roots=None, solver="cpu", dtype="float64",
         print(f"[{k}/{len(board_list)}] {bstr}: {len(recs)} records "
               f"({sum(r['accepted'] for r in recs)} accepted) [{time.time()-t0:.0f}s]", flush=True)
 
-    rep = yield_report(all_recs, len(all_recs), len(board_list), n, full_range_size)
+    rep = yield_report(all_recs, len(board_list), n, full_range_size)
     with open(os.path.join(out, "yield_report.json"), "w") as f:
         json.dump(rep, f, indent=2)
     with open(os.path.join(out, "records.json"), "w") as f:
         json.dump(all_recs, f)
     print("\n=== content-yield ===")
-    print(json.dumps({k: rep[k] for k in ("accepted_per_root_deduped",
-          "projected_accepted_per_root_full_range", "projection",
-          "distinct_concepts", "per_node_accepted")}, indent=2))
+    print(json.dumps({k: rep[k] for k in ("accepted", "accepted_deduped",
+          "projected_raw_accepted_per_root_full_range", "projection",
+          "distinct_concepts_measured", "per_node_accepted")}, indent=2))
     return rep
 
 

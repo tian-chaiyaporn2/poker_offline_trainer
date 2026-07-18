@@ -31,3 +31,4 @@ reference/**/output/
 
 # Colab upload bundle (regenerable: zip -r poker_solver_gpu.zip src bench)
 poker_solver_gpu.zip
+trainer/pack_results.db

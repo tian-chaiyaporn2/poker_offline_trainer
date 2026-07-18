@@ -50,12 +50,12 @@ def load_pack():
     meta = dict(conn.execute("SELECT key, value FROM pack_meta").fetchall())
     rows = conn.execute(
         "SELECT id, board, node, acting_player, hand, actions, ev, freq, "
-        "preferred_action, action_grades, reason, headline, detail, mixed, ev_sep_pct "
+        "preferred_action, action_grades, reason, headline, detail, mixed "
         "FROM flop_decision").fetchall()
     conn.close()
     q = {}
     for (rid, board, node, actor, hand, actions, ev, freq, pref, grades,
-         reason, headline, detail, mixed, sep) in rows:
+         reason, headline, detail, mixed) in rows:
         cards = board.split() if " " in board else [board[i:i + 2] for i in range(0, len(board), 2)]
         q[rid] = {
             "id": rid, "board": cards, "node": node, "acting_player": actor,
@@ -64,7 +64,7 @@ def load_pack():
             "actions": json.loads(actions), "ev": json.loads(ev), "freq": json.loads(freq),
             "preferred_action": pref, "action_grades": json.loads(grades),
             "reason": reason, "headline": headline, "detail": json.loads(detail),
-            "mixed": bool(mixed), "ev_sep_pct": sep,
+            "mixed": bool(mixed),
         }
     return os.path.basename(path), meta, q
 
@@ -86,7 +86,7 @@ def grade_answer(q, action):
         "major_error": "Major error — clearly dominated here.",
     }
     return {
-        "grade": grade, "verdict": verdicts[grade],
+        "grade": grade, "verdict": verdicts.get(grade, grade),
         "recommended_action": q["preferred_action"], "mixed": q["mixed"],
         "headline": q["headline"], "detail": q["detail"], "reason": q["reason"],
         "action_grades": q["action_grades"],
@@ -117,6 +117,7 @@ def stats():
     conn.close()
     good = rows.get("best", 0) + rows.get("good", 0)
     return {"total": total, "best": rows.get("best", 0), "good": good,
+            "acceptable": rows.get("acceptable", 0),
             "costly": rows.get("costly", 0) + rows.get("major_error", 0)}
 
 

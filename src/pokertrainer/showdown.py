@@ -13,7 +13,7 @@ inner loop stays cheap. Full enumeration => exact and deterministic.
 from __future__ import annotations
 
 from itertools import combinations
-from typing import List, Sequence, Tuple
+from typing import Sequence, Tuple
 
 import numpy as np
 

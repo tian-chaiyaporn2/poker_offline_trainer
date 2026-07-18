@@ -45,8 +45,8 @@ class MultiStreetSpike:
         self.bet_frac = bet_frac
         self.raise_x = raise_x       # raise-to multiple of the bet; None = no raise
         self.n_streets = streets  # 1=flop only(showdown after flop), 2=+turn, 3=+river
-        self.w_o = w_oop / w_oop.sum()
-        self.w_i = w_ip / w_ip.sum()
+        self.w_o = (w_oop / w_oop.sum()).astype(np.float64)   # match batched dtype
+        self.w_i = (w_ip / w_ip.sum()).astype(np.float64)
 
         # Pairwise compatibility (board-independent): 1.0 if combos share no card.
         self.B = self._compat(self.oc, self.ic)
@@ -84,7 +84,8 @@ class MultiStreetSpike:
     def _reg(self, key, n_actions):
         r = self.R.get(key)
         if r is None:
-            player_n = self.no if key[-1] in ("root", "ovb") else self.ni
+            # OOP-owned nodes: root, ovb (OOP vs IP bet), iroop (OOP vs IP raise)
+            player_n = self.no if key[-1] in ("root", "ovb", "iroop") else self.ni
             r = np.zeros((player_n, n_actions))
             self.R[key] = r
             self.S[key] = np.zeros_like(r)

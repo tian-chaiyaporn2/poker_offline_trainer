@@ -17,8 +17,6 @@ import random
 import time
 from typing import Dict, List
 
-import numpy as np
-
 from .compare import compare
 from .mc_equity import mc_equity
 from .normalize import from_solver_arrays

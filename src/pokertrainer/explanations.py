@@ -21,7 +21,6 @@ HEADLINES = {
     "protection":    "Bet to protect — likely ahead but vulnerable, so charge the draws.",
     "bluff":         "Bet as a bluff — little showdown value, so pressure better hands to fold.",
     "semi_bluff":    "Bet as a semi-bluff — you can fold out better hands now and still improve.",
-    "range_advantage": "Bet — your range hits this board harder, so you can apply pressure.",
     "pot_control":   "Check to keep the pot small — decent showdown value, but don't bloat it.",
     "trap":          "Check to trap — you're very strong; let them catch up or bluff.",
     "realization":   "Check — weak holding; take a free card and try to improve.",
@@ -90,7 +89,7 @@ def explain(rec: Dict, board_favored: Optional[str] = None) -> Dict:
     """Return {reason, headline, detail:[...]} for a decision record."""
     reason = classify_reason(rec)
     pref = rec["preferred"]
-    headline = HEADLINES[reason].format(pref=_action_word(pref))
+    headline = HEADLINES[reason]
 
     # EV detail (expandable): how much better the preferred action is.
     evs = rec["ev"]
