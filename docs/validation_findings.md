@@ -4,134 +4,111 @@ _Executes `docs/flop_training_validation_plan.md`. One document: Reports A–D
 (§12), acceptance criteria (§9), hypotheses, stop-condition review (§14), and the
 config/compute caveats that bound the result._
 
-> ## ⚠️ SUPERSEDED — numbers below are from a flawed flop-only model
->
-> The first pass defined the flop-only model as an **immediate 3-card-flop
-> showdown** (no turn/river dealt), which valued **draws as pure high-card**
-> (a flush draw counted as 0% equity). The product's actual flop-only model deals
-> the turn+river runout and **realizes equity** (only future *betting* is absent).
-> The specific numbers in Reports A/B below are therefore **not valid** and are
-> being regenerated with the corrected model (`bet_streets=1`: flop betting, then
-> a pure runout to showdown). The **methodology, harness, config freeze, and
-> compute report (C) still stand.** Corrected results: full-range run via
-> `colab/kaggle_fullrange_validation.ipynb` (now using the fixed model). This
-> banner will be removed when the corrected numbers land.
+_Corrected model (see §1): "flop-only" = flop betting, then turn+river dealt as a
+pure chance runout (equity realized), no future betting. An earlier pass used a
+degenerate flop-only model (immediate 3-card showdown, draws = 0 equity); those
+numbers were withdrawn. The numbers below are from the corrected model._
 
 ---
 
 ## 0. Headline & recommendation
 
-**Do not ship unfiltered flop-only betting frequencies. Recommended path:
-Option B (fundamentals-only beta) now, with a *filtered-Green strategy subset* as
-a fast-follow — gated on one automated check: the full-range GPU re-run.**
+**Do not ship flop-only betting recommendations. Recommended path: Option B —
+fundamentals-only, plus a narrow filtered-Green subset used only for
+"when to check" decisions.**
 
-The flop-only model **systematically over-bets** (+14.4 pp vs full-street), and
-the over-betting is concentrated in **made/value hands** that the full-street
-model prefers to **check** (slow-play, pot control, protecting a checking range).
-Checks, clearly dominated actions, and non-betting fundamentals are safe; the
-prescriptive **bet** recommendations are where it fails.
+The flop-only model **over-bets massively**: it bets **60% of range vs the
+full-street model's 15% (+45 pp)**, and on non-indifferent decisions its
+preferred action agrees with full-street only **48.6% of the time** — no better
+than a coin flip. Almost every disagreement is the same shape: **flop-only bets,
+full-street checks.** Only **36.7%** of decisions are safe (Green), and those are
+concentrated in **checking** decisions (air, dry boards).
 
-Against the plan's Option-A bar the model does **not** qualify (agreement 77% <
-90%; Green 58% < 70%), but median full-street regret is **0.0% of pot** and a
-**138-question Green subset** is individually safe.
+The actionable split: **flop-only's *check* recommendations are largely safe**
+(full-street checks a superset of what flop-only checks); **its *bet*
+recommendations are largely wrong.** So the product can teach "when to check" and
+non-betting fundamentals — not "when to bet" — from flop-only data.
 
-**Safety without a human reviewer.** The safety mechanism is the *deterministic
-regret filter* (the Green classification), which needs no human. A Green question
-is, by definition, one whose recommended action matches the full-street model
-within ≤0.25% pot and is stable — its core claim is machine-verified. The
-conservative, reviewer-free posture is therefore: **ship only Green as scored
-questions; ship everything else as non-prescriptive fundamentals (never score
-Amber); keep explanations action-focused** ("checking is best here") rather than
-narrating multi-street logic the flop-only model can't justify. This removes the
-two things a human was there to catch — misleading "several actions OK" framing
-and over-claimed reasoning — by simply not shipping those as graded strategy.
+**Safety without a human reviewer** rests on the deterministic Green filter: ship
+only Green as scored questions, everything else as non-prescriptive fundamentals,
+explanations action-focused. See §Report D.
 
 ---
 
 ## 1. What was compared (and the caveats that bound it)
 
-- **Flop-only model** = `BatchedCFR(streets=1)`; **full-street reference** =
-  `BatchedCFR(streets=3)` — the *same solver and betting tree*, generated from one
-  frozen config (`docs/validation_config.md`). The **only** difference is whether
-  turn/river betting follows the flop. This is the assumption-matched comparison
-  §5 requires (no range/tree/stack/pot/bet-size mismatch possible).
-- **Preferred action** = highest-EV action. **Full-street regret** = full-street
+- **Flop-only** = `BatchedCFR(streets=3, bet_streets=1)` — flop betting, then
+  turn+river dealt as pure chance, equity realized at showdown. **Full-street** =
+  `bet_streets=3` — betting on all three streets. Same solver, same tree, one
+  frozen config (`docs/validation_config.md`); the only difference is turn/river
+  betting. This matches the product's flop-only solver, which likewise over-bets
+  (~78% of range in the POC) — the corrected model faithfully represents it.
+- **Preferred action** = highest-EV action; **full-street regret** = full-street
   EV(best) − full-street EV(flop-only's preferred action).
-- **Strategies read from the iteration-averaged profile** (not CFR+ last-iterate,
-  which oscillates and produced spurious instability). Convergence verified:
-  non-indifferent preferred actions stable from ~200 iters; run used 400 iters
-  with a mid-snapshot at 200 → **0.4% unstable** (§7.5 satisfied).
-
-### Caveats (must be resolved before final sign-off — see §7)
-
-1. **Single bet size (66%)**, required for a matched tree. This validates the
-   *abstraction*, not the exact 3-bet-size (33/75%) shipped question set. The
-   literal 120 shipped questions need a 3-size full-street solver (scoped
-   follow-up).
-2. **Reduced ranges (20 hands/side), CPU first pass.** Full ~250-hand ranges at
-   full-street need the GPU. The **direction** of every finding (over-betting of
-   made hands; safe checks/fundamentals) is robust and matches known solver
-   behaviour, but exact percentages will shift at full range. The plan's
-   Definition of Done (§15) requires the full-range 30–50 board GPU run.
+- **Strategies read from the iteration-averaged profile** (last-iterate
+  oscillates). Converged: **0.4% unstable**; non-indiff preferred stable ~200
+  iters; run used 400 iters, mid-snapshot at 200.
+- **Caveat — reduced ranges (20 hands/side), CPU.** Full ~250-hand ranges need
+  the GPU (`colab/kaggle_fullrange_validation.ipynb`, now using the corrected
+  model). The over-betting is **inherent to the no-future-street abstraction**
+  (confirmed by the POC's own ~78% betting), so full range is very unlikely to
+  rescue the betting recommendations; it will refine the exact Green%.
+- **Caveat — single bet size (66%)**, for a matched tree. Validating the literal
+  3-bet-size shipped questions needs a 3-size full-street solver (follow-up).
 
 ---
 
 ## Report A — Strategy fidelity
 
-_12 boards, 240 hand-decisions (210 non-indifferent)._
+_12 boards, 240 hand-decisions (222 non-indifferent)._
 
 | Metric | Result | Option-A target |
 |---|---|---|
-| Preferred-action agreement (all) | **74.6%** | — |
-| Preferred-action agreement (non-indifferent) | **77.1%** | ≥ 90% ❌ |
-| Full-street regret — median | **0.00% pot** | ≤ 0.25% ✅ |
-| Full-street regret — mean / p90 / max | 0.63% / 1.12% / **11.35%** | — |
-| Betting-frequency bias (flop-only − full-street) | **+14.4 pp** (0.294 vs 0.150) | understood ✅ |
-| Unstable (non-indiff preferred flips 200→400) | **0.4%** | low ✅ |
+| Preferred-action agreement (all / non-indiff) | 47.5% / **48.6%** | ≥ 90% ❌ |
+| Full-street regret — median | **0.05% pot** | ≤ 0.25% ✅ |
+| Full-street regret — mean / p90 / max | 1.94% / 6.0% / **29.5%** | — |
+| Betting-frequency bias (flop-only − full-street) | **+45.2 pp** (0.60 vs 0.15) | ❌ severe |
+| Unstable | **0.4%** | low ✅ |
 
-The regret distribution is **heavily right-skewed**: most decisions are fine
-(median 0), but a tail (Red 13%) reaches ~11% of pot — enough to teach a costly
-habit if shipped unfiltered.
+Median regret is near 0 (the many *check* agreements), but the mean/p90/max are
+large — a heavy tail of costly **over-bets** (regret to ~29% of pot).
 
-**By hand category** — disagreement is concentrated exactly where H2 predicted:
+**By hand category** — made hands and pairs disagree most:
 
 | category | n | agree (non-indiff) | Green % |
 |---|---:|---:|---:|
-| top_pair | 22 | **50.0%** | **22.7%** |
-| strong_made | 67 | **67.3%** | **34.3%** |
-| weak_pair | 73 | 85.3% | 74.0% |
-| air | 78 | 83.1% | 71.8% |
+| air | 78 | **71.8%** | **65.4%** |
+| top_pair | 22 | 43.8% | 31.8% |
+| weak_pair | 73 | 36.8% | 24.7% |
+| strong_made | 67 | **34.5%** | **17.9%** |
 
-The counter-intuitive but correct signal: **made/value hands are the *least*
-safe**, because the full-street model checks many of them (slow-play, pot
-control, checking-range protection) while flop-only bets them. Air and weak pairs
-agree far more often.
+Air is the *safest* (both models check it); made/value hands are least safe —
+full-street checks them (slow-play, pot control, checking-range protection) while
+flop-only bets.
 
-**By board category** — safest to least safe:
+**By board category** — dry safe, connected/draw-heavy unsafe:
 
 | category | agree (non-indiff) | Green % |
 |---|---:|---:|
-| monotone | 87.5% | **85.0%** |
-| paired / low | 82.5% / 76.9% | 62.5% |
-| high_card | 77.0% | 54.0% |
-| dry | 68.8% | 50.0% |
-| connected | 75.6% | **38.3%** |
+| dry | **79.2%** | **60.0%** |
+| rainbow / low | 55.9% / 53.8% | 45.0% / 43.8% |
+| monotone / paired | 52.5% / 55.0% | 45.0% / 42.5% |
+| two_suit | 33.9% | 21.2% |
+| draw_heavy | 30.8% | 15.0% |
+| connected | **13.3%** | **6.7%** |
 
-Monotone/paired/low boards (both models check-heavy) are safest; connected and
-dry boards (more marginal betting spots) are least safe.
+Dry boards (little betting incentive) are safe; connected/two-suit/draw-heavy
+boards — where flop-only over-bets draws and marginal hands hardest — are unsafe.
 
-**Largest disagreements — all the same shape (flop-only bets, full-street checks):**
+**Largest disagreements — all flop-only-bet → full-street-check:**
 
 | board | hand | category | regret %pot |
 |---|---|---|---:|
-| 6h4d2c | 9s8h | air | 11.35 |
-| Qh8h3h | JdJc | weak_pair | 11.03 |
-| As7h2d | AhTc | top_pair | 10.98 |
-| KsKd6h | 9s8h | weak_pair | 9.93 |
-| As7h2d | AcJh | top_pair | 9.02 |
-
-Every one of the top disagreements is **flop-only "bet" → full-street "check"** —
-the over-betting bias, made concrete.
+| Qh8h3h | 6d6c | weak_pair | 29.5 |
+| Qh8h3h | 8c7c | weak_pair | 25.1 |
+| 7s5s2s | Ah6h | air (draw) | 23.2 |
+| 7s5s2s | 3h3c | weak_pair | 21.5 |
+| 7s5s2s | AhTh | air (draw) | 20.1 |
 
 ---
 
@@ -139,17 +116,18 @@ the over-betting bias, made concrete.
 
 | Class | Count | % | Meaning |
 |---|---:|---:|---|
-| **Green** (publishable, scored) | 138 | **57.5%** | same action, regret ≤ 0.25% pot, stable |
-| **Amber** (teach as "several OK") | 70 | 29.2% | regret 0.25–1.0%, or near-indifferent, or freq differs |
-| **Red** (do not ship as strategy) | 32 | 13.3% | regret > 1.0%, clear disagreement, or (0.4%) unstable |
+| **Green** (publishable, scored) | 88 | **36.7%** | same action, regret ≤ 0.25% pot, stable |
+| **Amber** (non-scored) | 76 | 31.7% | regret 0.25–1.0%, near-indifferent, or freq differs |
+| **Red** (do not ship as strategy) | 76 | 31.7% | regret > 1.0%, clear disagreement, or unstable |
 
-- **Publishable now (Green): 138 questions** across all 12 boards — a real
-  curriculum, but below the 70% bar for declaring the *model* shippable.
-- **Concepts safe to teach:** checking decisions, clearly dominated actions,
-  monotone/paired/low-board play, and all **non-betting fundamentals** (equity,
-  hand strength, range interaction, board texture).
-- **Concepts requiring full-street content:** value-betting made hands,
-  slow-play/pot-control, thin bets on connected/dry boards, and bet-sizing.
+- **Publishable now (Green): 88 questions**, but strategically **narrow** — skewed
+  to *check* decisions on air and dry boards. Prescriptive **betting** content is
+  mostly Amber/Red.
+- **Safe to teach:** when to check, clearly dominated actions, dry/air play, and
+  **all non-betting fundamentals** (equity, hand strength, range interaction,
+  board texture).
+- **Requires full-street content:** value-betting, slow-play/pot-control, thin
+  bets, draws, connected/two-suit board play, and bet-sizing.
 
 ---
 
@@ -157,88 +135,73 @@ the over-betting bias, made concrete.
 
 _From the GPU benchmark (`docs/validation_config.md` §6) plus this CPU run._
 
-- **Full-street, full ranges (T4 GPU):** ~2.2 s/iter → **~22 min/board** at 600
-  iters; **~4.4 h** for a 12-board library.
-- **Convergence:** non-indifferent preferred actions stable from **~200 iters**
-  (0 changes 200→700). 600 iters is conservative → real cost likely ~⅓ lower.
-- **CPU vs GPU:** GPU ~10–15× faster; GPU EV == CPU EV (~1e-14). No material
-  disagreement (a §14 stop condition — cleared).
-- **This validation run (CPU, reduced n=20):** ~9.4 min/board for *both* models,
-  12 boards in ~1.9 h. Memory: a few MB.
-- **Library estimate (T4, 600 iters; halve if 200 suffice):** 100 boards ≈ 37 h,
-  500 ≈ 183 h, 1000 ≈ 367 h on one T4 → an A100/H100 (~5–15×) does 1000 boards in
-  ~1–3 days; board-level parallelism scales linearly (boards independent).
+- **Full-street, full ranges (T4 GPU):** ~2.2 s/iter → **~22 min/board**; the
+  corrected flop-only adds a runout pass, so a full 12-board validation is
+  **~4–6 h** headless on Kaggle (within the 30 h quota).
+- **Convergence:** non-indiff preferred actions stable from ~200 iters; 0.4%
+  unstable at 400.
+- **CPU vs GPU:** GPU ~10–15× faster; GPU EV == CPU EV (~0, exact). No material
+  disagreement (§14 stop condition cleared).
+- **This CPU run:** ~11 min/board (both models, n=20), 12 boards in ~2.2 h.
+- **Library estimate (T4, 600 iters):** 100 boards ≈ 37 h, 1000 ≈ 367 h on one
+  T4; A100/H100 ≈ 5–15× → ~1–3 days for 1000 boards, parallel across GPUs.
 
 ---
 
 ## Report D — Recommendation
 
-**Primary: Option B — ship a fundamentals-only beta now.** With 77% agreement and
-58% Green, the model as a whole is not safe for prescriptive betting instruction;
-the +14.4 pp over-bet would teach a systematic leak. Equity, hand-strength,
-range-interaction, and board-texture content is correct and stable and can ship.
+**Option B — fundamentals-only, no prescriptive betting.** Agreement is ~50%
+(coin-flip) and Green is 37%; the model is not safe for teaching *when to bet*.
+Ship equity, hand-strength, range-interaction, and board-texture content, which
+are correct and stable, and must not claim flop-only frequencies are GTO.
 
-**Fast-follow: filtered Option A** — ship the **138 Green questions** as scored
-strategy content, gated on a single automated check: the **full-range GPU re-run**
-confirming the Green subset holds at full resolution (this pass used 20-hand
-ranges). No human reviewer required — the Green filter is the deterministic safety
-gate (see §0). The app must not claim flop-only frequencies are full-street GTO
-(§9 Option B rule), and only Green ships as *scored* content.
+**Narrow filtered add-on (deterministic, no human reviewer):** the **88 Green
+questions** may ship as scored — but they are dominated by *check* decisions on
+air/dry boards, so treat this as a "when to check" module, not a general betting
+curriculum. Gate: the **full-range GPU re-run** (confirms Green% at full
+resolution). Safety mechanism = the Green filter alone (a Green question's
+recommended action is machine-verified within ≤0.25% pot of full-street);
+**never score Amber; keep explanations action-focused.**
 
-**Do not** ship unfiltered flop-only betting frequencies.
+**Do not** ship flop-only *bet* recommendations — the +45 pp over-bet is a
+systematic, costly leak.
 
 ---
 
 ## Hypotheses (§3)
 
-- **H1 — robust actions exist: CONFIRMED.** Median regret 0.0%; obvious
-  checks/dominated actions agree; air & weak pairs 83–85% agreement.
-- **H2 — disagreement is concentrated: CONFIRMED**, and localised more precisely
-  than expected: in **made/value hands the full-street model checks**
-  (slow-play/pot-control), plus draws/marginal spots. All top disagreements are
-  flop-only-bet → full-street-check.
-- **H3 — a safe publishable subset exists: PARTIALLY.** A deterministic
-  regret-filter yields a 57.5% Green subset — real, but below the 70% bar; the
-  filter works, the model just isn't clean enough to pass Option A wholesale.
-- **H4 — fundamentals remain useful: CONFIRMED.** Non-prescriptive content is
-  unaffected by the abstraction and is the safe immediate product.
+- **H1 — robust actions exist: CONFIRMED (checks).** Air/dry checks agree
+  strongly; median regret ~0.
+- **H2 — disagreement is concentrated: CONFIRMED**, in made/value hands, weak
+  pairs, draws, and connected/two-suit boards — all flop-only-bet → full-street-
+  check. Broader than H2 anticipated (it's ~half of all decisions).
+- **H3 — a safe publishable subset exists: WEAKLY.** 37% Green, skewed to check
+  decisions; the filter works but leaves a narrow, betting-poor curriculum.
+- **H4 — fundamentals remain useful: CONFIRMED**, and is now the primary product.
 
 ## Acceptance criteria (§9)
 
-**Option A (filtered strategy) — NOT met:** agreement 77.1% (< 90%), Green 57.5%
-(< 70%). Median regret 0.0% (✅) is the one primary criterion met.
-**Option B (fundamentals-only) — MET:** equity/classification/range/board metrics
-are correct and stable; the app can ship these while avoiding GTO claims.
+**Option A (filtered strategy) — NOT met:** agreement 48.6% (< 90%), Green 36.7%
+(< 70%). **Option B (fundamentals-only) — MET.**
 
 ## Stop-condition review (§14) — none triggered
 
-- CPU vs GPU differ materially: **NO** (EV equal to ~1e-14).
-- Increasing iterations flips clear preferred actions repeatedly: **NO** (stable
-  from ~200 iters; 0.4% unstable at 400).
-- Suit-isomorphic states disagree: **NO** (evaluator/showdown suit-iso unit-tested).
-- Full-street EVs fail internal consistency: **NO** (prize identity holds up to
-  the expected card-removal normalisation).
-- Benchmark ≠ full flop-root tree: **NO** (clarified in §6 — it is a flop root).
-- Ranges/action trees differ between models: **NO** (same code, one frozen config).
+CPU vs GPU exact; preferred actions stable with iterations (0.4% unstable);
+suit-isomorphism unit-tested; prize identity holds; benchmark is a flop root;
+ranges/trees identical between models (one frozen config).
 
 ## Definition of Done (§15) — status
 
-**Met:** harness + both models under one frozen config; full-street regret +
-safety class for every compared hand; largest disagreements investigated (all the
-same over-betting shape); GPU runtime/memory reproducible; CPU/GPU agreement.
-**Outstanding for final sign-off:** the full-range **GPU** re-run (this pass: 12
-boards, 20-hand ranges) — runnable now via `colab/poker_fullrange_validation.ipynb`
-(the harness runs on the GPU solver with `--solver gpu`). The plan's human-review
-gate (§10) is **dropped** by product decision; safety instead rests on the
-deterministic Green filter (see §0), which is why the reviewer-free posture ships
-only Green as scored content. This pass establishes the method — converged,
-stable, CPU/GPU-exact — and gives a decision-ready direction.
-
----
+**Met:** both (corrected) models under one frozen config; regret + safety class
+per hand; disagreements investigated (all the over-betting shape); GPU
+runtime/memory reproducible; CPU/GPU exact. **Outstanding:** the full-range GPU
+re-run (this pass: 12 boards, 20-hand ranges) — runnable now via
+`colab/kaggle_fullrange_validation.ipynb`. The human-review gate (§10) is dropped
+by product decision; safety rests on the deterministic Green filter.
 
 ## Artifacts
 
-- Per-hand dataset (§11 schema): `output/validation/flop_validation.csv` (240 rows)
-- Machine-readable aggregate: `output/validation/summary.json`
-- Config freeze + benchmark clarification: `docs/validation_config.md`
-- Harness (re-runnable at full scale on GPU): `src/pokertrainer/validate_flop.py`
+- Per-hand dataset (§11): `output/validation_corrected/flop_validation.csv` (240 rows)
+- Aggregate: `output/validation_corrected/summary.json`
+- Config freeze + benchmark: `docs/validation_config.md`
+- Harness (runs at full scale on GPU): `src/pokertrainer/validate_flop.py`
