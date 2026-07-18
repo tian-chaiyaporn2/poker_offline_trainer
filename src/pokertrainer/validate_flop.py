@@ -78,21 +78,24 @@ def classify(agree, regret_pct, indiff, freq_pp, clear_disagree, unstable):
 
 
 def _make_solver(solver, dtype):
-    """Return a factory building a flop-root-reporting solver on cpu or gpu."""
+    """Return a factory building a flop-root-reporting solver on cpu or gpu.
+    bet_streets controls which streets have betting (later streets = pure runout)."""
     if solver == "gpu":
-        return lambda f, o, i, wo, wi, pot, bf, streets: BatchedGPUCFR(
-            f, o, i, wo, wi, pot, bf, streets=streets, backend="auto", dtype=dtype)
-    return lambda f, o, i, wo, wi, pot, bf, streets: BatchedCFR(
-        f, o, i, wo, wi, pot, bf, streets=streets)
+        return lambda f, o, i, wo, wi, pot, bf, bet_streets: BatchedGPUCFR(
+            f, o, i, wo, wi, pot, bf, streets=3, bet_streets=bet_streets,
+            backend="auto", dtype=dtype)
+    return lambda f, o, i, wo, wi, pot, bf, bet_streets: BatchedCFR(
+        f, o, i, wo, wi, pot, bf, streets=3, bet_streets=bet_streets)
 
 
 def solve_board(flop, oop, ip, pot, bet_frac, iters, make):
     wo, wi = np.ones(len(oop)), np.ones(len(ip))
-    # flop-only
+    # FLOP-ONLY = flop betting, then turn+river dealt as pure chance (no betting),
+    # equity realized at showdown. (bet_streets=1; full 3-card->5-card runout.)
     s1 = make(flop, oop, ip, wo, wi, pot, bet_frac, 1)
     s1.run(max(200, iters))
     r1 = s1.flop_root_report()
-    # full-street: snapshot at mid and end for a stability check
+    # FULL-STREET = betting on all three streets. Snapshot mid+end for stability.
     s3 = make(flop, oop, ip, wo, wi, pot, bet_frac, 3)
     half = iters // 2
     s3.run(half)

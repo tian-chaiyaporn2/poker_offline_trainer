@@ -62,7 +62,8 @@ def _strat(xp, reg):
 
 class BatchedGPUCFR:
     def __init__(self, flop, oop, ip, w_oop, w_ip, pot_bb,
-                 bet_frac=0.66, streets=3, backend="auto", dtype="float64"):
+                 bet_frac=0.66, streets=3, backend="auto", dtype="float64",
+                 bet_streets=None):
         self.xp, self.scatter_add, self.to_dev, self.to_host, self.backend = get_backend(backend)
         xp = self.xp
         # Compute dtype for reaches/regrets/showdown. float32 is much faster on
@@ -75,6 +76,7 @@ class BatchedGPUCFR:
         self.P0 = float(pot_bb)
         self.bet_frac = bet_frac
         self.n_streets = streets
+        self.bet_streets = streets if bet_streets is None else bet_streets
 
         # host "alive" masks: combo does NOT contain card c
         o_alive = np.ones((52, self.no), np.float64)
@@ -188,6 +190,12 @@ class BatchedGPUCFR:
     def _solve(self, street, boards, eo, ei, ro, ri, path):
         xp = self.xp
         C = len(boards)
+        if street > self.bet_streets:
+            # distinct path suffix so per-path caches don't collide with the
+            # betting-street chance node at the same prefix
+            if street >= self.n_streets:
+                return self._showdown(boards, eo, ei, ro, ri, path + "s")
+            return self._chance(street, boards, eo, ei, ro, ri, path + "c")
         b = self.bet_frac * (self.P0 + eo + ei)
         s_root = self._get_strat(path, "R", C, True)
         s_ipc = self._get_strat(path, "P", C, False)

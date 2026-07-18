@@ -34,7 +34,7 @@ def _strat(reg: np.ndarray) -> np.ndarray:
 
 class BatchedCFR:
     def __init__(self, flop: List[int], oop, ip, w_oop, w_ip, pot_bb,
-                 bet_frac: float = 0.66, streets: int = 3):
+                 bet_frac: float = 0.66, streets: int = 3, bet_streets=None):
         self.flop = list(flop)
         self.oc = np.array(oop, dtype=np.int64)
         self.ic = np.array(ip, dtype=np.int64)
@@ -42,6 +42,10 @@ class BatchedCFR:
         self.P0 = float(pot_bb)
         self.bet_frac = bet_frac
         self.n_streets = streets
+        # Betting happens only on streets 1..bet_streets; later streets are pure
+        # chance runouts (both check) that still realize equity to showdown. So
+        # flop-only-with-runout = streets=3, bet_streets=1; full = bet_streets=3.
+        self.bet_streets = streets if bet_streets is None else bet_streets
         self.w_o = (w_oop / w_oop.sum()).astype(np.float64)
         self.w_i = (w_ip / w_ip.sum()).astype(np.float64)
         # combo card lookup for fast "combo contains card c" masks
@@ -144,6 +148,11 @@ class BatchedCFR:
 
     def _solve(self, street, boards, eo, ei, ro, ri, path):
         C = len(boards)
+        if street > self.bet_streets:
+            # No betting this street: both check, realize runout / showdown.
+            if street >= self.n_streets:
+                return self._showdown(boards, eo, ei, ro, ri)
+            return self._chance(street, boards, eo, ei, ro, ri, path + "c")
         b = self.bet_frac * (self.P0 + eo + ei)          # [C]
         s_root = self._get_strat(path, "R", C, 2)
         s_ipc = self._get_strat(path, "P", C, 2)
