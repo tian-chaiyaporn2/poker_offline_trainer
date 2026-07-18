@@ -4,6 +4,19 @@ _Executes `docs/flop_training_validation_plan.md`. One document: Reports A–D
 (§12), acceptance criteria (§9), hypotheses, stop-condition review (§14), and the
 config/compute caveats that bound the result._
 
+> ## ⚠️ SUPERSEDED — numbers below are from a flawed flop-only model
+>
+> The first pass defined the flop-only model as an **immediate 3-card-flop
+> showdown** (no turn/river dealt), which valued **draws as pure high-card**
+> (a flush draw counted as 0% equity). The product's actual flop-only model deals
+> the turn+river runout and **realizes equity** (only future *betting* is absent).
+> The specific numbers in Reports A/B below are therefore **not valid** and are
+> being regenerated with the corrected model (`bet_streets=1`: flop betting, then
+> a pure runout to showdown). The **methodology, harness, config freeze, and
+> compute report (C) still stand.** Corrected results: full-range run via
+> `colab/kaggle_fullrange_validation.ipynb` (now using the fixed model). This
+> banner will be removed when the corrected numbers land.
+
 ---
 
 ## 0. Headline & recommendation
