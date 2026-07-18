@@ -101,6 +101,9 @@ class BatchedGPUCFR:
         self._child: Dict[str, tuple] = {}   # cached chance structure per path
         self._bidx: Dict[str, object] = {}   # cached showdown board indices per path
         self._t = 0
+        self._done = 0
+        self._eval = False
+        self._cap = None
 
     def _build_showdown_tensor(self):
         """Precompute win-matrix E for every showdown board -> one device tensor."""
@@ -171,14 +174,25 @@ class BatchedGPUCFR:
         self.scatter_add(UI, pk_d, ui_c)
         return UO / denom, UI / denom
 
+    def _get_strat(self, path, node, C, player_o, na=2):
+        """Current strategy while training; iteration-averaged (from S) in eval
+        mode — the stable equilibrium readout (last-iterate oscillates)."""
+        self._reg(path + node, C, player_o, na)   # ensure R,S exist
+        xp = self.xp
+        if self._eval:
+            s = self.S[path + node]
+            tot = s.sum(axis=-1, keepdims=True)
+            return xp.where(tot > 0, s / xp.where(tot > 0, tot, 1.0), 1.0 / na)
+        return _strat(xp, self.R[path + node])
+
     def _solve(self, street, boards, eo, ei, ro, ri, path):
         xp = self.xp
         C = len(boards)
         b = self.bet_frac * (self.P0 + eo + ei)
-        s_root = _strat(xp, self._reg(path + "R", C, True, 2))
-        s_ipc = _strat(xp, self._reg(path + "P", C, False, 2))
-        s_ovb = _strat(xp, self._reg(path + "V", C, True, 2))
-        s_ivb = _strat(xp, self._reg(path + "I", C, False, 2))
+        s_root = self._get_strat(path, "R", C, True)
+        s_ipc = self._get_strat(path, "P", C, False)
+        s_ovb = self._get_strat(path, "V", C, True)
+        s_ivb = self._get_strat(path, "I", C, False)
 
         ro_ck = ro * s_root[:, :, CHECK]; ro_bt = ro * s_root[:, :, BET]
         ri_ck = ri * s_ipc[:, :, CHECK]; ri_bt = ri * s_ipc[:, :, BET]
@@ -203,6 +217,9 @@ class BatchedGPUCFR:
         oop_bet_fold = (self.P0 + ei)[:, None] * ((ri * s_ivb[:, :, FOLD]) @ self.B.T)
         u_root = xp.stack([u_check, oop_bet_fold + uo_L3], axis=2)
 
+        if self._eval and street == 1 and path == "":
+            self._cap = (s_root, u_root)
+
         self._update(path + "R", s_root, u_root, ro)
         self._update(path + "P", s_ipc, u_ipc, ri)
         self._update(path + "V", s_ovb, u_ovb, ro_ck)
@@ -212,9 +229,38 @@ class BatchedGPUCFR:
         return uo, ui
 
     def _update(self, key, s, u, reach):
+        if self._eval:
+            return
         base = (s * u).sum(axis=2, keepdims=True)
         self.R[key] = self.xp.maximum(self.R[key] + (u - base), 0.0)
         self.S[key] += self._t * reach[:, :, None] * s
+
+    def flop_root_report(self):
+        """Per-OOP-hand flop-root decision under the averaged profile: conditional
+        EV (bb) of check/bet, frequencies, and preferred action. Matches the CPU
+        solver's report (same extraction, average strategy)."""
+        xp = self.xp
+        self._eval = True
+        self._cap = None
+        self._solve(1, [list(self.flop)], xp.zeros(1, dtype=self.dtype),
+                    xp.zeros(1, dtype=self.dtype), self.w_o[None, :] + 0,
+                    self.w_i[None, :] + 0, "")
+        self._eval = False
+        s_root, u_root = self._cap
+        s_root = self.to_host(s_root); u_root = self.to_host(u_root)
+        opp = self.to_host(self.B @ self.w_i)
+        opp = np.where(opp > 1e-12, opp, 1.0)
+        from ..cards import hand_str
+        out = {}
+        for i in range(self.no):
+            ev_ch = float(u_root[0, i, CHECK] / opp[i])
+            ev_bt = float(u_root[0, i, BET] / opp[i])
+            out[hand_str((int(self.oc[i, 0]), int(self.oc[i, 1])))] = {
+                "ev": {"check": ev_ch, "bet": ev_bt},
+                "freq": {"check": float(s_root[0, i, CHECK]), "bet": float(s_root[0, i, BET])},
+                "preferred": "check" if ev_ch >= ev_bt else "bet",
+            }
+        return out
 
     def run(self, iterations: int) -> Dict:
         xp = self.xp
@@ -223,12 +269,13 @@ class BatchedGPUCFR:
         ro0 = self.w_o[None, :]
         ri0 = self.w_i[None, :]
         for t in range(1, iterations + 1):
-            self._t = t
+            self._t = self._done + t
             uo, ui = self._solve(1, [list(self.flop)],
                                  xp.zeros(1, dtype=self.dtype), xp.zeros(1, dtype=self.dtype),
                                  ro0 + 0, ri0 + 0, "")
             if t == iterations:
                 root_ev = float(self.to_host((self.w_o * uo[0]).sum()))
+        self._done += iterations
         if self.backend == "cupy":
             self.xp.cuda.Stream.null.synchronize()
         rt = time.time() - t0

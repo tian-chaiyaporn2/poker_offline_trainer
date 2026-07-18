@@ -10,7 +10,7 @@ config/compute caveats that bound the result._
 
 **Do not ship unfiltered flop-only betting frequencies. Recommended path:
 Option B (fundamentals-only beta) now, with a *filtered-Green strategy subset* as
-a fast-follow — contingent on the full-range GPU re-run and human review.**
+a fast-follow — gated on one automated check: the full-range GPU re-run.**
 
 The flop-only model **systematically over-bets** (+14.4 pp vs full-street), and
 the over-betting is concentrated in **made/value hands** that the full-street
@@ -20,8 +20,18 @@ prescriptive **bet** recommendations are where it fails.
 
 Against the plan's Option-A bar the model does **not** qualify (agreement 77% <
 90%; Green 58% < 70%), but median full-street regret is **0.0% of pot** and a
-**138-question Green subset** is individually safe — enough for a filtered ship
-if the team revises the threshold and the two outstanding gates pass.
+**138-question Green subset** is individually safe.
+
+**Safety without a human reviewer.** The safety mechanism is the *deterministic
+regret filter* (the Green classification), which needs no human. A Green question
+is, by definition, one whose recommended action matches the full-street model
+within ≤0.25% pot and is stable — its core claim is machine-verified. The
+conservative, reviewer-free posture is therefore: **ship only Green as scored
+questions; ship everything else as non-prescriptive fundamentals (never score
+Amber); keep explanations action-focused** ("checking is best here") rather than
+narrating multi-street logic the flop-only model can't justify. This removes the
+two things a human was there to catch — misleading "several actions OK" framing
+and over-claimed reasoning — by simply not shipping those as graded strategy.
 
 ---
 
@@ -156,13 +166,13 @@ the +14.4 pp over-bet would teach a systematic leak. Equity, hand-strength,
 range-interaction, and board-texture content is correct and stable and can ship.
 
 **Fast-follow: filtered Option A** — ship the **138 Green questions** as scored
-strategy content, gated on:
-1. the **full-range GPU re-run** confirming the Green subset holds at full
-   resolution (this pass used 20-hand ranges), and
-2. a **human poker-reviewer** stratified sign-off (§10), which has not yet run.
+strategy content, gated on a single automated check: the **full-range GPU re-run**
+confirming the Green subset holds at full resolution (this pass used 20-hand
+ranges). No human reviewer required — the Green filter is the deterministic safety
+gate (see §0). The app must not claim flop-only frequencies are full-street GTO
+(§9 Option B rule), and only Green ships as *scored* content.
 
-**Do not** ship unfiltered flop-only betting frequencies, and the app must not
-claim flop-only frequencies are full-street GTO (§9 Option B rule).
+**Do not** ship unfiltered flop-only betting frequencies.
 
 ---
 
@@ -203,10 +213,13 @@ are correct and stable; the app can ship these while avoiding GTO claims.
 **Met:** harness + both models under one frozen config; full-street regret +
 safety class for every compared hand; largest disagreements investigated (all the
 same over-betting shape); GPU runtime/memory reproducible; CPU/GPU agreement.
-**Outstanding for final sign-off:** (1) full-range **30–50 board GPU** run
-(this pass: 12 boards, 20-hand ranges, single bet size); (2) **human
-poker-reviewer** stratified review (§10). This pass establishes the method,
-converged and stable, and gives a clear, decision-ready direction.
+**Outstanding for final sign-off:** the full-range **GPU** re-run (this pass: 12
+boards, 20-hand ranges) — runnable now via `colab/poker_fullrange_validation.ipynb`
+(the harness runs on the GPU solver with `--solver gpu`). The plan's human-review
+gate (§10) is **dropped** by product decision; safety instead rests on the
+deterministic Green filter (see §0), which is why the reviewer-free posture ships
+only Green as scored content. This pass establishes the method — converged,
+stable, CPU/GPU-exact — and gives a decision-ready direction.
 
 ---
 

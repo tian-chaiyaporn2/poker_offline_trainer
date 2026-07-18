@@ -35,6 +35,7 @@ from .presets import BOARDS
 from .ranges import expand_range
 from .presets import BB_SRP, BTN_SRP
 from .solver.batched import BatchedCFR
+from .solver.batched_gpu import BatchedGPUCFR
 
 # Classification thresholds (§8; engineering starting points).
 GREEN_REGRET_PCT = 0.25
@@ -76,14 +77,23 @@ def classify(agree, regret_pct, indiff, freq_pp, clear_disagree, unstable):
     return "amber"
 
 
-def solve_board(flop, oop, ip, pot, bet_frac, iters):
+def _make_solver(solver, dtype):
+    """Return a factory building a flop-root-reporting solver on cpu or gpu."""
+    if solver == "gpu":
+        return lambda f, o, i, wo, wi, pot, bf, streets: BatchedGPUCFR(
+            f, o, i, wo, wi, pot, bf, streets=streets, backend="auto", dtype=dtype)
+    return lambda f, o, i, wo, wi, pot, bf, streets: BatchedCFR(
+        f, o, i, wo, wi, pot, bf, streets=streets)
+
+
+def solve_board(flop, oop, ip, pot, bet_frac, iters, make):
     wo, wi = np.ones(len(oop)), np.ones(len(ip))
     # flop-only
-    s1 = BatchedCFR(flop, oop, ip, wo, wi, pot, bet_frac, streets=1)
+    s1 = make(flop, oop, ip, wo, wi, pot, bet_frac, 1)
     s1.run(max(200, iters))
     r1 = s1.flop_root_report()
     # full-street: snapshot at mid and end for a stability check
-    s3 = BatchedCFR(flop, oop, ip, wo, wi, pot, bet_frac, streets=3)
+    s3 = make(flop, oop, ip, wo, wi, pot, bet_frac, 3)
     half = iters // 2
     s3.run(half)
     r3_mid = s3.flop_root_report()
@@ -92,18 +102,20 @@ def solve_board(flop, oop, ip, pot, bet_frac, iters):
     return r1, r3, r3_mid
 
 
-def validate(n=20, iters=280, pot=5.5, bet_frac=0.66, out="output/validation"):
+def validate(n=20, iters=280, pot=5.5, bet_frac=0.66, out="output/validation",
+             solver="cpu", dtype="float64", max_boards=len(BOARDS)):
     os.makedirs(out, exist_ok=True)
-    oop_full = [c for c, _ in expand_range(BB_SRP, parse_cards("As7h2d"))]  # size ref only
+    make = _make_solver(solver, dtype)
     rows: List[Dict] = []
     t0 = time.time()
+    boards = BOARDS[:max_boards]
 
-    for bi, entry in enumerate(BOARDS, 1):
+    for bi, entry in enumerate(boards, 1):
         board_str = entry["board"]
         flop = parse_cards(board_str)
         oop = subsample([c for c, _ in expand_range(BB_SRP, flop)], n)
         ip = subsample([c for c, _ in expand_range(BTN_SRP, flop)], n)
-        r1, r3, r3_mid = solve_board(flop, oop, ip, pot, bet_frac, iters)
+        r1, r3, r3_mid = solve_board(flop, oop, ip, pot, bet_frac, iters, make)
 
         for h in r1:
             fo, fs, fm = r1[h], r3[h], r3_mid[h]
@@ -153,10 +165,11 @@ def validate(n=20, iters=280, pot=5.5, bet_frac=0.66, out="output/validation"):
         # Incremental write after each board so a long run survives interruption.
         _write(rows, out, dict(n=n, iters=iters, pot=pot, bet_frac=bet_frac,
                                boards_done=bi))
-        print(f"[{bi:2d}/12] {board_str:8s} done ({time.time()-t0:.0f}s elapsed, "
-              f"{len(rows)} rows)", flush=True)
+        print(f"[{bi:2d}/{len(boards)}] {board_str:8s} done ({time.time()-t0:.0f}s "
+              f"elapsed, {len(rows)} rows)", flush=True)
 
-    print(f"\nTotal: {len(rows)} hand-decisions across 12 boards in {time.time()-t0:.0f}s")
+    print(f"\nTotal: {len(rows)} hand-decisions across {len(boards)} boards "
+          f"in {time.time()-t0:.0f}s")
 
 
 def _write(rows, out, cfg):
@@ -241,5 +254,9 @@ if __name__ == "__main__":
     ap.add_argument("--n", type=int, default=20)
     ap.add_argument("--iters", type=int, default=280)
     ap.add_argument("--out", default="output/validation")
+    ap.add_argument("--solver", choices=["cpu", "gpu"], default="cpu")
+    ap.add_argument("--dtype", default="float64")
+    ap.add_argument("--max-boards", type=int, default=len(BOARDS))
     a = ap.parse_args()
-    validate(n=a.n, iters=a.iters, out=a.out)
+    validate(n=a.n, iters=a.iters, out=a.out, solver=a.solver, dtype=a.dtype,
+             max_boards=a.max_boards)
