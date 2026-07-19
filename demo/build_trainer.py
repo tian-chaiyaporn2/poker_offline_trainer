@@ -14,8 +14,10 @@ import subprocess
 from collections import defaultdict
 
 DB = "output/packs/flop_pack_v1_fullrange.db"
+RAISE_DB = "output/packs/flop_pack_v1_raise_demo.db"   # reduced-range, but HAS fold/call/raise
 PER_REASON = 6          # cap questions per reason for variety
 MAX_Q = 60
+RAISE_Q = 12            # extra 3-action spots blended in to show the raise UX
 
 SITUATION = {
     "bb_first": "You're the BB, first to act on the flop.",
@@ -34,44 +36,73 @@ RLAB = {"value": "Value bet", "protection": "Protection", "bluff": "Bluff", "sem
         "fold": "Fold", "mixed": "Mixed / close"}
 
 
+COLS = ("id board node acting_player hand actions ev freq preferred_action "
+        "action_grades reason headline detail mixed").split()
+
+
+def _to_q(d):
+    acts = json.loads(d["actions"])
+    board = [d["board"][i:i+2] for i in range(0, len(d["board"]), 2)]
+    return {
+        "board": board, "hero": [d["hand"][0:2], d["hand"][2:4]],
+        "node": d["node"], "acting_player": d["acting_player"],
+        "situation": SITUATION.get(d["node"], f"You're the {d['acting_player']}."),
+        "actions": acts, "labels": {a: ALAB.get(a, a) for a in acts},
+        "ev": {k: round(v, 2) for k, v in json.loads(d["ev"]).items()},
+        "freq": {k: round(100 * v) for k, v in json.loads(d["freq"]).items()},
+        "preferred": d["preferred_action"], "grades": json.loads(d["action_grades"]),
+        "reason": d["reason"], "reason_label": RLAB.get(d["reason"], d["reason"]),
+        "headline": d["headline"], "detail": json.loads(d["detail"]),
+    }
+
+
 def load_questions():
     c = sqlite3.connect(DB)
     meta = dict(c.execute("SELECT key, value FROM pack_meta").fetchall())
-    cols = ("id board node acting_player hand actions ev freq preferred_action "
-            "action_grades reason headline detail mixed").split()
-    rows = c.execute(f"SELECT {','.join(cols)} FROM flop_decision").fetchall()
+    rows = c.execute(f"SELECT {','.join(COLS)} FROM flop_decision").fetchall()
     c.close()
     buckets = defaultdict(list)
     for r in rows:
-        d = dict(zip(cols, r))
+        d = dict(zip(COLS, r))
         buckets[(d["node"], d["reason"])].append(d)   # balance across BOTH node and reason
     # round-robin across (node, reason) groups so every decision node and every
     # reason type is represented even after the total cap.
     from itertools import zip_longest
     groups = [g[:PER_REASON] for g in buckets.values()]
     picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:MAX_Q]
-    qs = []
-    for d in picked:
-        board = [d["board"][i:i+2] for i in range(0, len(d["board"]), 2)]
-        qs.append({
-            "board": board, "hero": [d["hand"][0:2], d["hand"][2:4]],
-            "node": d["node"], "acting_player": d["acting_player"],
-            "situation": SITUATION.get(d["node"], f"You're the {d['acting_player']}."),
-            "actions": json.loads(d["actions"]),
-            "labels": {a: ALAB.get(a, a) for a in json.loads(d["actions"])},
-            "ev": {k: round(v, 2) for k, v in json.loads(d["ev"]).items()},
-            "freq": {k: round(100 * v) for k, v in json.loads(d["freq"]).items()},
-            "preferred": d["preferred_action"], "grades": json.loads(d["action_grades"]),
-            "reason": d["reason"], "reason_label": RLAB.get(d["reason"], d["reason"]),
-            "headline": d["headline"], "detail": json.loads(d["detail"]),
-        })
-    return meta, qs
+    return meta, [_to_q(d) for d in picked]
+
+
+def load_raise(n=RAISE_Q):
+    """A few real fold/call/raise spots from the raise-enabled (reduced-range) pack,
+    so the trainer demonstrates the 3-action UX until the full-range raise run lands."""
+    if not os.path.exists(RAISE_DB):
+        return []
+    c = sqlite3.connect(RAISE_DB)
+    rows = c.execute(f"SELECT {','.join(COLS)} FROM flop_decision "
+                     "WHERE actions LIKE '%raise%'").fetchall()
+    c.close()
+    by_reason = defaultdict(list)
+    for r in rows:
+        d = dict(zip(COLS, r))
+        by_reason[d["reason"]].append(d)
+    from itertools import zip_longest
+    groups = [g[:3] for g in by_reason.values()]
+    picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
+    out = []
+    for q in (_to_q(d) for d in picked):
+        q["demo_raise"] = True     # flag so the UI can note the reduced-range source
+        out.append(q)
+    return out
 
 
 def build():
     meta, qs = load_questions()
+    raise_qs = load_raise()
+    qs = qs + raise_qs
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
                             capture_output=True, text=True).stdout.strip() or "local"
+    print(f"  ({len(raise_qs)} raise spots blended from the reduced-range raise pack)")
     data = json.dumps(qs, separators=(",", ":"))
     body = TEMPLATE.replace("__DATA__", data).replace("__VERSION__", meta.get("version", "")) \
                    .replace("__RECORDS__", str(meta.get("record_count", ""))).replace("__COMMIT__", commit)
@@ -121,6 +152,7 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .pos{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.05em;padding:2px 8px;border-radius:6px;flex:none}
 .pos.BB,.pos.SB{background:color-mix(in srgb,var(--brass) 20%,transparent);color:var(--brass)}
 .pos.BTN{background:color-mix(in srgb,var(--best) 20%,transparent);color:var(--best)}
+.demo{margin-left:auto;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accept);border:1px solid color-mix(in srgb,var(--accept) 45%,var(--line));border-radius:6px;padding:1px 6px}
 .felt{background:radial-gradient(120% 130% at 50% -10%,color-mix(in srgb,var(--best) 20%,var(--panel)),var(--panel));padding:20px 18px 18px;text-align:center}
 .cap{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
 .cards{display:flex;gap:8px;justify-content:center}
@@ -186,7 +218,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
   <div class="bar-top"><i id="prog" style="width:0"></i></div>
 
   <div class="card">
-    <div class="sit"><span class="pos" id="pos"></span><span id="sit"></span></div>
+    <div class="sit"><span class="pos" id="pos"></span><span id="sit"></span><span class="demo" id="demotag" hidden>raise demo</span></div>
     <div class="felt">
       <div class="cap">Flop</div>
       <div class="cards" id="board"></div>
@@ -209,7 +241,10 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
   <div class="foot">
     Real solver output — pack <code>__VERSION__</code>, <b>__RECORDS__</b> signed records, build <code>__COMMIT__</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
-    Prefer to review all the answers at a glance? See the <a href="preview.html">content gallery</a>.
+    Most spots are Check/Bet or Fold/Call (the launch pack). The few <b>Fold/Call/Raise</b> spots
+    (marked <span class="demo">raise demo</span>) come from a reduced-range pack — the full-range raise
+    run (FR-011) is the next depth pass.<br>
+    Prefer to review the answers at a glance? See the <a href="preview.html">content gallery</a>.
   </div>
 </div>
 <script>
@@ -231,6 +266,7 @@ function deal(){
   document.getElementById("fb").className="fb";
   const posEl=document.getElementById("pos");posEl.textContent=q.acting_player;posEl.className="pos "+q.acting_player;
   document.getElementById("sit").textContent=q.situation;
+  document.getElementById("demotag").hidden=!q.demo_raise;
   render(q.board,document.getElementById("board"));
   render(q.hero,document.getElementById("hero"));
   const box=document.getElementById("acts");box.innerHTML="";
