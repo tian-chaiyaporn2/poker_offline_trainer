@@ -191,3 +191,69 @@ def test_root_ev_conditioned_on_compatible_matchups():
     cond_eq = num / den
     assert abs(r["root_ev_pct_pot"] / 100.0 - cond_eq) < 0.01
 
+
+
+def test_content_yield_checkpoint_config_mismatch(tmp_path):
+    from pokertrainer.content_yield import (
+        _atomic_write_json, _ensure_checkpoint_config, _solve_config,
+    )
+    out = tmp_path / "cy"
+    out.mkdir()
+    (out / "boards").mkdir()
+    cfg_a = _solve_config(40, 100, "cpu", "float64", 5.5, 0.66, None, [0, 1])
+    cfg_b = _solve_config(40, 200, "cpu", "float64", 5.5, 0.66, None, [0, 1])
+    _ensure_checkpoint_config(str(out), cfg_a, fresh=False)
+    try:
+        _ensure_checkpoint_config(str(out), cfg_b, fresh=False)
+        assert False, "expected SystemExit on config mismatch"
+    except SystemExit as e:
+        assert "mismatch" in str(e)
+
+
+def test_content_yield_fresh_clears_stale_boards(tmp_path):
+    from pokertrainer.content_yield import (
+        _atomic_write_json, _ensure_checkpoint_config, _solve_config,
+    )
+    out = tmp_path / "cy"
+    boards = out / "boards"
+    boards.mkdir(parents=True)
+    stale = boards / "board_00.json"
+    _atomic_write_json(str(stale), [{"hand": "AhAd", "accepted": True}])
+    cfg = _solve_config(40, 100, "cpu", "float64", 5.5, 0.66, None, [0])
+    _ensure_checkpoint_config(str(out), cfg, fresh=True)
+    assert not stale.exists()
+    assert (out / "solve_config.json").exists()
+
+
+def test_content_yield_refuses_orphan_checkpoints(tmp_path):
+    from pokertrainer.content_yield import _atomic_write_json, _ensure_checkpoint_config, _solve_config
+    out = tmp_path / "cy"
+    boards = out / "boards"
+    boards.mkdir(parents=True)
+    _atomic_write_json(str(boards / "board_00.json"), [{"hand": "AhAd"}])
+    cfg = _solve_config(40, 100, "cpu", "float64", 5.5, 0.66, None, [0])
+    try:
+        _ensure_checkpoint_config(str(out), cfg, fresh=False)
+        assert False, "expected SystemExit for orphan checkpoints"
+    except SystemExit as e:
+        assert "solve_config.json" in str(e)
+
+
+def test_validate_records_flags_bad_freq():
+    from pokertrainer.content_yield import validate_records
+    recs = [{
+        "node": "bb_first", "hand": "AhAd",
+        "ev": {"check": 1.0, "bet": 0.5},
+        "freq": {"check": 0.5, "bet": 0.3},
+        "preferred": "check",
+    }]
+    problems = validate_records(recs)
+    assert any("freq sums" in p for p in problems)
+
+
+def test_validate_flop_write_empty_rows(tmp_path):
+    from pokertrainer.validate_flop import _write
+    _write([], str(tmp_path), {"n": 1})
+    import json
+    summary = json.load(open(tmp_path / "summary.json"))
+    assert summary["totals"]["hand_decisions"] == 0
