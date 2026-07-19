@@ -54,9 +54,14 @@ python -m pokertrainer.content_yield --solver cpu --n 40 --iters 300 \
    (+ `records_v1_fullrange.json`) from the version's Output tab.
 
 Checkpointing: each board is solved → validated → written to `boards/board_XX.json`;
-`records.json`/`yield_report.json` refresh after every board, so a crash or the
-12 h session limit never loses completed boards, and a re-run resumes. Non-finite
-(NaN/inf) records are dropped per board and never enter the pack.
+`records.json`/`yield_report.json` refresh after every board. A single crashing
+board is logged and **skipped**, and the run continues. Non-finite (NaN/inf)
+records are dropped per board and never enter the pack. **Caveat:** Kaggle's GPU
+commit limit is ~**9 h**, and a commit that *exceeds* it may be killed without
+saving `/kaggle/working` — so keep the run inside the limit (the main run is
+~5–7 h; smoke + raise cells auto-skip in a commit). Checkpoints let an
+*interactive* re-run resume; a fresh commit starts over (`/kaggle/working` is
+wiped between commits).
 
 Resume / rebuild from partial checkpoints without re-solving:
 ```bash

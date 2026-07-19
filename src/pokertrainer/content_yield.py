@@ -292,10 +292,10 @@ def _ensure_checkpoint_config(out: str, cfg: Dict, fresh: bool) -> None:
     _atomic_write_json(path, cfg)
 
 
-def _atomic_write_json(path: str, obj) -> None:
+def _atomic_write_json(path: str, obj, indent=None) -> None:
     tmp = path + ".tmp"
     with open(tmp, "w") as f:
-        json.dump(obj, f)
+        json.dump(obj, f, indent=indent)
     os.replace(tmp, path)
 
 
@@ -318,8 +318,8 @@ def _aggregate(out: str, boards_dir: str, board_idx: List[int], hands_per_side: 
     rep["boards_completed"] = done
     rep["boards_requested"] = list(board_idx)
     rep["boards_missing"] = [i for i in board_idx if i not in done]
-    with open(os.path.join(out, "yield_report.json"), "w") as f:
-        json.dump(rep, f, indent=2)
+    # atomic so a kill mid-write can't leave truncated JSON for the build step
+    _atomic_write_json(os.path.join(out, "yield_report.json"), rep, indent=2)
     return rep
 
 
@@ -393,7 +393,8 @@ def run(n=40, iters=300, roots=None, solver="cpu", dtype="float64",
                     f.write(traceback.format_exc())
                 print(f"[{k}/{len(board_idx)}] board {i:02d} {bstr}: CRASHED — logged "
                       f"board_{i:02d}.ERROR.txt, continuing", flush=True)
-            # refresh combined outputs after every board (survives a later timeout)
+            # refresh combined outputs after every board (keeps partial output
+            # available within the session; a killed Batch commit may not save it)
             _aggregate(out, boards_dir, board_idx, eff_hands, eff_full)
 
     rep = _aggregate(out, boards_dir, board_idx, eff_hands, eff_full)
