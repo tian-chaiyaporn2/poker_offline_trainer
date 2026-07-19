@@ -148,7 +148,7 @@ def render(meta, samples):
            '<meta name="description" content="A preview of full-street flop training questions '
            'with solver grades and plain-language explanations.">\n'
            '</head>\n<body>\n' + body + '\n</body>\n</html>\n')
-    open("index.html", "w").write(doc)
+    open("preview.html", "w").write(doc)   # gallery served at /preview.html (trainer is the landing)
     return len(cards_html), commit
 
 
@@ -235,6 +235,6 @@ footer code{font-family:var(--mono);font-size:11.5px;background:color-mix(in srg
 if __name__ == "__main__":
     meta, samples = load_samples()
     n, commit = render(meta, samples)
-    print(f"wrote demo/content_preview.html + index.html | {n} cards | pack {meta.get('version')} "
+    print(f"wrote demo/content_preview.html + preview.html | {n} cards | pack {meta.get('version')} "
           f"({meta.get('record_count')} recs) | build {commit}")
     print("reasons:", [s["reason"] for s in samples])
