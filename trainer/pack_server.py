@@ -23,6 +23,11 @@ ROOT = os.path.dirname(HERE)
 RESULTS_DB = os.path.join(HERE, "pack_results.db")
 INDEX = os.path.join(HERE, "pack_index.html")
 
+import sys
+if os.path.join(ROOT, "src") not in sys.path:
+    sys.path.insert(0, os.path.join(ROOT, "src"))
+from pokertrainer.content_pack import verify_pack
+
 SITUATION = {
     "bb_first": "You are the BB (out of position), first to act on the flop.",
     "btn_vs_check": "You are the BTN. The BB checked to you.",
@@ -46,6 +51,13 @@ def find_pack() -> str:
 
 def load_pack():
     path = find_pack()
+    verdict = verify_pack(path)
+    if not (verdict.get("hash_ok") and verdict.get("signature_ok")):
+        raise SystemExit(
+            f"Content pack failed integrity check: {path}\n"
+            f"  verify={verdict}\n"
+            "Refuse to serve a tampered or unsigned pack."
+        )
     conn = sqlite3.connect(path)
     meta = dict(conn.execute("SELECT key, value FROM pack_meta").fetchall())
     rows = conn.execute(
@@ -66,7 +78,7 @@ def load_pack():
             "reason": reason, "headline": headline, "detail": json.loads(detail),
             "mixed": bool(mixed),
         }
-    return os.path.basename(path), meta, q
+    return os.path.basename(path), meta, q, verdict
 
 
 def public_question(q):
@@ -165,9 +177,10 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     global QUESTIONS, PACK_META
-    name, meta, QUESTIONS = load_pack()
+    name, meta, QUESTIONS, verdict = load_pack()
     PACK_META = {"file": name, "version": meta.get("version"),
-                 "records": meta.get("record_count"), "signed": bool(meta.get("signature"))}
+                 "records": meta.get("record_count"),
+                 "signed": bool(verdict.get("hash_ok") and verdict.get("signature_ok"))}
     init_results()
     port = int(os.environ.get("PORT", "8000"))
     srv = ThreadingHTTPServer(("127.0.0.1", port), Handler)

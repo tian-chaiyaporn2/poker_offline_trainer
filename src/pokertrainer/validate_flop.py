@@ -53,15 +53,17 @@ def subsample(lst, n):
 
 
 def hand_category(descriptor: str) -> str:
-    d = descriptor
-    if any(k in d for k in ("two pair", "three of", "straight", "flush", "full",
-                            "four of", "overpair")):   # "four of a kind" (evaluator name)
+    # Classify from the made-hand token only. Checking the full string matches
+    # substrings inside draw labels (e.g. "high card + flush draw" → "flush").
+    made = descriptor.split(" + ")[0]
+    if any(k in made for k in ("two pair", "three of", "straight", "flush", "full",
+                               "four of", "overpair")):   # "four of a kind" (evaluator name)
         return "strong_made"
-    if "top pair" in d:
+    if "top pair" in made:
         return "top_pair"
-    if "pair" in d:                      # middle/bottom/pocket underpair
+    if "pair" in made:                      # middle/bottom/pocket underpair
         return "weak_pair"
-    if "draw" in d:
+    if "draw" in descriptor:
         return "draw"
     return "air"
 
@@ -232,7 +234,9 @@ def _write(rows, out, cfg):
             "red_pct": pct(len(reds), tot),
             "median_regret_pct_pot": round(statistics.median(regrets), 3),
             "mean_regret_pct_pot": round(statistics.mean(regrets), 3),
-            "p90_regret_pct_pot": round(sorted(regrets)[int(0.9 * len(regrets))], 3),
+            "p90_regret_pct_pot": round(
+                sorted(regrets)[min(len(regrets) - 1, max(0, int(np.ceil(0.9 * len(regrets)) - 1)))],
+                3),
             "max_regret_pct_pot": round(max(regrets), 3),
             "unstable_count": len(unstable),
             "unstable_pct": pct(len(unstable), tot),

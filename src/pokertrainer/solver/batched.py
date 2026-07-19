@@ -133,8 +133,10 @@ class BatchedCFR:
         UO = np.zeros((C, self.no)); UI = np.zeros((C, self.ni))
         np.add.at(UO, parent_idx, uo_c)
         np.add.at(UI, parent_idx, ui_c)
-        # current board has (street+2) cards; valid next cards per combo:
-        denom = (52 - (street + 2)) - 2
+        # Uniform average over cards that collide with neither private hand:
+        # 52 - board - 4. (Using board-2 under-weights showdown EV by ~45/47 per
+        # street and biases betting lines that realize fold equity.)
+        denom = (52 - (street + 2)) - 4
         return UO / denom, UI / denom
 
     def _get_strat(self, path, node, C, na):
@@ -318,6 +320,8 @@ class BatchedCFR:
         return _flop_decisions_from_cap(self)
 
     def run(self, iterations: int) -> Dict:
+        if iterations <= 0:
+            raise ValueError("iterations must be positive")
         tracemalloc.start()
         t0 = time.time()
         ev = []

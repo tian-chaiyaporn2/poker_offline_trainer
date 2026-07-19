@@ -1,5 +1,5 @@
 """Benchmark: C river-showdown kernel vs NumPy per-board loop, then extrapolate."""
-import ctypes, time, sys
+import ctypes, os, time, sys
 import numpy as np
 sys.path.insert(0, "src")
 from itertools import combinations
@@ -8,8 +8,14 @@ from pokertrainer.ranges import expand_range
 from pokertrainer.presets import BB_SRP, BTN_SRP
 from pokertrainer.evaluator import evaluate
 
-HERE = "/Users/Chaiyaporn/.claude/tmp/claude-501/-Users-Chaiyaporn-Projects-work-poker-offline-trainer/5f95f27f-ac21-4614-bc92-b8e6e2c7398e/scratchpad"
-lib = ctypes.CDLL(HERE + "/kernel.so")
+HERE = os.path.dirname(os.path.abspath(__file__))
+lib_path = os.path.join(HERE, "kernel.so")
+if not os.path.exists(lib_path):
+    raise SystemExit(
+        f"Missing {lib_path}. Build it first:\n"
+        f"  cc -O3 -shared -fPIC -o {lib_path} {os.path.join(HERE, 'kernel.c')}"
+    )
+lib = ctypes.CDLL(lib_path)
 lib.river_pass.argtypes = [ctypes.c_int]*3 + [ctypes.POINTER(ctypes.c_float)]*2 + \
     [ctypes.POINTER(ctypes.c_double)]*2 + [ctypes.c_double]*3 + [ctypes.POINTER(ctypes.c_double)]*2
 
@@ -76,8 +82,8 @@ def c_pass():
     return uo_c,ui_c
 
 # correctness
-un,_=numpy_pass(); uc,_=c_pass()
-print(f"max |numpy-C| diff: {np.abs(un-uc).max():.2e}", flush=True)
+un, uni = numpy_pass(); uc, uci = c_pass()
+print(f"max |numpy-C| diff OOP: {np.abs(un-uc).max():.2e}  IP: {np.abs(uni-uci).max():.2e}", flush=True)
 
 # timing
 K=10

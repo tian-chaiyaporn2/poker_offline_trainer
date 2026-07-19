@@ -113,7 +113,9 @@ class MultiStreetSpike:
                                         ro * live_o, ri * live_i, path)
             UO += uo * live_o
             UI += ui * live_i
-        denom = len(deck) - 2  # valid next cards per combo (uniform)
+        # Cards that collide with neither private hand: |deck| - 4.
+        # (|deck| - 2 under-weights showdown EV vs fold equity.)
+        denom = len(deck) - 4
         return UO / denom, UI / denom
 
     # --- one street's betting; returns (uo, ui) counterfactual values ---
@@ -257,6 +259,8 @@ class MultiStreetSpike:
         self.S[key] += self._t * reach[:, None] * strat
 
     def run(self, iterations: int) -> Dict:
+        if iterations <= 0:
+            raise ValueError("iterations must be positive")
         tracemalloc.start()
         t0 = time.time()
         ev_curve = []

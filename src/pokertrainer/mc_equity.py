@@ -20,6 +20,8 @@ Combo = Tuple[int, int]
 def mc_equity(board: List[int], hero: Combo, villain: Combo,
               samples: int = 20000, seed: int = 7) -> float:
     """Random-sampling estimate of P(hero beats villain) + 0.5 P(tie)."""
+    if samples <= 0:
+        raise ValueError("samples must be positive")
     used = set(board) | set(hero) | set(villain)
     if len(used) != len(board) + 4:
         raise ValueError("card collision between board/hero/villain")

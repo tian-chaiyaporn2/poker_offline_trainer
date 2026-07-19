@@ -43,7 +43,8 @@ def describe_hand(hole: Combo, board: List[int]) -> str:
     top_board = board_ranks[0] if board_ranks else -1
 
     if made == "one pair":
-        # Distinguish overpair / top pair / lower.
+        # Distinguish overpair / top pair / lower. Board-pair-only (hero does not
+        # pair a hole card and is not a pocket pair) stays high-card / air.
         if hole_ranks[0] == hole_ranks[1]:  # pocket pair
             labels = ["overpair" if hole_ranks[0] > top_board else "pocket pair"]
         else:
@@ -52,6 +53,8 @@ def describe_hand(hole: Combo, board: List[int]) -> str:
                 labels = ["top pair"]
             elif paired_rank is not None:
                 labels = ["middle/bottom pair"]
+            else:
+                labels = ["high card"]
 
     draws = []
     if _has_flush_draw(five) and "flush" not in made:

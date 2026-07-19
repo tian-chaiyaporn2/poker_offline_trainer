@@ -91,16 +91,28 @@ async function answer(action){
   const fb=await(await fetch("/api/answer",{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({question_id:cur.id,action})})).json();
   const v=document.getElementById("verdict");v.className="verdict g-"+fb.grade;v.textContent=fb.verdict;
-  document.getElementById("why").innerHTML=fb.headline+`<span class="reason">${fb.reason}</span>`;
+  document.getElementById("why").textContent="";
+  document.getElementById("why").appendChild(document.createTextNode(fb.headline));
+  const rs=document.createElement("span");rs.className="reason";rs.textContent=fb.reason;
+  document.getElementById("why").appendChild(rs);
   const dl=document.getElementById("detail");dl.innerHTML="";fb.detail.forEach(d=>{const li=document.createElement("li");li.textContent=d;dl.appendChild(li);});
   const bars=document.getElementById("bars");bars.innerHTML="";
   cur.actions.forEach(a=>{const k=a.key,fr=fb.freq_pct[k]||0,ev=fb.ev_bb[k],g=fb.action_grades[k];
-    const chosen=k===action?" ← you":"";const rec=k===fb.recommended_action?'<span class="tag t-rec">recommended</span>':"";
+    const chosen=k===action?" ← you":"";
     const col=(g==="best"||g==="good")?"#3fb950":(g==="acceptable"?"#d29922":"#f85149");
     const row=document.createElement("div");row.className="row";
-    row.innerHTML=`<div class="barlabel"><span>${a.label}<span class="tag t-${g}">${g.replace("_"," ")}</span>${rec}<b>${chosen}</b></span>
-      <span class="muted">${fr}% · EV ${ev}bb</span></div><div class="bar"><i style="width:${fr}%;background:${col}"></i></div>`;
-    bars.appendChild(row);});
+    const label=document.createElement("div");label.className="barlabel";
+    const left=document.createElement("span");
+    left.appendChild(document.createTextNode(a.label));
+    const gtag=document.createElement("span");gtag.className="tag t-"+g;gtag.textContent=g.replace("_"," ");
+    left.appendChild(gtag);
+    if(k===fb.recommended_action){const rtag=document.createElement("span");rtag.className="tag t-rec";rtag.textContent="recommended";left.appendChild(rtag);}
+    if(chosen){const b=document.createElement("b");b.textContent=chosen;left.appendChild(b);}
+    const right=document.createElement("span");right.className="muted";right.textContent=fr+"% · EV "+ev+"bb";
+    label.appendChild(left);label.appendChild(right);
+    const bar=document.createElement("div");bar.className="bar";
+    const i=document.createElement("i");i.style.width=fr+"%";i.style.background=col;bar.appendChild(i);
+    row.appendChild(label);row.appendChild(bar);bars.appendChild(row);});
   document.getElementById("fb").style.display="block";loadStats();
 }
 async function loadStats(){const s=await(await fetch("/api/stats")).json();
