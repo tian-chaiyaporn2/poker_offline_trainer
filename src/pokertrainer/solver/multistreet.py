@@ -286,7 +286,9 @@ class MultiStreetSpike:
         self._eval = True
         uo_avg, _ = self._solve_street(1, self.flop, 0.0, 0.0, self.w_o.copy(), self.w_i.copy())
         self._eval = False
-        root_ev = float((self.w_o * uo_avg).sum())
+        # See batched.py: condition root EV on compatible matchups (matches cfr.py).
+        joint = float(self.w_o @ (self.B @ self.w_i))
+        root_ev = float((self.w_o * uo_avg).sum()) / (joint if joint > 1e-12 else 1.0)
         runtime = time.time() - t0
         _, peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()

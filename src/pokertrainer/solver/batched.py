@@ -339,7 +339,12 @@ class BatchedCFR:
         uo_avg, _ = self._solve(1, [list(self.flop)], np.zeros(1), np.zeros(1),
                                 self.w_o[None, :].copy(), self.w_i[None, :].copy(), "")
         self._eval = False
-        root_ev = float((self.w_o * uo_avg[0]).sum())
+        # Normalize by the compatible-matchup mass so the reported root EV is
+        # conditioned on a valid (non-colliding) OOP-vs-IP matchup — matches
+        # cfr.py. Without this, card-removal "dead" mass understates EV on real
+        # (overlapping) ranges. Per-action EVs/grades are unaffected (separate).
+        joint = float(self.w_o @ (self.B @ self.w_i))
+        root_ev = float((self.w_o * uo_avg[0]).sum()) / (joint if joint > 1e-12 else 1.0)
         rt = time.time() - t0
         _, peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()

@@ -363,7 +363,9 @@ class BatchedGPUCFR:
                                 xp.zeros(1, dtype=self.dtype), xp.zeros(1, dtype=self.dtype),
                                 self.w_o[None, :] + 0, self.w_i[None, :] + 0, "")
         self._eval = False
-        root_ev = float(self.to_host((self.w_o * uo_avg[0]).sum()))
+        # See batched.py: condition root EV on compatible matchups (matches cfr.py).
+        joint = float(self.to_host(self.w_o @ (self.B @ self.w_i)))
+        root_ev = float(self.to_host((self.w_o * uo_avg[0]).sum())) / (joint if joint > 1e-12 else 1.0)
         if self.backend == "cupy":
             self.xp.cuda.Stream.null.synchronize()
         rt = time.time() - t0

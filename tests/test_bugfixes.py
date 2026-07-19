@@ -165,3 +165,29 @@ def test_checkdown_root_ev_matches_true_equity():
     eq = mc_equity(flop, oh, ih, samples=120000, seed=3)
     assert abs(r["root_ev_pct_pot"] / 100.0 - eq) < 0.01
 
+
+def test_root_ev_conditioned_on_compatible_matchups():
+    """With OVERLAPPING ranges (card collisions -> joint mass < 1), the reported
+    root EV must be normalized by that compatible mass. On a check-down the pot
+    share then equals the reach-weighted equity over compatible matchups; the
+    un-normalized value understates it by ~1-joint."""
+    from pokertrainer.mc_equity import mc_equity
+    flop = parse_cards("As7h2d")
+    oop = [parse_hand(h) for h in ["AhKh", "AhQd", "KsKc", "Td9d", "QdJd", "Kh5h"]]
+    ip = [parse_hand(h) for h in ["AhJc", "QhQc", "KsTs", "Td8c", "9s8s", "KhQs"]]
+    wo, wi = np.ones(len(oop)), np.ones(len(ip))
+    s = BatchedCFR(flop, oop, ip, wo, wi, 5.5, 0.0, streets=3)
+    r = s.run(40)
+    joint = float(s.w_o @ (s.B @ s.w_i))
+    assert joint < 0.95, "test needs colliding ranges to be meaningful"
+    num = den = 0.0
+    for i, ho in enumerate(oop):
+        for j, hi in enumerate(ip):
+            if s.B[i, j] == 0:
+                continue
+            eq = mc_equity(flop, ho, hi, samples=30000, seed=100 + i * 10 + j)
+            num += s.w_o[i] * s.w_i[j] * eq
+            den += s.w_o[i] * s.w_i[j]
+    cond_eq = num / den
+    assert abs(r["root_ev_pct_pot"] / 100.0 - cond_eq) < 0.01
+
