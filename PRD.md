@@ -339,3 +339,82 @@ benchmarking and trainer pipeline remain reusable.
 
 **Stop** — Available permissive software cannot produce sufficiently reliable or
 practical results for the proposed product.
+
+---
+
+## 13. Content Strategy & Roadmap (post-POC direction)
+
+The POC's core question is answered: permissively-licensed software **can**
+generate reliable strategy data. The solver is cross-validated three ways to
+machine precision and matches independent Monte-Carlo equity to <0.001 (see
+`docs/runbook.md`, §7 invariants). This section records the direction for turning
+that capability into a content library, so scope decisions are deliberate.
+
+### 13.1 Full-street solving as the foundation
+
+Content is generated from **full flop→turn→river solves** (betting on all three
+streets), and the flop decisions are extracted from them so each recommendation
+already accounts for future streets. A consequence worth stating explicitly: the
+turn and river GTO strategies are **computed as a byproduct** of every solve — the
+expensive compute is already spent, so reaching turn/river content is primarily an
+*extraction* problem, not a *solve* problem.
+
+### 13.2 Data-driven prioritization (do not cover everything)
+
+The flop space is ~1,755 strategically-distinct boards and the turn/river space is
+combinatorially larger; exhaustive coverage is neither feasible nor useful. Content
+selection is therefore **prioritized by measured value**, not curated by hand. Each
+candidate lesson is scored (`pokertrainer.priority`) on three axes read from the
+solve output:
+
+- **Frequency** — `P(board texture)` (exact combinatorics over all flops) ×
+  `reach_mass` (how often the hand reaches the node). How often the spot occurs.
+- **Impact** — best-vs-worst EV spread as a share of the pot. How costly the
+  mistake is.
+- **Intuition-gap** — how non-obvious the GTO play is (a trap or bluff-catch
+  scores far above a value bet). Teaching value is highest where intuition fails.
+
+The scorer emits two backlogs that drive planning:
+
+- **Solve backlog** — board textures ranked by real-world frequency vs current
+  coverage. **High-frequency + uncovered = solve next.**
+- **Lesson backlog** — spot-types (node × texture × hand-category × reason) ranked
+  by total teaching value. What to surface first.
+
+### 13.3 Phased roadmap
+
+1. **MVP (current)** — flop decisions for one scenario (BTN opens, BB calls,
+   single-raised pot, 100 bb, 66% c-bet), on a prioritized board set. Launch gate:
+   ≥1,200 accepted records with coverage across nodes, textures, hand categories,
+   and reasons (measured by the content-yield report).
+2. **Broaden board coverage** — add the highest-frequency uncovered textures the
+   solve backlog flags (e.g. the two-tone high-disconnected family, ~⅓ of flops),
+   toward the ~40-board reference library. Cheap: board-parallel, checkpointed.
+3. **Turn & river decisions** — extract from the *same* solves via
+   representative-runout sampling (brick / flush-completing / pairing / overcard),
+   prioritized by the same scorer. No additional GPU budget beyond the flop runs.
+4. **Scope expansion (compute-bounded)** — other positions, 3-bet/4-bet pots,
+   stack depths, and multiple bet sizes. Each is a *new solve family* that
+   multiplies compute and pushes GPU memory (already near the T4 float32 limit at
+   full range with the raise action), so these are sequenced deliberately, not
+   bundled.
+
+Items 2–4 move the corresponding entries in §8 from "out of POC scope" to
+"roadmapped after validation"; the single-scenario, flop-only §8 boundary still
+describes the **MVP**, not the product ceiling.
+
+### 13.4 Foundations content (complementary stream)
+
+Alongside solver-derived decisions, a deterministic **foundations** stream
+(`pokertrainer.foundations`) generates fundamentals questions — board reading, pot
+odds, hand reading, equity — computed from the same primitives (no invented
+strategy). These require no solve and broaden the curriculum below the
+spot-specific lessons.
+
+### 13.5 Resourcing summary
+
+The GPU cost is dominated by the flop full-street solves, which already exist.
+Turn/river content and prioritization add **CPU-cheap extraction and analysis**,
+not solve time. The genuine compute frontier is *scope broadening* (§13.3 item 4),
+which is the decision to budget against — not board count or street depth within
+the current scenario.
