@@ -1,0 +1,1391 @@
+{
+  "params": {
+    "pot": 5.5,
+    "weights": {
+      "frequency": 0.4,
+      "impact": 0.4,
+      "intuition": 0.2
+    }
+  },
+  "n_accepted": 5737,
+  "top_lessons": [
+    {
+      "priority": 0.8986,
+      "parts": {
+        "frequency": 0.953,
+        "impact": 0.934,
+        "intuition": 0.719,
+        "freq_raw": 0.25996,
+        "impact_pct": 105.07
+      },
+      "node": "bb_vs_bet",
+      "board": "AhQh7c",
+      "hand": "8h7h",
+      "hand_category": "weak_pair",
+      "preferred": "call",
+      "reason": "bluff_catch",
+      "headline": "Call to catch bluffs \u2014 you beat the hands they'd bluff with."
+    },
+    {
+      "priority": 0.8981,
+      "parts": {
+        "frequency": 0.95,
+        "impact": 0.936,
+        "intuition": 0.719,
+        "freq_raw": 0.25847,
+        "impact_pct": 107.21
+      },
+      "node": "bb_vs_bet",
+      "board": "AhQh7c",
+      "hand": "9h7h",
+      "hand_category": "weak_pair",
+      "preferred": "call",
+      "reason": "bluff_catch",
+      "headline": "Call to catch bluffs \u2014 you beat the hands they'd bluff with."
+    },
+    {
+      "priority": 0.8981,
+      "parts": {
+        "frequency": 0.953,
+        "impact": 0.933,
+        "intuition": 0.719,
+        "freq_raw": 0.26004,
+        "impact_pct": 102.01
+      },
+      "node": "bb_vs_bet",
+      "board": "AhQh7c",
+      "hand": "7h6h",
+      "hand_category": "weak_pair",
+      "preferred": "call",
+      "reason": "bluff_catch",
+      "headline": "Call to catch bluffs \u2014 you beat the hands they'd bluff with."
+    },
+    {
+      "priority": 0.8404,
+      "parts": {
+        "frequency": 0.931,
+        "impact": 0.936,
+        "intuition": 0.469,
+        "freq_raw": 0.24422,
+        "impact_pct": 107.13
+      },
+      "node": "bb_vs_bet",
+      "board": "AhQh7c",
+      "hand": "KhTh",
+      "hand_category": "draw",
+      "preferred": "call",
+      "reason": "call_odds",
+      "headline": "Call \u2014 your draw has the equity and pot odds to continue."
+    },
+    {
+      "priority": 0.839,
+      "parts": {
+        "frequency": 0.93,
+        "impact": 0.933,
+        "intuition": 0.469,
+        "freq_raw": 0.24374,
+        "impact_pct": 104.09
+      },
+      "node": "bb_vs_bet",
+      "board": "AhQh7c",
+      "hand": "JhTh",
+      "hand_category": "draw",
+      "preferred": "call",
+      "reason": "call_odds",
+      "headline": "Call \u2014 your draw has the equity and pot odds to continue."
+    },
+    {
+      "priority": 0.8353,
+      "parts": {
+        "frequency": 0.917,
+        "impact": 0.937,
+        "intuition": 0.469,
+        "freq_raw": 0.23741,
+        "impact_pct": 109.03
+      },
+      "node": "bb_vs_bet",
+      "board": "AhQh7c",
+      "hand": "KhJh",
+      "hand_category": "draw",
+      "preferred": "call",
+      "reason": "call_odds",
+      "headline": "Call \u2014 your draw has the equity and pot odds to continue."
+    },
+    {
+      "priority": 0.8325,
+      "parts": {
+        "frequency": 0.952,
+        "impact": 0.993,
+        "intuition": 0.272,
+        "freq_raw": 0.2597,
+        "impact_pct": 278.56
+      },
+      "node": "bb_vs_bet",
+      "board": "AhQh7c",
+      "hand": "7h7d",
+      "hand_category": "strong_made",
+      "preferred": "call",
+      "reason": "value_call",
+      "headline": "Call \u2014 you're ahead of enough of their betting range to continue."
+    },
+    {
+      "priority": 0.8325,
+      "parts": {
+        "frequency": 0.952,
+        "impact": 0.993,
+        "intuition": 0.272,
+        "freq_raw": 0.2597,
+        "impact_pct": 278.56
+      },
+      "node": "bb_vs_bet",
+      "board": "AhQh7c",
+      "hand": "7s7h",
+      "hand_category": "strong_made",
+      "preferred": "call",
+      "reason": "value_call",
+      "headline": "Call \u2014 you're ahead of enough of their betting range to continue."
+    },
+    {
+      "priority": 0.8306,
+      "parts": {
+        "frequency": 0.951,
+        "impact": 0.891,
+        "intuition": 0.469,
+        "freq_raw": 0.25896,
+        "impact_pct": 62.12
+      },
+      "node": "bb_vs_bet",
+      "board": "AhQh7c",
+      "hand": "9h8h",
+      "hand_category": "draw",
+      "preferred": "call",
+      "reason": "call_odds",
+      "headline": "Call \u2014 your draw has the equity and pot odds to continue."
+    },
+    {
+      "priority": 0.8302,
+      "parts": {
+        "frequency": 0.949,
+        "impact": 0.991,
+        "intuition": 0.272,
+        "freq_raw": 0.25838,
+        "impact_pct": 272.13
+      },
+      "node": "bb_vs_bet",
+      "board": "AhQh7c",
+      "hand": "7s7d",
+      "hand_category": "strong_made",
+      "preferred": "call",
+      "reason": "value_call",
+      "headline": "Call \u2014 you're ahead of enough of their betting range to continue."
+    },
+    {
+      "priority": 0.8298,
+      "parts": {
+        "frequency": 0.943,
+        "impact": 0.897,
+        "intuition": 0.469,
+        "freq_raw": 0.25478,
+        "impact_pct": 67.69
+      },
+      "node": "bb_vs_bet",
+      "board": "AhQh7c",
+      "hand": "Th9h",
+      "hand_category": "draw",
+      "preferred": "call",
+      "reason": "call_odds",
+      "headline": "Call \u2014 your draw has the equity and pot odds to continue."
+    },
+    {
+      "priority": 0.8288,
+      "parts": {
+        "frequency": 0.954,
+        "impact": 0.884,
+        "intuition": 0.469,
+        "freq_raw": 0.26055,
+        "impact_pct": 57.02
+      },
+      "node": "bb_vs_bet",
+      "board": "AhQh7c",
+      "hand": "5h4h",
+      "hand_category": "draw",
+      "preferred": "call",
+      "reason": "call_odds",
+      "headline": "Call \u2014 your draw has the equity and pot odds to continue."
+    },
+    {
+      "priority": 0.8287,
+      "parts": {
+        "frequency": 0.942,
+        "impact": 0.895,
+        "intuition": 0.469,
+        "freq_raw": 0.25318,
+        "impact_pct": 66.94
+      },
+      "node": "bb_vs_bet",
+      "board": "AhQh7c",
+      "hand": "Th8h",
+      "hand_category": "draw",
+      "preferred": "call",
+      "reason": "call_odds",
+      "headline": "Call \u2014 your draw has the equity and pot odds to continue."
+    },
+    {
+      "priority": 0.8282,
+      "parts": {
+        "frequency": 0.951,
+        "impact": 0.885,
+        "intuition": 0.469,
+        "freq_raw": 0.25904,
+        "impact_pct": 57.82
+      },
+      "node": "bb_vs_bet",
+      "board": "AhQh7c",
+      "hand": "6h5h",
+      "hand_category": "draw",
+      "preferred": "call",
+      "reason": "call_odds",
+      "headline": "Call \u2014 your draw has the equity and pot odds to continue."
+    },
+    {
+      "priority": 0.828,
+      "parts": {
+        "frequency": 0.945,
+        "impact": 0.891,
+        "intuition": 0.469,
+        "freq_raw": 0.25743,
+        "impact_pct": 61.87
+      },
+      "node": "bb_vs_bet",
+      "board": "AhQh7c",
+      "hand": "8h6h",
+      "hand_category": "draw",
+      "preferred": "call",
+      "reason": "call_odds",
+      "headline": "Call \u2014 your draw has the equity and pot odds to continue."
+    },
+    {
+      "priority": 0.827,
+      "parts": {
+        "frequency": 0.935,
+        "impact": 0.897,
+        "intuition": 0.469,
+        "freq_raw": 0.2469,
+        "impact_pct": 68.3
+      },
+      "node": "bb_vs_bet",
+      "board": "AhQh7c",
+      "hand": "Kh9h",
+      "hand_category": "draw",
+      "preferred": "call",
+      "reason": "call_odds",
+      "headline": "Call \u2014 your draw has the equity and pot odds to continue."
+    },
+    {
+      "priority": 0.8267,
+      "parts": {
+        "frequency": 0.915,
+        "impact": 0.792,
+        "intuition": 0.719,
+        "freq_raw": 0.2367,
+        "impact_pct": 26.41
+      },
+      "node": "bb_vs_bet",
+      "board": "AhQh7c",
+      "hand": "KhQc",
+      "hand_category": "weak_pair",
+      "preferred": "call",
+      "reason": "bluff_catch",
+      "headline": "Call to catch bluffs \u2014 you beat the hands they'd bluff with."
+    },
+    {
+      "priority": 0.8264,
+      "parts": {
+        "frequency": 0.917,
+        "impact": 0.79,
+        "intuition": 0.719,
+        "freq_raw": 0.23784,
+        "impact_pct": 26.16
+      },
+      "node": "bb_vs_bet",
+      "board": "AhQh7c",
+      "hand": "KhQd",
+      "hand_category": "weak_pair",
+      "preferred": "call",
+      "reason": "bluff_catch",
+      "headline": "Call to catch bluffs \u2014 you beat the hands they'd bluff with."
+    },
+    {
+      "priority": 0.8263,
+      "parts": {
+        "frequency": 0.917,
+        "impact": 0.789,
+        "intuition": 0.719,
+        "freq_raw": 0.23784,
+        "impact_pct": 26.16
+      },
+      "node": "bb_vs_bet",
+      "board": "AhQh7c",
+      "hand": "KhQs",
+      "hand_category": "weak_pair",
+      "preferred": "call",
+      "reason": "bluff_catch",
+      "headline": "Call to catch bluffs \u2014 you beat the hands they'd bluff with."
+    },
+    {
+      "priority": 0.8247,
+      "parts": {
+        "frequency": 0.934,
+        "impact": 0.893,
+        "intuition": 0.469,
+        "freq_raw": 0.24642,
+        "impact_pct": 63.51
+      },
+      "node": "bb_vs_bet",
+      "board": "AhQh7c",
+      "hand": "Jh9h",
+      "hand_category": "draw",
+      "preferred": "call",
+      "reason": "call_odds",
+      "headline": "Call \u2014 your draw has the equity and pot odds to continue."
+    },
+    {
+      "priority": 0.817,
+      "parts": {
+        "frequency": 0.918,
+        "impact": 0.766,
+        "intuition": 0.719,
+        "freq_raw": 0.23795,
+        "impact_pct": 22.12
+      },
+      "node": "bb_vs_bet",
+      "board": "AhQh7c",
+      "hand": "KcQc",
+      "hand_category": "weak_pair",
+      "preferred": "call",
+      "reason": "bluff_catch",
+      "headline": "Call to catch bluffs \u2014 you beat the hands they'd bluff with."
+    },
+    {
+      "priority": 0.8163,
+      "parts": {
+        "frequency": 0.987,
+        "impact": 0.859,
+        "intuition": 0.389,
+        "freq_raw": 0.29476,
+        "impact_pct": 41.64
+      },
+      "node": "bb_first",
+      "board": "AhQh7c",
+      "hand": "Kd9d",
+      "hand_category": "air",
+      "preferred": "check",
+      "reason": "realization",
+      "headline": "Check \u2014 weak holding; take a free card and try to improve."
+    },
+    {
+      "priority": 0.8163,
+      "parts": {
+        "frequency": 0.987,
+        "impact": 0.859,
+        "intuition": 0.389,
+        "freq_raw": 0.29476,
+        "impact_pct": 41.64
+      },
+      "node": "bb_first",
+      "board": "AhQh7c",
+      "hand": "Ks9s",
+      "hand_category": "air",
+      "preferred": "check",
+      "reason": "realization",
+      "headline": "Check \u2014 weak holding; take a free card and try to improve."
+    },
+    {
+      "priority": 0.8162,
+      "parts": {
+        "frequency": 0.993,
+        "impact": 0.764,
+        "intuition": 0.565,
+        "freq_raw": 0.30873,
+        "impact_pct": 22.04
+      },
+      "node": "bb_first",
+      "board": "AhQh7c",
+      "hand": "6s6d",
+      "hand_category": "weak_pair",
+      "preferred": "check",
+      "reason": "pot_control",
+      "headline": "Check to keep the pot small \u2014 decent showdown value, but don't bloat it."
+    },
+    {
+      "priority": 0.8153,
+      "parts": {
+        "frequency": 0.87,
+        "impact": 0.934,
+        "intuition": 0.469,
+        "freq_raw": 0.18702,
+        "impact_pct": 104.93
+      },
+      "node": "bb_vs_bet",
+      "board": "Jd8d3s",
+      "hand": "Qd9d",
+      "hand_category": "draw",
+      "preferred": "call",
+      "reason": "call_odds",
+      "headline": "Call \u2014 your draw has the equity and pot odds to continue."
+    },
+    {
+      "priority": 0.8145,
+      "parts": {
+        "frequency": 0.864,
+        "impact": 0.937,
+        "intuition": 0.469,
+        "freq_raw": 0.18256,
+        "impact_pct": 109.13
+      },
+      "node": "bb_vs_bet",
+      "board": "Jd8d3s",
+      "hand": "QdTd",
+      "hand_category": "draw",
+      "preferred": "call",
+      "reason": "call_odds",
+      "headline": "Call \u2014 your draw has the equity and pot odds to continue."
+    },
+    {
+      "priority": 0.8141,
+      "parts": {
+        "frequency": 0.996,
+        "impact": 0.845,
+        "intuition": 0.389,
+        "freq_raw": 0.31028,
+        "impact_pct": 37.83
+      },
+      "node": "bb_first",
+      "board": "AhQh7c",
+      "hand": "5s4s",
+      "hand_category": "air",
+      "preferred": "check",
+      "reason": "realization",
+      "headline": "Check \u2014 weak holding; take a free card and try to improve."
+    },
+    {
+      "priority": 0.814,
+      "parts": {
+        "frequency": 0.996,
+        "impact": 0.844,
+        "intuition": 0.389,
+        "freq_raw": 0.31028,
+        "impact_pct": 37.83
+      },
+      "node": "bb_first",
+      "board": "AhQh7c",
+      "hand": "5d4d",
+      "hand_category": "air",
+      "preferred": "check",
+      "reason": "realization",
+      "headline": "Check \u2014 weak holding; take a free card and try to improve."
+    },
+    {
+      "priority": 0.8132,
+      "parts": {
+        "frequency": 0.987,
+        "impact": 0.851,
+        "intuition": 0.389,
+        "freq_raw": 0.29476,
+        "impact_pct": 39.71
+      },
+      "node": "bb_first",
+      "board": "AhQh7c",
+      "hand": "Js9s",
+      "hand_category": "air",
+      "preferred": "check",
+      "reason": "realization",
+      "headline": "Check \u2014 weak holding; take a free card and try to improve."
+    },
+    {
+      "priority": 0.8131,
+      "parts": {
+        "frequency": 0.987,
+        "impact": 0.851,
+        "intuition": 0.389,
+        "freq_raw": 0.29476,
+        "impact_pct": 39.71
+      },
+      "node": "bb_first",
+      "board": "AhQh7c",
+      "hand": "Jd9d",
+      "hand_category": "air",
+      "preferred": "check",
+      "reason": "realization",
+      "headline": "Check \u2014 weak holding; take a free card and try to improve."
+    }
+  ],
+  "lesson_backlog": [
+    {
+      "node": "btn_vs_check",
+      "board_texture": [
+        "unpaired",
+        "rainbow",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "air",
+      "reason": "mixed",
+      "n_records": 44,
+      "total_value": 23.956,
+      "mean_priority": 0.544,
+      "mean_impact_pct": 0.14
+    },
+    {
+      "node": "bb_vs_bet",
+      "board_texture": [
+        "unpaired",
+        "two_tone",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "draw",
+      "reason": "call_odds",
+      "n_records": 30,
+      "total_value": 23.563,
+      "mean_priority": 0.785,
+      "mean_impact_pct": 65.87
+    },
+    {
+      "node": "bb_first",
+      "board_texture": [
+        "unpaired",
+        "two_tone",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "weak_pair",
+      "reason": "pot_control",
+      "n_records": 30,
+      "total_value": 23.412,
+      "mean_priority": 0.78,
+      "mean_impact_pct": 13.93
+    },
+    {
+      "node": "btn_vs_check",
+      "board_texture": [
+        "unpaired",
+        "rainbow",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "weak_pair",
+      "reason": "mixed",
+      "n_records": 42,
+      "total_value": 23.312,
+      "mean_priority": 0.555,
+      "mean_impact_pct": 0.22
+    },
+    {
+      "node": "bb_first",
+      "board_texture": [
+        "unpaired",
+        "two_tone",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "air",
+      "reason": "realization",
+      "n_records": 30,
+      "total_value": 23.22,
+      "mean_priority": 0.774,
+      "mean_impact_pct": 28.93
+    },
+    {
+      "node": "bb_vs_bet",
+      "board_texture": [
+        "unpaired",
+        "two_tone",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "top_pair",
+      "reason": "value_call",
+      "n_records": 30,
+      "total_value": 23.008,
+      "mean_priority": 0.767,
+      "mean_impact_pct": 52.75
+    },
+    {
+      "node": "bb_vs_bet",
+      "board_texture": [
+        "unpaired",
+        "rainbow",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "top_pair",
+      "reason": "value_call",
+      "n_records": 30,
+      "total_value": 22.377,
+      "mean_priority": 0.746,
+      "mean_impact_pct": 73.95
+    },
+    {
+      "node": "btn_vs_bet",
+      "board_texture": [
+        "unpaired",
+        "two_tone",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "top_pair",
+      "reason": "value_call",
+      "n_records": 30,
+      "total_value": 21.996,
+      "mean_priority": 0.733,
+      "mean_impact_pct": 74.82
+    },
+    {
+      "node": "btn_vs_bet",
+      "board_texture": [
+        "unpaired",
+        "two_tone",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "weak_pair",
+      "reason": "bluff_catch",
+      "n_records": 30,
+      "total_value": 21.524,
+      "mean_priority": 0.717,
+      "mean_impact_pct": 17.21
+    },
+    {
+      "node": "bb_vs_bet",
+      "board_texture": [
+        "unpaired",
+        "two_tone",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "air",
+      "reason": "bluff_catch",
+      "n_records": 30,
+      "total_value": 21.143,
+      "mean_priority": 0.705,
+      "mean_impact_pct": 5.87
+    },
+    {
+      "node": "bb_vs_bet",
+      "board_texture": [
+        "unpaired",
+        "two_tone",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "weak_pair",
+      "reason": "bluff_catch",
+      "n_records": 27,
+      "total_value": 21.015,
+      "mean_priority": 0.778,
+      "mean_impact_pct": 22.05
+    },
+    {
+      "node": "bb_vs_bet",
+      "board_texture": [
+        "unpaired",
+        "two_tone",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "air",
+      "reason": "fold",
+      "n_records": 30,
+      "total_value": 20.923,
+      "mean_priority": 0.697,
+      "mean_impact_pct": 30.32
+    },
+    {
+      "node": "btn_vs_bet",
+      "board_texture": [
+        "unpaired",
+        "rainbow",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "weak_pair",
+      "reason": "bluff_catch",
+      "n_records": 30,
+      "total_value": 20.633,
+      "mean_priority": 0.688,
+      "mean_impact_pct": 44.36
+    },
+    {
+      "node": "bb_first",
+      "board_texture": [
+        "unpaired",
+        "rainbow",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "top_pair",
+      "reason": "pot_control",
+      "n_records": 30,
+      "total_value": 20.514,
+      "mean_priority": 0.684,
+      "mean_impact_pct": 6.86
+    },
+    {
+      "node": "btn_vs_check",
+      "board_texture": [
+        "unpaired",
+        "two_tone",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "strong_made",
+      "reason": "value",
+      "n_records": 30,
+      "total_value": 20.506,
+      "mean_priority": 0.684,
+      "mean_impact_pct": 18.5
+    },
+    {
+      "node": "btn_vs_bet",
+      "board_texture": [
+        "unpaired",
+        "two_tone",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "strong_made",
+      "reason": "value_call",
+      "n_records": 27,
+      "total_value": 20.425,
+      "mean_priority": 0.756,
+      "mean_impact_pct": 168.77
+    },
+    {
+      "node": "btn_vs_bet",
+      "board_texture": [
+        "unpaired",
+        "rainbow",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "top_pair",
+      "reason": "value_call",
+      "n_records": 30,
+      "total_value": 20.357,
+      "mean_priority": 0.679,
+      "mean_impact_pct": 159.24
+    },
+    {
+      "node": "bb_first",
+      "board_texture": [
+        "unpaired",
+        "rainbow",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "weak_pair",
+      "reason": "pot_control",
+      "n_records": 30,
+      "total_value": 20.34,
+      "mean_priority": 0.678,
+      "mean_impact_pct": 5.48
+    },
+    {
+      "node": "bb_first",
+      "board_texture": [
+        "unpaired",
+        "rainbow",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "air",
+      "reason": "realization",
+      "n_records": 30,
+      "total_value": 20.196,
+      "mean_priority": 0.673,
+      "mean_impact_pct": 9.95
+    },
+    {
+      "node": "bb_first",
+      "board_texture": [
+        "unpaired",
+        "two_tone",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "top_pair",
+      "reason": "pot_control",
+      "n_records": 30,
+      "total_value": 19.927,
+      "mean_priority": 0.664,
+      "mean_impact_pct": 2.89
+    },
+    {
+      "node": "bb_vs_bet",
+      "board_texture": [
+        "unpaired",
+        "two_tone",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "weak_pair",
+      "reason": "fold",
+      "n_records": 30,
+      "total_value": 19.553,
+      "mean_priority": 0.652,
+      "mean_impact_pct": 15.48
+    },
+    {
+      "node": "btn_vs_bet",
+      "board_texture": [
+        "unpaired",
+        "rainbow",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "air",
+      "reason": "bluff_catch",
+      "n_records": 30,
+      "total_value": 19.497,
+      "mean_priority": 0.65,
+      "mean_impact_pct": 10.06
+    },
+    {
+      "node": "btn_vs_bet",
+      "board_texture": [
+        "unpaired",
+        "two_tone",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "air",
+      "reason": "bluff_catch",
+      "n_records": 29,
+      "total_value": 19.465,
+      "mean_priority": 0.671,
+      "mean_impact_pct": 10.32
+    },
+    {
+      "node": "btn_vs_check",
+      "board_texture": [
+        "unpaired",
+        "rainbow",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "strong_made",
+      "reason": "value",
+      "n_records": 28,
+      "total_value": 19.012,
+      "mean_priority": 0.679,
+      "mean_impact_pct": 23.2
+    },
+    {
+      "node": "bb_vs_bet",
+      "board_texture": [
+        "unpaired",
+        "rainbow",
+        "low",
+        "connected"
+      ],
+      "hand_category": "strong_made",
+      "reason": "value_call",
+      "n_records": 30,
+      "total_value": 18.933,
+      "mean_priority": 0.631,
+      "mean_impact_pct": 66.08
+    },
+    {
+      "node": "bb_vs_bet",
+      "board_texture": [
+        "unpaired",
+        "rainbow",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "air",
+      "reason": "bluff_catch",
+      "n_records": 27,
+      "total_value": 18.831,
+      "mean_priority": 0.697,
+      "mean_impact_pct": 10.6
+    },
+    {
+      "node": "bb_first",
+      "board_texture": [
+        "paired",
+        "rainbow",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "strong_made",
+      "reason": "trap",
+      "n_records": 30,
+      "total_value": 18.74,
+      "mean_priority": 0.625,
+      "mean_impact_pct": 3.91
+    },
+    {
+      "node": "bb_first",
+      "board_texture": [
+        "unpaired",
+        "monotone",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "weak_pair",
+      "reason": "pot_control",
+      "n_records": 30,
+      "total_value": 18.611,
+      "mean_priority": 0.62,
+      "mean_impact_pct": 7.84
+    },
+    {
+      "node": "bb_first",
+      "board_texture": [
+        "unpaired",
+        "two_tone",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "draw",
+      "reason": "realization",
+      "n_records": 30,
+      "total_value": 18.242,
+      "mean_priority": 0.608,
+      "mean_impact_pct": 2.02
+    },
+    {
+      "node": "bb_first",
+      "board_texture": [
+        "unpaired",
+        "two_tone",
+        "high_card",
+        "connected"
+      ],
+      "hand_category": "weak_pair",
+      "reason": "pot_control",
+      "n_records": 30,
+      "total_value": 18.216,
+      "mean_priority": 0.607,
+      "mean_impact_pct": 3.82
+    },
+    {
+      "node": "bb_vs_bet",
+      "board_texture": [
+        "paired",
+        "rainbow",
+        "low",
+        "connected"
+      ],
+      "hand_category": "strong_made",
+      "reason": "value_call",
+      "n_records": 30,
+      "total_value": 17.799,
+      "mean_priority": 0.593,
+      "mean_impact_pct": 76.68
+    },
+    {
+      "node": "btn_vs_check",
+      "board_texture": [
+        "unpaired",
+        "monotone",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "air",
+      "reason": "mixed",
+      "n_records": 39,
+      "total_value": 17.765,
+      "mean_priority": 0.456,
+      "mean_impact_pct": 0.26
+    },
+    {
+      "node": "bb_first",
+      "board_texture": [
+        "unpaired",
+        "monotone",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "air",
+      "reason": "realization",
+      "n_records": 30,
+      "total_value": 17.678,
+      "mean_priority": 0.589,
+      "mean_impact_pct": 9.87
+    },
+    {
+      "node": "btn_vs_check",
+      "board_texture": [
+        "unpaired",
+        "two_tone",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "draw",
+      "reason": "semi_bluff",
+      "n_records": 26,
+      "total_value": 17.562,
+      "mean_priority": 0.675,
+      "mean_impact_pct": 4.87
+    },
+    {
+      "node": "bb_vs_bet",
+      "board_texture": [
+        "unpaired",
+        "two_tone",
+        "high_card",
+        "connected"
+      ],
+      "hand_category": "strong_made",
+      "reason": "value_call",
+      "n_records": 30,
+      "total_value": 17.475,
+      "mean_priority": 0.582,
+      "mean_impact_pct": 101.67
+    },
+    {
+      "node": "bb_first",
+      "board_texture": [
+        "unpaired",
+        "monotone",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "top_pair",
+      "reason": "pot_control",
+      "n_records": 30,
+      "total_value": 17.475,
+      "mean_priority": 0.582,
+      "mean_impact_pct": 5.54
+    },
+    {
+      "node": "btn_vs_check",
+      "board_texture": [
+        "unpaired",
+        "two_tone",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "air",
+      "reason": "mixed",
+      "n_records": 30,
+      "total_value": 17.468,
+      "mean_priority": 0.582,
+      "mean_impact_pct": 0.22
+    },
+    {
+      "node": "bb_vs_bet",
+      "board_texture": [
+        "paired",
+        "rainbow",
+        "high_card",
+        "disconnected"
+      ],
+      "hand_category": "strong_made",
+      "reason": "value_call",
+      "n_records": 30,
+      "total_value": 17.236,
+      "mean_priority": 0.575,
+      "mean_impact_pct": 44.73
+    },
+    {
+      "node": "bb_first",
+      "board_texture": [
+        "unpaired",
+        "two_tone",
+        "low",
+        "connected"
+      ],
+      "hand_category": "strong_made",
+      "reason": "mixed",
+      "n_records": 34,
+      "total_value": 17.206,
+      "mean_priority": 0.506,
+      "mean_impact_pct": 0.2
+    },
+    {
+      "node": "btn_vs_check",
+      "board_texture": [
+        "unpaired",
+        "rainbow",
+        "high_card",
+        "connected"
+      ],
+      "hand_category": "air",
+      "reason": "mixed",
+      "n_records": 40,
+      "total_value": 16.93,
+      "mean_priority": 0.423,
+      "mean_impact_pct": 0.26
+    }
+  ],
+  "solve_backlog": [
+    {
+      "board_texture": [
+        "unpaired",
+        "two_tone",
+        "low",
+        "disconnected"
+      ],
+      "occurrence_pct": 4.561,
+      "boards_solved": 0,
+      "records": 0,
+      "example_board": "2c 3c 7d",
+      "covered": false
+    },
+    {
+      "board_texture": [
+        "paired",
+        "two_tone",
+        "high_card",
+        "disconnected"
+      ],
+      "occurrence_pct": 3.258,
+      "boards_solved": 0,
+      "records": 0,
+      "example_board": "2c 2d Tc",
+      "covered": false
+    },
+    {
+      "board_texture": [
+        "unpaired",
+        "rainbow",
+        "low",
+        "disconnected"
+      ],
+      "occurrence_pct": 3.041,
+      "boards_solved": 0,
+      "records": 0,
+      "example_board": "2c 3d 7h",
+      "covered": false
+    },
+    {
+      "board_texture": [
+        "paired",
+        "two_tone",
+        "low",
+        "connected"
+      ],
+      "occurrence_pct": 2.389,
+      "boards_solved": 0,
+      "records": 0,
+      "example_board": "2c 2d 3c",
+      "covered": false
+    },
+    {
+      "board_texture": [
+        "paired",
+        "rainbow",
+        "high_card",
+        "connected"
+      ],
+      "occurrence_pct": 2.262,
+      "boards_solved": 0,
+      "records": 0,
+      "example_board": "6c 6d Th",
+      "covered": false
+    },
+    {
+      "board_texture": [
+        "paired",
+        "two_tone",
+        "high_card",
+        "connected"
+      ],
+      "occurrence_pct": 2.172,
+      "boards_solved": 0,
+      "records": 0,
+      "example_board": "6c 6d Tc",
+      "covered": false
+    },
+    {
+      "board_texture": [
+        "paired",
+        "two_tone",
+        "low",
+        "disconnected"
+      ],
+      "occurrence_pct": 0.652,
+      "boards_solved": 0,
+      "records": 0,
+      "example_board": "2c 2d 7c",
+      "covered": false
+    },
+    {
+      "board_texture": [
+        "paired",
+        "rainbow",
+        "low",
+        "disconnected"
+      ],
+      "occurrence_pct": 0.652,
+      "boards_solved": 0,
+      "records": 0,
+      "example_board": "2c 2d 7h",
+      "covered": false
+    },
+    {
+      "board_texture": [
+        "unpaired",
+        "monotone",
+        "high_card",
+        "connected"
+      ],
+      "occurrence_pct": 0.543,
+      "boards_solved": 0,
+      "records": 0,
+      "example_board": "6c 7c Tc",
+      "covered": false
+    },
+    {
+      "board_texture": [
+        "unpaired",
+        "monotone",
+        "low",
+        "connected"
+      ],
+      "occurrence_pct": 0.507,
+      "boards_solved": 0,
+      "records": 0,
+      "example_board": "2c 3c 4c",
+      "covered": false
+    },
+    {
+      "board_texture": [
+        "unpaired",
+        "two_tone",
+        "high_card",
+        "disconnected"
+      ],
+      "occurrence_pct": 32.579,
+      "boards_solved": 2,
+      "records": 750,
+      "example_board": "2c 3c Td",
+      "covered": true
+    },
+    {
+      "board_texture": [
+        "unpaired",
+        "rainbow",
+        "high_card",
+        "disconnected"
+      ],
+      "occurrence_pct": 21.719,
+      "boards_solved": 2,
+      "records": 609,
+      "example_board": "2c 3d Th",
+      "covered": true
+    },
+    {
+      "board_texture": [
+        "unpaired",
+        "two_tone",
+        "high_card",
+        "connected"
+      ],
+      "occurrence_pct": 4.887,
+      "boards_solved": 1,
+      "records": 753,
+      "example_board": "6c 7c Td",
+      "covered": true
+    },
+    {
+      "board_texture": [
+        "unpaired",
+        "two_tone",
+        "low",
+        "connected"
+      ],
+      "occurrence_pct": 4.561,
+      "boards_solved": 1,
+      "records": 696,
+      "example_board": "2c 3c 4d",
+      "covered": true
+    },
+    {
+      "board_texture": [
+        "unpaired",
+        "monotone",
+        "high_card",
+        "disconnected"
+      ],
+      "occurrence_pct": 3.62,
+      "boards_solved": 1,
+      "records": 702,
+      "example_board": "2c 3c Tc",
+      "covered": true
+    },
+    {
+      "board_texture": [
+        "paired",
+        "rainbow",
+        "high_card",
+        "disconnected"
+      ],
+      "occurrence_pct": 3.258,
+      "boards_solved": 1,
+      "records": 250,
+      "example_board": "2c 2d Th",
+      "covered": true
+    },
+    {
+      "board_texture": [
+        "unpaired",
+        "rainbow",
+        "high_card",
+        "connected"
+      ],
+      "occurrence_pct": 3.258,
+      "boards_solved": 1,
+      "records": 661,
+      "example_board": "6c 7d Th",
+      "covered": true
+    },
+    {
+      "board_texture": [
+        "unpaired",
+        "rainbow",
+        "low",
+        "connected"
+      ],
+      "occurrence_pct": 3.041,
+      "boards_solved": 1,
+      "records": 420,
+      "example_board": "2c 3d 4h",
+      "covered": true
+    },
+    {
+      "board_texture": [
+        "paired",
+        "rainbow",
+        "low",
+        "connected"
+      ],
+      "occurrence_pct": 2.534,
+      "boards_solved": 1,
+      "records": 289,
+      "example_board": "2c 2d 2h",
+      "covered": true
+    },
+    {
+      "board_texture": [
+        "unpaired",
+        "monotone",
+        "low",
+        "disconnected"
+      ],
+      "occurrence_pct": 0.507,
+      "boards_solved": 1,
+      "records": 607,
+      "example_board": "2c 3c 7c",
+      "covered": true
+    }
+  ],
+  "coverage": {
+    "textures_covered": 10,
+    "textures_total": 20
+  }
+}

@@ -10,7 +10,7 @@ import os
 import sqlite3
 import subprocess
 
-DB = "output/packs/flop_pack_v1_raise_demo.db"
+DB = "output/packs/flop_pack_v1_fullrange.db"
 DISPLAY_ORDER = ["value", "protection", "bluff", "trap", "pot_control", "realization",
                  "value_call", "bluff_catch", "fold", "mixed", "raise_value", "raise_bluff"]
 
@@ -128,14 +128,15 @@ def render(meta, samples):
   </div>
 
   <footer>
-    These cover the full range of reasons the trainer teaches — value, protection, bluff, trap,
-    pot control, realization, bluff-catch, folds, mixed spots, and value / bluff <em>raises</em>. Grading and
-    explanations are generated deterministically from the solve; nothing here is hand-written strategy.
+    These cover the reasons the trainer teaches — value, protection, bluff, trap, pot control,
+    realization, bluff-catch, folds, and mixed spots. Grading and explanations are generated
+    deterministically from the solve; nothing here is hand-written strategy.
     <br><br>
-    <b>Note:</b> this preview pack is a reduced-range demo (small solve, 3 boards) built to show the content
-    <em>format</em> and explanation style — exact EV magnitudes and frequencies are illustrative, not final
-    full-range GTO. The launch pack is generated the same way at full ranges. Reason labels come from
-    <code>explanations.py</code>; grades from EV regret thresholds stored in the pack.
+    <b>This is the real launch pack:</b> a full-range flop solve across 12 boards
+    (BTN vs BB, single-raised pot, 100&nbsp;bb, 66% c-bet) — the same {meta.get('record_count')} decisions
+    the trainer ships, on a GPU-solved flop→turn→river tree. EVs and frequencies are the actual solver
+    output. Raise decisions (FR-011) are a separate run and aren't shown here. Reason labels come from
+    <code>explanations.py</code>; grades from EV-regret thresholds stored in the pack.
   </footer>
 </div>'''
     os.makedirs("demo", exist_ok=True)
