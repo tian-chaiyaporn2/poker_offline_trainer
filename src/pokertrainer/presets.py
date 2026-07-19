@@ -55,6 +55,14 @@ BOARDS: List[Dict] = [
     {"board": "7s5s2s", "categories": ["monotone", "low"]},
     {"board": "6h4d2c", "categories": ["dry", "low", "rainbow"]},
     {"board": "JcTs9d", "categories": ["connected", "high_card", "rainbow"]},
+    # Coverage additions (indices 12-16): the highest-frequency textures the
+    # priority scorer flagged as uncovered by boards 0-11 (low + paired
+    # disconnected/connected families). Solve as a targeted second run.
+    {"board": "9h6h2c", "categories": ["two_suit", "low", "dry"]},
+    {"board": "QhQc6h", "categories": ["paired", "two_suit", "high_card", "dry"]},
+    {"board": "9s6d2c", "categories": ["rainbow", "low", "dry"]},
+    {"board": "8h8c7h", "categories": ["paired", "two_suit", "low", "connected"]},
+    {"board": "JhJcTd", "categories": ["paired", "rainbow", "high_card", "connected"]},
 ]
 
 
