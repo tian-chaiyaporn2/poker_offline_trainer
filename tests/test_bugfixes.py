@@ -135,7 +135,9 @@ def test_solve_result_has_action_ev_for_all_infosets():
 
 
 def test_run_reports_average_strategy_ev():
-    """Batched and multistreet run() must agree on average-strategy root EV."""
+    """run() must report the iteration-AVERAGED root EV — not the last iterate —
+    consistently across solvers. (A pure agreement check would also pass under the
+    old last-iterate behavior, so also pin it to the average and to ground truth.)"""
     from pokertrainer.solver.multistreet import MultiStreetSpike
     flop = parse_cards("As7h2d")
     oop = [parse_hand(h) for h in ["AhAc", "KsKc", "7s7c"]]
@@ -143,5 +145,23 @@ def test_run_reports_average_strategy_ev():
     wo, wi = np.ones(3), np.ones(3)
     a = MultiStreetSpike(flop, oop, ip, wo, wi, 5.5, 0.66, streets=2).run(60)
     b = BatchedCFR(flop, oop, ip, wo, wi, 5.5, 0.66, streets=2).run(60)
+    # (1) both solvers agree on the averaged-strategy EV
     assert abs(a["root_ev_oop_bb"] - b["root_ev_oop_bb"]) < 1e-9
+    # (2) the reported EV is the AVERAGE, provably distinct from the last iterate
+    #     (ev_curve records the per-iteration last-iterate EVs). If run() reported
+    #     the last iterate these would be equal.
+    assert abs(a["root_ev_oop_bb"] - a["ev_curve"][-1][1]) > 1e-4
+    assert abs(b["root_ev_oop_bb"] - b["ev_curve"][-1][1]) > 1e-4
+
+
+def test_checkdown_root_ev_matches_true_equity():
+    """Ground truth for the averaged EV + chance denominator together: with no
+    betting (bet_frac=0) the game is a pure check-down, so OOP's reported pot
+    share must equal OOP's full-runout equity."""
+    from pokertrainer.mc_equity import mc_equity
+    flop = parse_cards("As7h2d")
+    oh, ih = parse_hand("KhQh"), parse_hand("JcTc")
+    r = BatchedCFR(flop, [oh], [ih], np.ones(1), np.ones(1), 5.5, 0.0, streets=3).run(40)
+    eq = mc_equity(flop, oh, ih, samples=120000, seed=3)
+    assert abs(r["root_ev_pct_pot"] / 100.0 - eq) < 0.01
 

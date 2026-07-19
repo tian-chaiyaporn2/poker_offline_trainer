@@ -61,10 +61,19 @@ def load_pack():
     path = find_pack()
     verdict = verify_pack(path)
     if not (verdict.get("hash_ok") and verdict.get("signature_ok")):
+        # Common non-tamper cause: a POKERTRAINER_SIGNING_KEY is exported that
+        # differs from the key the pack was signed with (e.g. the shipped packs
+        # are dev-signed). Call that out so it isn't mistaken for tampering.
+        hint = ""
+        if os.environ.get("POKERTRAINER_SIGNING_KEY") and verdict.get("hash_ok") \
+                and not verdict.get("signature_ok"):
+            hint = ("\n  NOTE: POKERTRAINER_SIGNING_KEY is set but does not match this "
+                    "pack's signature.\n  Unset it to serve a dev-signed pack, or rebuild "
+                    "the pack with that key (content_pack --records ...).")
         raise SystemExit(
             f"Content pack failed integrity check: {path}\n"
             f"  verify={verdict}\n"
-            "Refuse to serve a tampered or unsigned pack."
+            "Refuse to serve a tampered or unsigned pack." + hint
         )
     conn = sqlite3.connect(path)
     meta = dict(conn.execute("SELECT key, value FROM pack_meta").fetchall())
