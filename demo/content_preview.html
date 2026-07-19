@@ -1,0 +1,296 @@
+<style>
+:root{
+  --bg:#e9ece6; --panel:#ffffff; --ink:#171d19; --muted:#59635c; --line:#dbe0d8;
+  --brass:#9a7c41; --brass-soft:#b8975a;
+  --best:#2f7d54; --good:#4f8f66; --accept:#b07f2a; --costly:#bf5330; --major:#9c3320;
+  --pc-bg:#fcfbf7; --pc-ink:#181818; --pc-red:#bf1d2c; --pc-line:#d9d7cd;
+  --disp:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,sans-serif;
+  --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0e1512; --panel:#151d18; --ink:#e6ece7; --muted:#8f9d94; --line:#25302a;
+  --brass:#cBa066; --brass-soft:#d8b478;
+  --best:#4bb57e; --good:#66b784; --accept:#d1a048; --costly:#e0714e; --major:#cf5138;
+  --pc-bg:#f6f4ee; --pc-ink:#181818; --pc-red:#c02636; --pc-line:#cbc9bf;
+}}
+:root[data-theme="light"]{--bg:#e9ece6;--panel:#ffffff;--ink:#171d19;--muted:#59635c;--line:#dbe0d8;--brass:#9a7c41;--brass-soft:#b8975a;--best:#2f7d54;--good:#4f8f66;--accept:#b07f2a;--costly:#bf5330;--major:#9c3320;--pc-bg:#fcfbf7;--pc-ink:#181818;--pc-red:#bf1d2c;--pc-line:#d9d7cd;}
+:root[data-theme="dark"]{--bg:#0e1512;--panel:#151d18;--ink:#e6ece7;--muted:#8f9d94;--line:#25302a;--brass:#cBa066;--brass-soft:#d8b478;--best:#4bb57e;--good:#66b784;--accept:#d1a048;--costly:#e0714e;--major:#cf5138;--pc-bg:#f6f4ee;--pc-ink:#181818;--pc-red:#c02636;--pc-line:#cbc9bf;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:40px 22px 64px}
+.eyebrow{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--brass);font-weight:600}
+h1{font-family:var(--disp);font-weight:600;font-size:clamp(28px,4.4vw,46px);line-height:1.05;
+  margin:.28em 0 .18em;text-wrap:balance;letter-spacing:-.01em}
+.thesis{color:var(--muted);font-size:clamp(15px,1.7vw,17.5px);max-width:60ch;margin:0}
+.rule{height:1px;background:linear-gradient(90deg,var(--brass),transparent);margin:22px 0;border:0}
+.meta{display:flex;flex-wrap:wrap;gap:8px 18px;font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.meta b{color:var(--ink);font-weight:600}
+.key{display:grid;grid-template-columns:1fr;gap:14px;background:var(--panel);border:1px solid var(--line);
+  border-radius:14px;padding:18px 20px;margin:26px 0 30px}
+.key h2{font-family:var(--disp);font-size:16px;margin:0 0 2px;font-weight:600}
+.key p{margin:0;color:var(--muted);font-size:13.5px;max-width:70ch}
+.scale{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);
+  border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+.dot{width:9px;height:9px;border-radius:2px;display:inline-block}
+.grid{display:grid;grid-template-columns:1fr;gap:18px}
+@media(min-width:760px){.grid{grid-template-columns:1fr 1fr}}
+.q{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 18px 16px;
+  display:flex;flex-direction:column;gap:13px;overflow:hidden}
+.qh{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sit{font-family:var(--disp);font-size:16.5px;font-weight:600}
+.pos{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.05em;padding:2px 7px;border-radius:6px;
+  vertical-align:middle;margin-right:5px}
+.pos.BB{background:color-mix(in srgb,var(--brass) 20%,transparent);color:var(--brass)}
+.pos.BTN{background:color-mix(in srgb,var(--best) 20%,transparent);color:var(--best)}
+.hc{font-size:11.5px;color:var(--muted);text-transform:capitalize;font-variant:small-caps;letter-spacing:.03em}
+.felt{background:radial-gradient(120% 120% at 50% 0,color-mix(in srgb,var(--best) 22%,var(--panel)),var(--panel));
+  border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:9px}
+.crow{display:flex;align-items:center;gap:12px}
+.cap{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);width:38px;flex:none}
+.pcs{display:flex;gap:6px}
+.pc{background:var(--pc-bg);color:var(--pc-ink);border:1px solid var(--pc-line);border-radius:6px;
+  width:34px;height:46px;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;
+  box-shadow:0 1px 2px rgba(0,0,0,.18);line-height:1}
+.pc b{font-size:16px;font-weight:700;font-family:var(--sans)}
+.pc i{font-size:15px;font-style:normal;margin-top:1px}
+.pc.red{color:var(--pc-red)}
+.acts{display:flex;flex-direction:column;gap:6px}
+.act{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:10px;
+  border:1px solid var(--line);border-left:3px solid var(--gc,var(--line));border-radius:8px;padding:8px 11px;position:relative}
+.act.g-best{--gc:var(--best)} .act.g-good{--gc:var(--good)} .act.g-acceptable{--gc:var(--accept)}
+.act.g-costly{--gc:var(--costly)} .act.g-major_error{--gc:var(--major)}
+.act.rec{background:color-mix(in srgb,var(--gc) 9%,var(--panel))}
+.al{font-weight:600;font-size:14px}
+.act.rec .al::after{content:"★";color:var(--gc);font-size:11px;margin-left:7px;vertical-align:1px}
+.ameta{font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;gap:12px;font-variant-numeric:tabular-nums}
+.ae{color:var(--ink)}
+.ag{font-size:11px;font-weight:700;color:var(--gc);text-align:right;min-width:74px}
+.expl{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:7px}
+.reason{align-self:flex-start;font-size:11px;font-weight:600;letter-spacing:.03em;color:var(--brass);
+  border:1px solid color-mix(in srgb,var(--brass) 40%,var(--line));border-radius:999px;padding:2px 10px}
+.head{margin:0;font-size:14.5px;font-weight:600}
+.det{margin:0;padding-left:17px;color:var(--muted);font-size:12.5px;display:flex;flex-direction:column;gap:2px}
+.det li{font-variant-numeric:tabular-nums}
+footer{margin-top:34px;color:var(--muted);font-size:12.5px;border-top:1px solid var(--line);padding-top:16px;max-width:75ch}
+footer code{font-family:var(--mono);font-size:11.5px;background:color-mix(in srgb,var(--ink) 7%,transparent);padding:1px 5px;border-radius:4px}
+</style>
+<div class="wrap">
+  <div class="eyebrow">Solver content preview</div>
+  <h1>Full-street flop decisions, in plain language</h1>
+  <p class="thesis">A sample of what the trainer ships: every recommendation comes from a complete
+  flop-to-turn-to-river solve, graded by EV, and explained in one sentence a casual player understands.</p>
+  <hr class="rule">
+  <div class="meta">
+    <span>Pack <b>v1_raise_demo</b></span>
+    <span><b>200</b> decision records</span>
+    <span>🔏 <b>Signed</b> &amp; integrity-verified</span>
+    <span>Solver <b>full-street CFR+</b></span>
+    <span>Build <b>5e72a650fb</b></span>
+  </div>
+
+  <div class="key">
+    <h2>How to read a card</h2>
+    <p>Each card is one real question. The player picks an action; it's graded instantly from the pack's
+    precomputed grades, then the reason is shown. The action marked ★ is the solver's pick. Numbers are the
+    solver's frequency and expected value (in big blinds) for each action.</p>
+    <div class="scale"><span class="chip"><span class="dot" style="background:var(--best)"></span>Best</span><span class="chip"><span class="dot" style="background:var(--good)"></span>Good</span><span class="chip"><span class="dot" style="background:var(--accept)"></span>OK</span><span class="chip"><span class="dot" style="background:var(--costly)"></span>Costly</span><span class="chip"><span class="dot" style="background:var(--major)"></span>Major error</span></div>
+  </div>
+
+  <div class="grid">
+    <article class="q">
+  <header class="qh">
+    <div class="sit"><span class="pos BTN">BTN</span> checked to</div>
+    <span class="hc">strong made</span>
+  </header>
+  <div class="felt">
+    <div class="crow"><span class="cap">Flop</span><span class="pcs"><span class="pc red"><b>Q</b><i>♥</i></span><span class="pc red"><b>8</b><i>♥</i></span><span class="pc red"><b>3</b><i>♥</i></span></span></div>
+    <div class="crow"><span class="cap">Hand</span><span class="pcs"><span class="pc red"><b>A</b><i>♥</i></span><span class="pc red"><b>6</b><i>♥</i></span></span></div>
+  </div>
+  <div class="acts"><div class="act g-major_error"><span class="al">Check</span><span class="ameta"><span class="af">0%</span><span class="ae">+8.97 bb</span></span><span class="ag">Major error</span></div><div class="act g-best rec"><span class="al">Bet 66%</span><span class="ameta"><span class="af">100%</span><span class="ae">+10.77 bb</span></span><span class="ag">Best</span></div></div>
+  <div class="expl">
+    <span class="reason">Value bet</span>
+    <p class="head">Bet for value — you&#x27;re ahead of the hands that call, so get money in.</p>
+    <ul class="det"><li>Bet is best; check gives up ~32.772% of the pot.</li><li>Solver frequency: bet 100%, check 0%</li><li>BTN&#x27;s range is stronger on this board, which supports betting.</li><li>Board: all one suit.</li></ul>
+  </div>
+</article><article class="q">
+  <header class="qh">
+    <div class="sit"><span class="pos BTN">BTN</span> checked to</div>
+    <span class="hc">weak pair</span>
+  </header>
+  <div class="felt">
+    <div class="crow"><span class="cap">Flop</span><span class="pcs"><span class="pc red"><b>Q</b><i>♥</i></span><span class="pc red"><b>8</b><i>♥</i></span><span class="pc red"><b>3</b><i>♥</i></span></span></div>
+    <div class="crow"><span class="cap">Hand</span><span class="pcs"><span class="pc red"><b>5</b><i>♦</i></span><span class="pc"><b>5</b><i>♣</i></span></span></div>
+  </div>
+  <div class="acts"><div class="act g-costly"><span class="al">Check</span><span class="ameta"><span class="af">2%</span><span class="ae">+2.75 bb</span></span><span class="ag">Costly</span></div><div class="act g-best rec"><span class="al">Bet 66%</span><span class="ameta"><span class="af">98%</span><span class="ae">+3.09 bb</span></span><span class="ag">Best</span></div></div>
+  <div class="expl">
+    <span class="reason">Protection</span>
+    <p class="head">Bet to protect — likely ahead but vulnerable, so charge the draws.</p>
+    <ul class="det"><li>Bet is best; check gives up ~6.177% of the pot.</li><li>Solver frequency: bet 98%, check 2%</li><li>BTN&#x27;s range is stronger on this board, which supports betting.</li><li>Board: all one suit.</li></ul>
+  </div>
+</article><article class="q">
+  <header class="qh">
+    <div class="sit"><span class="pos BTN">BTN</span> checked to</div>
+    <span class="hc">air</span>
+  </header>
+  <div class="felt">
+    <div class="crow"><span class="cap">Flop</span><span class="pcs"><span class="pc red"><b>Q</b><i>♥</i></span><span class="pc red"><b>8</b><i>♥</i></span><span class="pc red"><b>3</b><i>♥</i></span></span></div>
+    <div class="crow"><span class="cap">Hand</span><span class="pcs"><span class="pc"><b>K</b><i>♣</i></span><span class="pc"><b>10</b><i>♣</i></span></span></div>
+  </div>
+  <div class="acts"><div class="act g-major_error"><span class="al">Check</span><span class="ameta"><span class="af">0%</span><span class="ae">+2.61 bb</span></span><span class="ag">Major error</span></div><div class="act g-best rec"><span class="al">Bet 66%</span><span class="ameta"><span class="af">100%</span><span class="ae">+3.61 bb</span></span><span class="ag">Best</span></div></div>
+  <div class="expl">
+    <span class="reason">Bluff</span>
+    <p class="head">Bet as a bluff — little showdown value, so pressure better hands to fold.</p>
+    <ul class="det"><li>Bet is best; check gives up ~18.167% of the pot.</li><li>Solver frequency: bet 100%, check 0%</li><li>BTN&#x27;s range is stronger on this board, which supports betting.</li><li>Board: all one suit.</li></ul>
+  </div>
+</article><article class="q">
+  <header class="qh">
+    <div class="sit"><span class="pos BB">BB</span> first to act</div>
+    <span class="hc">strong made</span>
+  </header>
+  <div class="felt">
+    <div class="crow"><span class="cap">Flop</span><span class="pcs"><span class="pc red"><b>Q</b><i>♥</i></span><span class="pc red"><b>8</b><i>♥</i></span><span class="pc red"><b>3</b><i>♥</i></span></span></div>
+    <div class="crow"><span class="cap">Hand</span><span class="pcs"><span class="pc"><b>A</b><i>♠</i></span><span class="pc red"><b>10</b><i>♥</i></span></span></div>
+  </div>
+  <div class="acts"><div class="act g-best rec"><span class="al">Check</span><span class="ameta"><span class="af">100%</span><span class="ae">+0.00 bb</span></span><span class="ag">Best</span></div><div class="act g-major_error"><span class="al">Bet 66%</span><span class="ameta"><span class="af">0%</span><span class="ae">-1.69 bb</span></span><span class="ag">Major error</span></div></div>
+  <div class="expl">
+    <span class="reason">Trap</span>
+    <p class="head">Check to trap — you&#x27;re very strong; let them catch up or bluff.</p>
+    <ul class="det"><li>Check is best; bet gives up ~30.652% of the pot.</li><li>Solver frequency: check 100%, bet 0%</li><li>Board: all one suit.</li></ul>
+  </div>
+</article><article class="q">
+  <header class="qh">
+    <div class="sit"><span class="pos BB">BB</span> first to act</div>
+    <span class="hc">weak pair</span>
+  </header>
+  <div class="felt">
+    <div class="crow"><span class="cap">Flop</span><span class="pcs"><span class="pc red"><b>Q</b><i>♥</i></span><span class="pc red"><b>8</b><i>♥</i></span><span class="pc red"><b>3</b><i>♥</i></span></span></div>
+    <div class="crow"><span class="cap">Hand</span><span class="pcs"><span class="pc"><b>8</b><i>♣</i></span><span class="pc"><b>7</b><i>♣</i></span></span></div>
+  </div>
+  <div class="acts"><div class="act g-best rec"><span class="al">Check</span><span class="ameta"><span class="af">94%</span><span class="ae">+0.02 bb</span></span><span class="ag">Best</span></div><div class="act g-major_error"><span class="al">Bet 66%</span><span class="ameta"><span class="af">6%</span><span class="ae">-2.01 bb</span></span><span class="ag">Major error</span></div></div>
+  <div class="expl">
+    <span class="reason">Pot control</span>
+    <p class="head">Check to keep the pot small — decent showdown value, but don&#x27;t bloat it.</p>
+    <ul class="det"><li>Check is best; bet gives up ~36.952% of the pot.</li><li>Solver frequency: check 94%, bet 6%</li><li>Board: all one suit.</li></ul>
+  </div>
+</article><article class="q">
+  <header class="qh">
+    <div class="sit"><span class="pos BB">BB</span> first to act</div>
+    <span class="hc">air</span>
+  </header>
+  <div class="felt">
+    <div class="crow"><span class="cap">Flop</span><span class="pcs"><span class="pc red"><b>Q</b><i>♥</i></span><span class="pc red"><b>8</b><i>♥</i></span><span class="pc red"><b>3</b><i>♥</i></span></span></div>
+    <div class="crow"><span class="cap">Hand</span><span class="pcs"><span class="pc"><b>A</b><i>♠</i></span><span class="pc red"><b>J</b><i>♦</i></span></span></div>
+  </div>
+  <div class="acts"><div class="act g-best rec"><span class="al">Check</span><span class="ameta"><span class="af">100%</span><span class="ae">+0.00 bb</span></span><span class="ag">Best</span></div><div class="act g-major_error"><span class="al">Bet 66%</span><span class="ameta"><span class="af">0%</span><span class="ae">-2.75 bb</span></span><span class="ag">Major error</span></div></div>
+  <div class="expl">
+    <span class="reason">Realization</span>
+    <p class="head">Check — weak holding; take a free card and try to improve.</p>
+    <ul class="det"><li>Check is best; bet gives up ~50.045% of the pot.</li><li>Solver frequency: check 100%, bet 0%</li><li>Board: all one suit.</li></ul>
+  </div>
+</article><article class="q">
+  <header class="qh">
+    <div class="sit"><span class="pos BB">BB</span> facing a 66% bet</div>
+    <span class="hc">top pair</span>
+  </header>
+  <div class="felt">
+    <div class="crow"><span class="cap">Flop</span><span class="pcs"><span class="pc red"><b>10</b><i>♥</i></span><span class="pc red"><b>9</b><i>♥</i></span><span class="pc red"><b>8</b><i>♦</i></span></span></div>
+    <div class="crow"><span class="cap">Hand</span><span class="pcs"><span class="pc"><b>K</b><i>♣</i></span><span class="pc red"><b>10</b><i>♦</i></span></span></div>
+  </div>
+  <div class="acts"><div class="act g-costly"><span class="al">Fold</span><span class="ameta"><span class="af">16%</span><span class="ae">-0.00 bb</span></span><span class="ag">Costly</span></div><div class="act g-best rec"><span class="al">Call</span><span class="ameta"><span class="af">78%</span><span class="ae">+0.34 bb</span></span><span class="ag">Best</span></div><div class="act g-costly"><span class="al">Raise 3×</span><span class="ameta"><span class="af">7%</span><span class="ae">-0.01 bb</span></span><span class="ag">Costly</span></div></div>
+  <div class="expl">
+    <span class="reason">Value call</span>
+    <p class="head">Call — you&#x27;re ahead of enough of their betting range to continue.</p>
+    <ul class="det"><li>Call is best; fold gives up ~6.186% of the pot.</li><li>Solver frequency: call 78%, fold 16%, raise 7%</li><li>Board: two of a suit, a connected board.</li></ul>
+  </div>
+</article><article class="q">
+  <header class="qh">
+    <div class="sit"><span class="pos BB">BB</span> facing a 66% bet</div>
+    <span class="hc">weak pair</span>
+  </header>
+  <div class="felt">
+    <div class="crow"><span class="cap">Flop</span><span class="pcs"><span class="pc"><b>A</b><i>♠</i></span><span class="pc red"><b>7</b><i>♥</i></span><span class="pc red"><b>2</b><i>♦</i></span></span></div>
+    <div class="crow"><span class="cap">Hand</span><span class="pcs"><span class="pc red"><b>9</b><i>♥</i></span><span class="pc"><b>9</b><i>♣</i></span></span></div>
+  </div>
+  <div class="acts"><div class="act g-costly"><span class="al">Fold</span><span class="ameta"><span class="af">45%</span><span class="ae">-0.00 bb</span></span><span class="ag">Costly</span></div><div class="act g-best rec"><span class="al">Call</span><span class="ameta"><span class="af">41%</span><span class="ae">+0.48 bb</span></span><span class="ag">Best</span></div><div class="act g-costly"><span class="al">Raise 3×</span><span class="ameta"><span class="af">13%</span><span class="ae">+0.18 bb</span></span><span class="ag">Costly</span></div></div>
+  <div class="expl">
+    <span class="reason">Bluff-catch</span>
+    <p class="head">Call to catch bluffs — you beat the hands they&#x27;d bluff with.</p>
+    <ul class="det"><li>Call is best; raise gives up ~5.465% of the pot.</li><li>Solver frequency: call 41%, raise 13%, fold 45%</li><li>Board: three suits.</li></ul>
+  </div>
+</article><article class="q">
+  <header class="qh">
+    <div class="sit"><span class="pos BB">BB</span> facing a 66% bet</div>
+    <span class="hc">air</span>
+  </header>
+  <div class="felt">
+    <div class="crow"><span class="cap">Flop</span><span class="pcs"><span class="pc red"><b>Q</b><i>♥</i></span><span class="pc red"><b>8</b><i>♥</i></span><span class="pc red"><b>3</b><i>♥</i></span></span></div>
+    <div class="crow"><span class="cap">Hand</span><span class="pcs"><span class="pc"><b>A</b><i>♠</i></span><span class="pc red"><b>J</b><i>♦</i></span></span></div>
+  </div>
+  <div class="acts"><div class="act g-best rec"><span class="al">Fold</span><span class="ameta"><span class="af">100%</span><span class="ae">-0.00 bb</span></span><span class="ag">Best</span></div><div class="act g-major_error"><span class="al">Call</span><span class="ameta"><span class="af">0%</span><span class="ae">-6.19 bb</span></span><span class="ag">Major error</span></div><div class="act g-major_error"><span class="al">Raise 3×</span><span class="ameta"><span class="af">0%</span><span class="ae">-10.75 bb</span></span><span class="ag">Major error</span></div></div>
+  <div class="expl">
+    <span class="reason">Fold</span>
+    <p class="head">Fold — not enough equity or showdown value against this bet.</p>
+    <ul class="det"><li>Fold is best; call gives up ~112.544% of the pot.</li><li>Solver frequency: fold 100%, call 0%, raise 0%</li><li>Board: all one suit.</li></ul>
+  </div>
+</article><article class="q">
+  <header class="qh">
+    <div class="sit"><span class="pos BB">BB</span> facing a 66% bet</div>
+    <span class="hc">air</span>
+  </header>
+  <div class="felt">
+    <div class="crow"><span class="cap">Flop</span><span class="pcs"><span class="pc red"><b>10</b><i>♥</i></span><span class="pc red"><b>9</b><i>♥</i></span><span class="pc red"><b>8</b><i>♦</i></span></span></div>
+    <div class="crow"><span class="cap">Hand</span><span class="pcs"><span class="pc"><b>K</b><i>♠</i></span><span class="pc red"><b>Q</b><i>♥</i></span></span></div>
+  </div>
+  <div class="acts"><div class="act g-good"><span class="al">Fold</span><span class="ameta"><span class="af">23%</span><span class="ae">-0.00 bb</span></span><span class="ag">Good</span></div><div class="act g-best rec"><span class="al">Call</span><span class="ameta"><span class="af">67%</span><span class="ae">+0.03 bb</span></span><span class="ag">Best</span></div><div class="act g-costly"><span class="al">Raise 3×</span><span class="ameta"><span class="af">11%</span><span class="ae">-0.14 bb</span></span><span class="ag">Costly</span></div></div>
+  <div class="expl">
+    <span class="reason">Mixed</span>
+    <p class="head">Both actions are close here — either is acceptable.</p>
+    <ul class="det"><li>call and fold are within 0.488% of the pot — treat both as acceptable.</li><li>Solver frequency: call 67%, fold 23%, raise 11%</li><li>Board: two of a suit, a connected board.</li></ul>
+  </div>
+</article><article class="q">
+  <header class="qh">
+    <div class="sit"><span class="pos BB">BB</span> facing a 66% bet</div>
+    <span class="hc">strong made</span>
+  </header>
+  <div class="felt">
+    <div class="crow"><span class="cap">Flop</span><span class="pcs"><span class="pc red"><b>Q</b><i>♥</i></span><span class="pc red"><b>8</b><i>♥</i></span><span class="pc red"><b>3</b><i>♥</i></span></span></div>
+    <div class="crow"><span class="cap">Hand</span><span class="pcs"><span class="pc red"><b>A</b><i>♥</i></span><span class="pc red"><b>4</b><i>♥</i></span></span></div>
+  </div>
+  <div class="acts"><div class="act g-major_error"><span class="al">Fold</span><span class="ameta"><span class="af">0%</span><span class="ae">-0.00 bb</span></span><span class="ag">Major error</span></div><div class="act g-costly"><span class="al">Call</span><span class="ameta"><span class="af">12%</span><span class="ae">+18.81 bb</span></span><span class="ag">Costly</span></div><div class="act g-best rec"><span class="al">Raise 3×</span><span class="ameta"><span class="af">88%</span><span class="ae">+19.06 bb</span></span><span class="ag">Best</span></div></div>
+  <div class="expl">
+    <span class="reason">Value raise</span>
+    <p class="head">Raise for value — you&#x27;re strong, so build the pot against worse.</p>
+    <ul class="det"><li>Raise is best; call gives up ~4.5% of the pot.</li><li>Solver frequency: raise 88%, call 12%, fold 0%</li><li>Board: all one suit.</li></ul>
+  </div>
+</article><article class="q">
+  <header class="qh">
+    <div class="sit"><span class="pos BTN">BTN</span> facing a 66% bet</div>
+    <span class="hc">air</span>
+  </header>
+  <div class="felt">
+    <div class="crow"><span class="cap">Flop</span><span class="pcs"><span class="pc red"><b>10</b><i>♥</i></span><span class="pc red"><b>9</b><i>♥</i></span><span class="pc red"><b>8</b><i>♦</i></span></span></div>
+    <div class="crow"><span class="cap">Hand</span><span class="pcs"><span class="pc red"><b>A</b><i>♦</i></span><span class="pc red"><b>Q</b><i>♦</i></span></span></div>
+  </div>
+  <div class="acts"><div class="act g-major_error"><span class="al">Fold</span><span class="ameta"><span class="af">22%</span><span class="ae">-0.00 bb</span></span><span class="ag">Major error</span></div><div class="act g-major_error"><span class="al">Call</span><span class="ameta"><span class="af">31%</span><span class="ae">+0.74 bb</span></span><span class="ag">Major error</span></div><div class="act g-best rec"><span class="al">Raise 3×</span><span class="ameta"><span class="af">47%</span><span class="ae">+1.52 bb</span></span><span class="ag">Best</span></div></div>
+  <div class="expl">
+    <span class="reason">Bluff raise</span>
+    <p class="head">Raise as a bluff — represent strength and pressure their bets.</p>
+    <ul class="det"><li>Raise is best; call gives up ~14.181% of the pot.</li><li>Solver frequency: raise 47%, call 31%, fold 22%</li><li>Board: two of a suit, a connected board.</li></ul>
+  </div>
+</article>
+  </div>
+
+  <footer>
+    These twelve cover the full range of reasons the trainer teaches — value, protection, bluff, trap,
+    pot control, realization, bluff-catch, folds, mixed spots, and value / bluff <em>raises</em>. Grading and
+    explanations are generated deterministically from the solve; nothing here is hand-written strategy.
+    <br><br>
+    <b>Note:</b> this preview pack is a reduced-range demo (small solve, 3 boards) built to show the content
+    <em>format</em> and explanation style — exact EV magnitudes and frequencies are illustrative, not final
+    full-range GTO. The launch pack is generated the same way at full ranges. Reason labels come from
+    <code>explanations.py</code>; grades from EV regret thresholds stored in the pack.
+  </footer>
+</div>
