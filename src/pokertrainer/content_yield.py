@@ -168,7 +168,12 @@ def _is_finite_record(r: Dict) -> bool:
     ev, fr = r.get("ev", {}), r.get("freq", {})
     if not ev or not fr:
         return False
-    return all(_finite(v) for v in ev.values()) and all(_finite(v) for v in fr.values())
+    if not (all(_finite(v) for v in ev.values()) and all(_finite(v) for v in fr.values())):
+        return False
+    # reach_mass / ev_sep_pct also become SQLite REAL columns; a NaN there would
+    # be coerced to NULL and silently break the pack signature at the very end of
+    # a long run. They're always finite when ev/freq are, but guard anyway.
+    return all(_finite(r[k]) for k in ("reach_mass", "ev_sep_pct") if k in r)
 
 
 def _mean_range_size(board_idx: List[int]) -> float:
