@@ -48,6 +48,35 @@ def load_scenario(raw: Dict) -> Scenario:
     if len(board) != 3:
         raise ValidationError(f"flop must be 3 cards in {raw['id']}")
 
+    # FlopSolver implements a fixed tree. Reject scenario fields that would
+    # silently describe a different game than the one being solved.
+    _SUPPORTED_ALLOWED = {"check", "bet_small", "bet_large", "call", "fold"}
+    _SUPPORTED_RAISE = {"no_raise_v1"}
+    acting = raw.get("acting_player", "BB")
+    if acting != "BB":
+        raise ValidationError(
+            f"acting_player={acting!r} unsupported; FlopSolver is BB-first only"
+        )
+    actions = raw.get("actions", {})
+    allowed = set(actions.get("allowed", list(_SUPPORTED_ALLOWED)))
+    if not allowed.issubset(_SUPPORTED_ALLOWED):
+        raise ValidationError(
+            f"unsupported actions {sorted(allowed - _SUPPORTED_ALLOWED)}; "
+            f"FlopSolver supports {sorted(_SUPPORTED_ALLOWED)}"
+        )
+    raise_rule = actions.get("raise_rule", "no_raise_v1")
+    if raise_rule not in _SUPPORTED_RAISE:
+        raise ValidationError(
+            f"raise_rule={raise_rule!r} unsupported; use one of {sorted(_SUPPORTED_RAISE)}"
+        )
+    tree = raw.get("tree", {})
+    streets = tree.get("streets", ["flop"])
+    if streets != ["flop"]:
+        raise ValidationError(
+            f"tree.streets={streets!r} unsupported by FlopSolver "
+            f"(flop-only realized-equity model); use BatchedCFR for multi-street"
+        )
+
     oop_wc = expand_range(raw["ranges"]["BB"]["combos"], board)
     ip_wc = expand_range(raw["ranges"]["BTN"]["combos"], board)
     if not oop_wc or not ip_wc:

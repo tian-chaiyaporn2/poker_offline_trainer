@@ -26,6 +26,14 @@ ROOT = os.path.dirname(HERE)
 QUESTIONS_DB = os.path.join(ROOT, "output", "trainer.db")
 RESULTS_DB = os.path.join(HERE, "results.db")
 INDEX_HTML = os.path.join(HERE, "index.html")
+MAX_BODY = 64 * 1024
+_results_lock = __import__("threading").Lock()
+
+
+def _connect(path: str) -> sqlite3.Connection:
+    conn = sqlite3.connect(path, timeout=30, check_same_thread=False)
+    conn.execute("PRAGMA journal_mode=WAL")
+    return conn
 
 
 def load_questions() -> dict:
@@ -34,14 +42,14 @@ def load_questions() -> dict:
             f"Question DB not found at {QUESTIONS_DB}.\n"
             "Generate it first:  PYTHONPATH=src python -m pokertrainer.generate"
         )
-    conn = sqlite3.connect(QUESTIONS_DB)
+    conn = _connect(QUESTIONS_DB)
     rows = conn.execute("SELECT id, payload FROM questions").fetchall()
     conn.close()
     return {qid: json.loads(payload) for qid, payload in rows}
 
 
 def init_results_db() -> None:
-    conn = sqlite3.connect(RESULTS_DB)
+    conn = _connect(RESULTS_DB)
     conn.execute(
         """CREATE TABLE IF NOT EXISTS results (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -101,18 +109,19 @@ def _label(a: str) -> str:
 
 
 def record_result(question_id: str, action: str, grade: str, ev_loss: float) -> None:
-    conn = sqlite3.connect(RESULTS_DB)
-    conn.execute(
-        "INSERT INTO results (question_id, chosen_action, grade, ev_loss_pct_pot, ts)"
-        " VALUES (?,?,?,?,?)",
-        (question_id, action, grade, ev_loss, dt.datetime.now().isoformat(timespec="seconds")),
-    )
-    conn.commit()
-    conn.close()
+    with _results_lock:
+        conn = _connect(RESULTS_DB)
+        conn.execute(
+            "INSERT INTO results (question_id, chosen_action, grade, ev_loss_pct_pot, ts)"
+            " VALUES (?,?,?,?,?)",
+            (question_id, action, grade, ev_loss, dt.datetime.now().isoformat(timespec="seconds")),
+        )
+        conn.commit()
+        conn.close()
 
 
 def stats() -> dict:
-    conn = sqlite3.connect(RESULTS_DB)
+    conn = _connect(RESULTS_DB)
     rows = conn.execute("SELECT grade, COUNT(*) FROM results GROUP BY grade").fetchall()
     total = conn.execute("SELECT COUNT(*), AVG(ev_loss_pct_pot) FROM results").fetchone()
     conn.close()
@@ -159,8 +168,19 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = urlparse(self.path).path
-        length = int(self.headers.get("Content-Length", 0))
-        data = json.loads(self.rfile.read(length) or b"{}")
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+        except (TypeError, ValueError):
+            self._send_json({"error": "bad content-length"}, 400)
+            return
+        if length < 0 or length > MAX_BODY:
+            self._send_json({"error": "payload too large"}, 413)
+            return
+        try:
+            data = json.loads(self.rfile.read(length) or b"{}")
+        except json.JSONDecodeError:
+            self._send_json({"error": "invalid json"}, 400)
+            return
         if path == "/api/answer":
             q = QUESTIONS.get(data.get("question_id"))
             action = data.get("action")

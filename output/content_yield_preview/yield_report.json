@@ -2,62 +2,89 @@
   "config": {
     "roots_solved": 4,
     "hands_per_side": 40,
-    "full_range_size": 250,
+    "full_range_size": 243,
     "note": "reduced-range projection"
   },
   "records_raw": 640,
-  "accepted": 520,
-  "accepted_deduped": 520,
-  "accepted_rate": 0.812,
-  "mixed_share": 0.129,
+  "accepted": 600,
+  "accepted_deduped": 600,
+  "accepted_rate": 0.938,
+  "mixed_share": 0.04,
   "per_node_accepted": {
     "bb_first": 160,
     "btn_vs_check": 160,
     "bb_vs_bet": 160,
-    "btn_vs_bet": 40
+    "btn_vs_bet": 120
   },
   "mean_reach_by_node": {
     "bb_first": 0.902,
-    "btn_vs_check": 0.811,
-    "bb_vs_bet": 0.729,
-    "btn_vs_bet": 0.292
+    "btn_vs_check": 0.766,
+    "bb_vs_bet": 0.537,
+    "btn_vs_bet": 0.168
   },
-  "accepted_per_root_deduped": 130.0,
-  "projected_accepted_per_root_full_range": 812.5,
+  "projected_raw_accepted_per_root_full_range": 911.2,
+  "projection_note": "raw records scale linearly; after concept-dedup the usable count is bounded by distinct concepts x cap",
   "projection": {
-    "at_40_roots": 32500,
-    "at_60_roots": 48750,
-    "target_1200_met_at_40": true,
-    "target_1200_met_at_60": true
+    "raw_at_40_roots": 36450,
+    "raw_at_60_roots": 54675,
+    "target_1200_met_at_40_roots": true
   },
-  "distinct_concepts": 67,
-  "est_10q_sessions_at_60_roots": 4875,
+  "distinct_concepts_measured": 90,
+  "est_10q_sessions_raw_at_60_roots": 5468,
   "coverage": {
     "by_node": {
       "bb_first": 160,
       "btn_vs_check": 160,
       "bb_vs_bet": 160,
-      "btn_vs_bet": 40
+      "btn_vs_bet": 120
     },
     "by_board_texture": {
-      "unpaired": 400,
-      "rainbow": 240,
-      "high_card": 520,
-      "disconnected": 360,
+      "unpaired": 440,
+      "rainbow": 280,
+      "high_card": 600,
+      "disconnected": 440,
       "two_tone": 160,
       "connected": 160,
-      "paired": 120,
-      "monotone": 120
+      "paired": 160,
+      "monotone": 160
     },
     "by_hand_category": {
-      "weak_pair": 150,
-      "top_pair": 55,
-      "strong_made": 194,
-      "air": 121
+      "weak_pair": 113,
+      "top_pair": 69,
+      "strong_made": 142,
+      "air": 224,
+      "draw": 52
     },
     "by_decision_type": {
       "first_action": 320,
-      "vs_bet": 200
+      "vs_bet": 280
+    },
+    "by_reason": {
+      "pot_control": 71,
+      "trap": 41,
+      "realization": 83,
+      "value": 46,
+      "mixed": 24,
+      "bluff": 46,
+      "bluff_catch": 46,
+      "fold": 119,
+      "value_call": 87,
+      "semi_bluff": 9,
+      "protection": 5,
+      "call_odds": 23
     }
-  }
+  },
+  "boards_completed": [
+    0,
+    2,
+    4,
+    8
+  ],
+  "boards_requested": [
+    0,
+    2,
+    4,
+    8
+  ],
+  "boards_missing": []
 }

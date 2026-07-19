@@ -100,3 +100,48 @@ def test_compare_rejects_board_mismatch():
                         {"check": 1, "bet_small": 0, "bet_large": 0}, hand)
     with pytest.raises(ValueError, match="board mismatch"):
         compare(a, b, pot_bb=5.5)
+
+
+def test_range_rejects_weight_above_one():
+    from pokertrainer.ranges import expand_range
+    with pytest.raises(ValueError, match=r"\[0, 1\]"):
+        expand_range({"AA": 1.5}, [])
+
+
+def test_range_rejects_duplicate_aliases():
+    from pokertrainer.ranges import expand_range
+    with pytest.raises(ValueError, match="duplicate combo"):
+        expand_range({"AKs": 1.0, "KAs": 1.0}, [])
+
+
+def test_scenario_rejects_multistreet_tree():
+    from pokertrainer.presets import BOARDS, build_scenario
+    from pokertrainer.scenario import load_scenario, ValidationError
+    raw = build_scenario(BOARDS[0])
+    raw["tree"] = {"streets": ["flop", "turn", "river"]}
+    with pytest.raises(ValidationError, match="tree.streets"):
+        load_scenario(raw)
+
+
+def test_solve_result_has_action_ev_for_all_infosets():
+    board = parse_cards("As7h2d")
+    oop = [parse_hand(h) for h in ["AhAc", "KsKc", "7s7c"]]
+    ip = [parse_hand(h) for h in ["AhQh", "JsJh", "Tc9c"]]
+    eq, C = equity_matrix(board, oop, ip)
+    res = FlopSolver(eq, C, np.ones(3), np.ones(3), 5.5, 0.33, 0.75).solve(80)
+    for key in res.action_labels:
+        assert key in res.action_ev
+        assert res.action_ev[key].shape[1] == len(res.action_labels[key])
+
+
+def test_run_reports_average_strategy_ev():
+    """Batched and multistreet run() must agree on average-strategy root EV."""
+    from pokertrainer.solver.multistreet import MultiStreetSpike
+    flop = parse_cards("As7h2d")
+    oop = [parse_hand(h) for h in ["AhAc", "KsKc", "7s7c"]]
+    ip = [parse_hand(h) for h in ["AhQh", "JsJh", "Tc9c"]]
+    wo, wi = np.ones(3), np.ones(3)
+    a = MultiStreetSpike(flop, oop, ip, wo, wi, 5.5, 0.66, streets=2).run(60)
+    b = BatchedCFR(flop, oop, ip, wo, wi, 5.5, 0.66, streets=2).run(60)
+    assert abs(a["root_ev_oop_bb"] - b["root_ev_oop_bb"]) < 1e-9
+

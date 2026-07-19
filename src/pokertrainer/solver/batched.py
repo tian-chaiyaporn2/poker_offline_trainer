@@ -334,12 +334,18 @@ class BatchedCFR:
             if t % max(1, iterations // 12) == 0 or t == iterations:
                 ev.append((t, float((self.w_o * uo[0]).sum())))
         self._done += iterations
+        # Report EV under the averaged strategy (CFR guarantee), not last iterate.
+        self._eval = True
+        uo_avg, _ = self._solve(1, [list(self.flop)], np.zeros(1), np.zeros(1),
+                                self.w_o[None, :].copy(), self.w_i[None, :].copy(), "")
+        self._eval = False
+        root_ev = float((self.w_o * uo_avg[0]).sum())
         rt = time.time() - t0
         _, peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
         return {
-            "root_ev_oop_bb": ev[-1][1],
-            "root_ev_pct_pot": 100 * ev[-1][1] / self.P0,
+            "root_ev_oop_bb": root_ev,
+            "root_ev_pct_pot": 100 * root_ev / self.P0,
             "ev_curve": ev,
             "iterations": iterations,
             "runtime_sec": rt,

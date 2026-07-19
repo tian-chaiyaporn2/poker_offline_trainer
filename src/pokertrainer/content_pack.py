@@ -99,11 +99,21 @@ FOUNDATION_SEEDS = [
 ]
 
 
+def _resolve_signing_key(signing_key: Optional[bytes] = None) -> bytes:
+    """Prefer an explicit key, then POKERTRAINER_SIGNING_KEY, else the dev key."""
+    if signing_key is not None:
+        return signing_key
+    env = os.environ.get("POKERTRAINER_SIGNING_KEY")
+    if env:
+        return env.encode() if isinstance(env, str) else env
+    return DEV_SIGNING_KEY
+
+
 def build_pack(records: List[Dict], config: Dict, out_dir: str, version: str,
                signing_key: Optional[bytes] = None, pot: float = 5.5,
                dedup_cap: int = 30) -> Dict:
     os.makedirs(out_dir, exist_ok=True)
-    signing_key = signing_key or DEV_SIGNING_KEY
+    signing_key = _resolve_signing_key(signing_key)
 
     accepted = [r for r in records if r.get("accepted", True)]
     # concept dedup (cap near-identical records)
@@ -171,7 +181,7 @@ def build_pack(records: List[Dict], config: Dict, out_dir: str, version: str,
 
 def verify_pack(db_path: str, signing_key: Optional[bytes] = None) -> Dict:
     """Recompute the content hash + signature and compare to stored (integrity)."""
-    signing_key = signing_key or DEV_SIGNING_KEY
+    signing_key = _resolve_signing_key(signing_key)
     conn = sqlite3.connect(db_path)
     cols = [d[1] for d in conn.execute("PRAGMA table_info(flop_decision)")]
     rows = conn.execute(f"SELECT {','.join(cols)} FROM flop_decision").fetchall()

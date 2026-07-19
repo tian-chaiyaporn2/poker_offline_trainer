@@ -354,11 +354,33 @@ class FlopSolver:
         opp_mass_i = np.where(opp_mass_i > 1e-12, opp_mass_i, 1.0)
         ipc_action_ev = u_ipc / opp_mass_i[:, None]
 
+        # Response-node action EVs (conditional on reaching the node).
+        ri_s = w_i * s_ipc[:, 1]
+        ri_l = w_i * s_ipc[:, 2]
+        mass_ovs = np.where((C @ ri_s) > 1e-12, C @ ri_s, 1.0)
+        mass_ovl = np.where((C @ ri_l) > 1e-12, C @ ri_l, 1.0)
+        ovs_ev = np.stack([np.zeros(self.n_o), self._showdown_oop(bs, ri_s)], axis=1) / mass_ovs[:, None]
+        ovl_ev = np.stack([np.zeros(self.n_o), self._showdown_oop(bl, ri_l)], axis=1) / mass_ovl[:, None]
+
+        ro_s = w_o * s_root[:, 1]
+        ro_l = w_o * s_root[:, 2]
+        mass_ivs = np.where((CT @ ro_s) > 1e-12, CT @ ro_s, 1.0)
+        mass_ivl = np.where((CT @ ro_l) > 1e-12, CT @ ro_l, 1.0)
+        ivs_ev = np.stack([np.zeros(self.n_i), self._showdown_ip(bs, ro_s)], axis=1) / mass_ivs[:, None]
+        ivl_ev = np.stack([np.zeros(self.n_i), self._showdown_ip(bl, ro_l)], axis=1) / mass_ivl[:, None]
+
         # Root EV to OOP (bb): expected over OOP hands of chosen-strategy value,
         # normalized by compatible private-hand joint mass.
         joint = float(w_o @ (C @ w_i))
         joint = joint if joint > 1e-12 else 1.0
         root_ev = float((w_o * (s_root * u_root).sum(axis=1)).sum()) / joint
 
-        action_ev = {"root": root_action_ev, "ip_vs_check": ipc_action_ev}
+        action_ev = {
+            "root": root_action_ev,
+            "ip_vs_check": ipc_action_ev,
+            "oop_vs_s": ovs_ev,
+            "oop_vs_l": ovl_ev,
+            "ip_vs_s": ivs_ev,
+            "ip_vs_l": ivl_ev,
+        }
         return action_ev, root_ev

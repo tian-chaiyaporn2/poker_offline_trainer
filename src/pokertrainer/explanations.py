@@ -123,4 +123,5 @@ def explain(rec: Dict, board_favored: Optional[str] = None) -> Dict:
 
 
 def _action_word(a: str) -> str:
-    return {"bet": "bet", "check": "check", "call": "call", "fold": "fold"}.get(a, a)
+    return {"bet": "bet", "check": "check", "call": "call", "fold": "fold",
+            "raise": "raise"}.get(a, a)

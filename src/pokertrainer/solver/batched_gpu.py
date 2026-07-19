@@ -352,15 +352,18 @@ class BatchedGPUCFR:
         t0 = time.time()
         ro0 = self.w_o[None, :]
         ri0 = self.w_i[None, :]
-        root_ev = 0.0
         for t in range(1, iterations + 1):
             self._t = self._done + t
-            uo, ui = self._solve(1, [list(self.flop)],
-                                 xp.zeros(1, dtype=self.dtype), xp.zeros(1, dtype=self.dtype),
-                                 ro0 + 0, ri0 + 0, "")
-            if t == iterations:
-                root_ev = float(self.to_host((self.w_o * uo[0]).sum()))
+            self._solve(1, [list(self.flop)],
+                        xp.zeros(1, dtype=self.dtype), xp.zeros(1, dtype=self.dtype),
+                        ro0 + 0, ri0 + 0, "")
         self._done += iterations
+        self._eval = True
+        uo_avg, _ = self._solve(1, [list(self.flop)],
+                                xp.zeros(1, dtype=self.dtype), xp.zeros(1, dtype=self.dtype),
+                                self.w_o[None, :] + 0, self.w_i[None, :] + 0, "")
+        self._eval = False
+        root_ev = float(self.to_host((self.w_o * uo_avg[0]).sum()))
         if self.backend == "cupy":
             self.xp.cuda.Stream.null.synchronize()
         rt = time.time() - t0

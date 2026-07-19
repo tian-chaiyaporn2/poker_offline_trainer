@@ -10,12 +10,10 @@
     "pot_bb": 5.5,
     "bet_pct_pot": 66,
     "rake": 0,
-    "solver_model": "full_street_cfr_plus",
-    "raise_x": 3,
-    "range_note": "DEMO: n=20, 3 boards, with raise (reduced-range demo, not launch authority)"
+    "solver_model": "full_street_cfr_plus"
   },
   "provenance": {
-    "git_commit": "5e72a650fbfaed8fc28295f018b493faaae37bb9",
+    "git_commit": "ac570093451c20f140526813cacbce739abbf2e7",
     "solver_model": "full_street_cfr_plus"
   },
   "grade_thresholds_pct_pot": {
@@ -24,12 +22,12 @@
     "acceptable": 3.0,
     "costly": 10.0
   },
-  "record_count": "200",
-  "content_hash": "396c3c64750514d3a20f39321fb891da78dbab0ed5dc764c6da4bd28dd2931c4",
-  "signature": "c9f82e1c1707a37a12ada949f50cc8344b1f0fcc5e9e8c9e6e516c3a3df4aa93",
+  "record_count": "240",
+  "content_hash": "729a0001dc401c789d73c2ecce895229bc62434801122bbf1c766340d64b48a2",
+  "signature": "df95306edbd1a863de9bb23624979fcd05291e9d0073fa189e5bbaaedd9b93e9",
   "signing_scheme": "hmac-sha256-dev",
-  "db_bytes": 188416,
-  "gz_bytes": 39552,
-  "records_accepted": 200,
-  "records_after_dedup": 200
+  "db_bytes": 225280,
+  "gz_bytes": 42507,
+  "records_accepted": 240,
+  "records_after_dedup": 240
 }

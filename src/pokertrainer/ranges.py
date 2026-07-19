@@ -58,11 +58,22 @@ def expand_range(
     """Expand class->weight into [(combo, weight)], removing board collisions."""
     blocked = set(board)
     out: List[Tuple[Combo, float]] = []
+    seen: set = set()
     for hand_class, weight in class_weights.items():
+        if weight < 0 or weight > 1:
+            raise ValueError(
+                f"range weight for {hand_class!r} must be in [0, 1], got {weight}"
+            )
         if weight <= 0:
             continue
         for combo in class_to_combos(hand_class):
             if combo[0] in blocked or combo[1] in blocked:
                 continue
+            if combo in seen:
+                raise ValueError(
+                    f"duplicate combo {combo} from overlapping range classes "
+                    f"(e.g. both 'AKs' and 'KAs')"
+                )
+            seen.add(combo)
             out.append((combo, float(weight)))
     return out

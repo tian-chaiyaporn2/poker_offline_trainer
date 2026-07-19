@@ -22,6 +22,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 RESULTS_DB = os.path.join(HERE, "pack_results.db")
 INDEX = os.path.join(HERE, "pack_index.html")
+MAX_BODY = 64 * 1024
+_results_lock = __import__("threading").Lock()
 
 import sys
 if os.path.join(ROOT, "src") not in sys.path:
@@ -38,6 +40,12 @@ ACTION_LABEL = {"check": "Check", "bet": "Bet 66%", "fold": "Fold",
                 "call": "Call", "raise": "Raise 3x"}
 QUESTIONS = {}
 PACK_META = {}
+
+
+def _connect(path: str) -> sqlite3.Connection:
+    conn = sqlite3.connect(path, timeout=30, check_same_thread=False)
+    conn.execute("PRAGMA journal_mode=WAL")
+    return conn
 
 
 def find_pack() -> str:
@@ -109,21 +117,22 @@ def grade_answer(q, action):
 
 
 def init_results():
-    conn = sqlite3.connect(RESULTS_DB)
+    conn = _connect(RESULTS_DB)
     conn.execute("CREATE TABLE IF NOT EXISTS results (id INTEGER PRIMARY KEY AUTOINCREMENT,"
                  "question_id TEXT, node TEXT, chosen TEXT, grade TEXT, ts TEXT)")
     conn.commit(); conn.close()
 
 
 def record(qid, node, action, grade):
-    conn = sqlite3.connect(RESULTS_DB)
-    conn.execute("INSERT INTO results (question_id,node,chosen,grade,ts) VALUES (?,?,?,?,?)",
-                 (qid, node, action, grade, dt.datetime.now().isoformat(timespec="seconds")))
-    conn.commit(); conn.close()
+    with _results_lock:
+        conn = _connect(RESULTS_DB)
+        conn.execute("INSERT INTO results (question_id,node,chosen,grade,ts) VALUES (?,?,?,?,?)",
+                     (qid, node, action, grade, dt.datetime.now().isoformat(timespec="seconds")))
+        conn.commit(); conn.close()
 
 
 def stats():
-    conn = sqlite3.connect(RESULTS_DB)
+    conn = _connect(RESULTS_DB)
     rows = dict(conn.execute("SELECT grade, COUNT(*) FROM results GROUP BY grade").fetchall())
     total = conn.execute("SELECT COUNT(*) FROM results").fetchone()[0]
     conn.close()
@@ -161,8 +170,16 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"error": "not found"}, 404)
 
     def do_POST(self):
-        length = int(self.headers.get("Content-Length", 0))
-        data = json.loads(self.rfile.read(length) or b"{}")
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+        except (TypeError, ValueError):
+            self._json({"error": "bad content-length"}, 400); return
+        if length < 0 or length > MAX_BODY:
+            self._json({"error": "payload too large"}, 413); return
+        try:
+            data = json.loads(self.rfile.read(length) or b"{}")
+        except json.JSONDecodeError:
+            self._json({"error": "invalid json"}, 400); return
         if urlparse(self.path).path == "/api/answer":
             q = QUESTIONS.get(data.get("question_id"))
             action = data.get("action")
