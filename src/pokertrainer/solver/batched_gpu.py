@@ -172,7 +172,7 @@ class BatchedGPUCFR:
                                  child_ro, child_ri, path)
         uo_c = uo_c * self.o_alive[pc_d]
         ui_c = ui_c * self.i_alive[pc_d]
-        UO = xp.zeros((C, self.no)); UI = xp.zeros((C, self.ni))
+        UO = xp.zeros((C, self.no), dtype=self.dtype); UI = xp.zeros((C, self.ni), dtype=self.dtype)
         self.scatter_add(UO, pk_d, uo_c)
         self.scatter_add(UI, pk_d, ui_c)
         return UO / denom, UI / denom
@@ -304,7 +304,9 @@ class BatchedGPUCFR:
         if self._eval:
             return
         base = (s * u).sum(axis=2, keepdims=True)
-        self.R[key] = self.xp.maximum(self.R[key] + (u - base), 0.0)
+        # keep regrets in self.dtype — a stray float64 here would silently promote
+        # the whole float32 run and cripple throughput on FP64-limited GPUs (T4).
+        self.R[key] = self.xp.maximum(self.R[key] + (u - base), 0.0).astype(self.dtype, copy=False)
         self.S[key] += self._t * reach[:, :, None] * s
 
     def _eval_capture(self):

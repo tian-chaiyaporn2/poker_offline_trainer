@@ -12,6 +12,7 @@ heuristics (hand strength × action × board texture × node).
 
 from __future__ import annotations
 
+import math
 from typing import Dict, List, Optional
 
 # Reason tags. First-action (bet/check) reasons align with FR-012's set;
@@ -104,7 +105,9 @@ def explain(rec: Dict, board_favored: Optional[str] = None) -> Dict:
     else:
         detail.append(f"{_action_word(best).capitalize()} is best; "
                       f"{_action_word(second)} gives up ~{gap_pct}% of the pot.")
-    if freq:
+    # round() raises on NaN/inf, so only emit the frequency line when every value
+    # is finite (a non-finite strategy is dropped upstream, but never crash here).
+    if freq and all(isinstance(freq.get(a), (int, float)) and math.isfinite(freq[a]) for a in freq):
         fp = {a: round(100 * freq[a]) for a in freq}
         detail.append("Solver frequency: " + ", ".join(f"{_action_word(a)} {fp[a]}%" for a in ranked))
     # board-level range-advantage note where relevant

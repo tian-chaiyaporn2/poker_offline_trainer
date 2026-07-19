@@ -15,8 +15,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import time
+import traceback
 from collections import Counter, defaultdict
 from typing import Dict, List
 
@@ -147,32 +149,174 @@ def yield_report(all_recs, roots, hands_per_side, full_range_size) -> Dict:
     }
 
 
-def run(n=40, iters=300, roots=None, solver="cpu", dtype="float64",
-        out="output/content_yield", full_range_size=250, pot=5.5, bet_frac=0.66,
-        raise_x=None):
-    os.makedirs(out, exist_ok=True)
-    make = _make_solver(solver, dtype, raise_x=raise_x)
-    board_list = [BOARDS[i]["board"] for i in roots] if roots else [b["board"] for b in BOARDS]
-    all_recs: List[Dict] = []
-    t0 = time.time()
-    for k, bstr in enumerate(board_list, 1):
-        flop = parse_cards(bstr)
-        oop = subsample([c for c, _ in expand_range(BB_SRP, flop)], n)
-        ip = subsample([c for c, _ in expand_range(BTN_SRP, flop)], n)
-        recs = extract_records(bstr, oop, ip, iters, make, pot, bet_frac)
-        all_recs.extend(recs)
-        print(f"[{k}/{len(board_list)}] {bstr}: {len(recs)} records "
-              f"({sum(r['accepted'] for r in recs)} accepted) [{time.time()-t0:.0f}s]", flush=True)
+# ---------------------------------------------------------------------------
+# Checkpointing (so a long GPU run never loses completed boards to a late crash
+# or Kaggle's session time-limit). Each board is solved, validated, then written
+# to boards/board_<idx>.json; records.json + yield_report.json are refreshed
+# after EVERY board so partial output is always present and downloadable. A
+# re-run skips boards that already have a valid checkpoint (resume).
+# ---------------------------------------------------------------------------
 
-    rep = yield_report(all_recs, len(board_list), n, full_range_size)
+def _finite(x) -> bool:
+    try:
+        return math.isfinite(float(x))
+    except (TypeError, ValueError):
+        return False
+
+
+def _is_finite_record(r: Dict) -> bool:
+    ev, fr = r.get("ev", {}), r.get("freq", {})
+    if not ev or not fr:
+        return False
+    return all(_finite(v) for v in ev.values()) and all(_finite(v) for v in fr.values())
+
+
+def _mean_range_size(board_idx: List[int]) -> float:
+    """Mean combos-per-side across the requested boards (full expanded ranges,
+    no subsample) — the true 'full range' for the yield projection."""
+    sizes: List[int] = []
+    for i in board_idx:
+        flop = parse_cards(BOARDS[i]["board"])
+        sizes.append(len(expand_range(BB_SRP, flop)))
+        sizes.append(len(expand_range(BTN_SRP, flop)))
+    return sum(sizes) / len(sizes) if sizes else 0.0
+
+
+def validate_records(recs: List[Dict]) -> List[str]:
+    """Catch NaN/inf EVs and malformed strategies immediately, per board, so a
+    numerically bad solve is flagged now instead of poisoning the final pack."""
+    problems: List[str] = []
+    if not recs:
+        return ["no records produced for this board"]
+    for r in recs:
+        tag = f"{r.get('node')} {r.get('hand')}"
+        ev = r.get("ev", {})
+        fr = r.get("freq", {})
+        if not ev or not fr:
+            problems.append(f"{tag}: missing ev/freq")
+            continue
+        for a, v in ev.items():
+            if not _finite(v):
+                problems.append(f"{tag}: ev[{a}]={v}")
+        for a, v in fr.items():
+            if not _finite(v):
+                problems.append(f"{tag}: freq[{a}]={v}")
+        fs = sum(v for v in fr.values() if _finite(v))
+        if not _finite(fs) or abs(fs - 1.0) > 0.02:
+            problems.append(f"{tag}: freq sums to {fs:.4f} (expected 1.0)")
+        if r.get("preferred") not in ev:
+            problems.append(f"{tag}: preferred={r.get('preferred')!r} not in ev keys {list(ev)}")
+    return problems
+
+
+def _valid_checkpoint(path: str) -> bool:
+    if not os.path.exists(path):
+        return False
+    try:
+        d = json.load(open(path))
+        return isinstance(d, list) and len(d) > 0
+    except Exception:
+        return False
+
+
+def _atomic_write_json(path: str, obj) -> None:
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(obj, f)
+    os.replace(tmp, path)
+
+
+def _aggregate(out: str, boards_dir: str, board_idx: List[int], hands_per_side: int,
+               full_range_size: int) -> Dict:
+    """Rebuild records.json + yield_report.json from whatever board checkpoints
+    exist so far. Safe to call after every board and as an --aggregate-only pass."""
+    all_recs: List[Dict] = []
+    done: List[int] = []
+    for i in board_idx:
+        bpath = os.path.join(boards_dir, f"board_{i:02d}.json")
+        if _valid_checkpoint(bpath):
+            all_recs.extend(json.load(open(bpath)))
+            done.append(i)
+    _atomic_write_json(os.path.join(out, "records.json"), all_recs)
+    if all_recs:
+        rep = yield_report(all_recs, len(done), hands_per_side, full_range_size)
+    else:
+        rep = {"accepted": 0, "note": "no boards completed yet"}
+    rep["boards_completed"] = done
+    rep["boards_requested"] = list(board_idx)
+    rep["boards_missing"] = [i for i in board_idx if i not in done]
     with open(os.path.join(out, "yield_report.json"), "w") as f:
         json.dump(rep, f, indent=2)
-    with open(os.path.join(out, "records.json"), "w") as f:
-        json.dump(all_recs, f)
+    return rep
+
+
+def run(n=40, iters=300, roots=None, solver="cpu", dtype="float64",
+        out="output/content_yield", full_range_size=250, pot=5.5, bet_frac=0.66,
+        raise_x=None, fresh=False, aggregate_only=False):
+    os.makedirs(out, exist_ok=True)
+    boards_dir = os.path.join(out, "boards")
+    os.makedirs(boards_dir, exist_ok=True)
+    board_idx = list(roots) if roots is not None else list(range(len(BOARDS)))
+    # True full range for the projection: when --n >= the range, we solve every
+    # combo, so hands_per_side == full range and the scale factor is 1.0 (avoids
+    # the old bug where --n 400 vs a ~250-combo range deflated projections ~1.6x).
+    mean_full = _mean_range_size(board_idx)
+    eff_full = int(round(mean_full)) if mean_full else full_range_size
+    eff_hands = min(n, eff_full) if eff_full else n
+
+    if not aggregate_only:
+        make = _make_solver(solver, dtype, raise_x=raise_x)
+        t0 = time.time()
+        for k, i in enumerate(board_idx, 1):
+            bstr = BOARDS[i]["board"]
+            bpath = os.path.join(boards_dir, f"board_{i:02d}.json")
+            if not fresh and _valid_checkpoint(bpath):
+                cnt = len(json.load(open(bpath)))
+                print(f"[{k}/{len(board_idx)}] board {i:02d} {bstr}: cached ({cnt} recs) — skip", flush=True)
+                continue
+            try:
+                flop = parse_cards(bstr)
+                oop = subsample([c for c, _ in expand_range(BB_SRP, flop)], n)
+                ip = subsample([c for c, _ in expand_range(BTN_SRP, flop)], n)
+                recs = extract_records(bstr, oop, ip, iters, make, pot, bet_frac)
+                # Drop only the individual records with non-finite EV/freq (a
+                # float32 blow-up on one hand must not discard the whole board's
+                # 30-min solve, nor leak a NaN into the signed pack).
+                clean = [r for r in recs if _is_finite_record(r)]
+                dropped = len(recs) - len(clean)
+                if not clean:
+                    _atomic_write_json(os.path.join(boards_dir, f"board_{i:02d}.raw.json"), recs)
+                    json.dump({"board": bstr, "reason": "no finite records",
+                               "n_records": len(recs)},
+                              open(os.path.join(boards_dir, f"board_{i:02d}.PROBLEM.json"), "w"), indent=2)
+                    print(f"[{k}/{len(board_idx)}] board {i:02d} {bstr}: {len(recs)} recs but ALL "
+                          f"non-finite — not checkpointed (see board_{i:02d}.PROBLEM.json)", flush=True)
+                else:
+                    _atomic_write_json(bpath, clean)
+                    extra = f", {dropped} dropped NaN/inf" if dropped else ""
+                    print(f"[{k}/{len(board_idx)}] board {i:02d} {bstr}: {len(clean)} recs "
+                          f"({sum(r['accepted'] for r in clean)} accepted{extra}) OK "
+                          f"[{time.time()-t0:.0f}s]", flush=True)
+                    if dropped:
+                        json.dump({"board": bstr, "dropped_non_finite": dropped, "kept": len(clean)},
+                                  open(os.path.join(boards_dir, f"board_{i:02d}.DROPPED.json"), "w"), indent=2)
+            except Exception:
+                # one board crashing must not abort the run — log and continue so
+                # the remaining boards still complete and get saved.
+                with open(os.path.join(boards_dir, f"board_{i:02d}.ERROR.txt"), "w") as f:
+                    f.write(traceback.format_exc())
+                print(f"[{k}/{len(board_idx)}] board {i:02d} {bstr}: CRASHED — logged "
+                      f"board_{i:02d}.ERROR.txt, continuing", flush=True)
+            # refresh combined outputs after every board (survives a later timeout)
+            _aggregate(out, boards_dir, board_idx, eff_hands, eff_full)
+
+    rep = _aggregate(out, boards_dir, board_idx, eff_hands, eff_full)
     print("\n=== content-yield ===")
-    print(json.dumps({k: rep[k] for k in ("accepted", "accepted_deduped",
-          "projected_raw_accepted_per_root_full_range", "projection",
-          "distinct_concepts_measured", "per_node_accepted")}, indent=2))
+    print(f"boards completed: {rep['boards_completed']}  missing: {rep['boards_missing']}")
+    if rep.get("accepted"):
+        print(json.dumps({k: rep[k] for k in ("accepted", "accepted_deduped",
+              "projected_raw_accepted_per_root_full_range", "projection",
+              "distinct_concepts_measured", "per_node_accepted")}, indent=2))
     return rep
 
 
@@ -187,7 +331,13 @@ if __name__ == "__main__":
     ap.add_argument("--raise-x", type=float, default=None,
                     help="enable fold/call/raise; raise-to multiple of the bet, e.g. 3")
     ap.add_argument("--out", default="output/content_yield")
+    ap.add_argument("--fresh", action="store_true",
+                    help="ignore existing board checkpoints and re-solve every board")
+    ap.add_argument("--aggregate-only", action="store_true",
+                    help="skip solving; just rebuild records.json + yield_report.json "
+                         "from existing board checkpoints")
     a = ap.parse_args()
     roots = [int(x) for x in a.roots.split(",")] if a.roots else None
     run(n=a.n, iters=a.iters, roots=roots, solver=a.solver, dtype=a.dtype,
-        out=a.out, full_range_size=a.full_range_size, raise_x=a.raise_x)
+        out=a.out, full_range_size=a.full_range_size, raise_x=a.raise_x,
+        fresh=a.fresh, aggregate_only=a.aggregate_only)
