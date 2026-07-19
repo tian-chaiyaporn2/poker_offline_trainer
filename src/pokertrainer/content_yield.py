@@ -224,6 +224,74 @@ def _valid_checkpoint(path: str) -> bool:
         return False
 
 
+def _solve_config(n, iters, solver, dtype, pot, bet_frac, raise_x, board_idx) -> Dict:
+    """Fingerprint of solve settings — checkpoints are only reusable for a match."""
+    return {
+        "n": n,
+        "iters": iters,
+        "solver": solver,
+        "dtype": dtype,
+        "pot": pot,
+        "bet_frac": bet_frac,
+        "raise_x": raise_x,
+        "boards": list(board_idx),
+    }
+
+
+def _config_path(out: str) -> str:
+    return os.path.join(out, "solve_config.json")
+
+
+def _ensure_checkpoint_config(out: str, cfg: Dict, fresh: bool) -> None:
+    """Refuse to resume when --out already holds checkpoints from a different solve.
+
+    Mixing iters/dtype/raise_x across boards would silently poison the pack.
+    Pass --fresh to discard and re-solve, or point --out at a new directory.
+    """
+    path = _config_path(out)
+    boards_dir = os.path.join(out, "boards")
+
+    def _clear_board_checkpoints() -> None:
+        if not os.path.isdir(boards_dir):
+            return
+        for name in os.listdir(boards_dir):
+            if name.startswith("board_") and name.endswith(".json"):
+                try:
+                    os.remove(os.path.join(boards_dir, name))
+                except OSError:
+                    pass
+
+    if fresh:
+        _clear_board_checkpoints()
+        _atomic_write_json(path, cfg)
+        return
+
+    if os.path.exists(path):
+        prev = json.load(open(path))
+        if prev != cfg:
+            raise SystemExit(
+                f"checkpoint config mismatch in {out}:\n"
+                f"  existing={prev}\n  requested={cfg}\n"
+                f"Use --fresh to re-solve, or a different --out directory."
+            )
+        return
+
+    # No config yet: refuse to reuse orphan board_XX.json from a pre-fingerprint run.
+    orphans = []
+    if os.path.isdir(boards_dir):
+        orphans = [n for n in os.listdir(boards_dir)
+                   if n.startswith("board_") and n.endswith(".json")
+                   and ".ERROR" not in n and ".PROBLEM" not in n
+                   and ".DROPPED" not in n and ".VALIDATE" not in n
+                   and ".raw" not in n]
+    if orphans:
+        raise SystemExit(
+            f"{out}/boards has {len(orphans)} checkpoint(s) but no solve_config.json. "
+            f"Refuse to resume without a config fingerprint — pass --fresh or delete boards/."
+        )
+    _atomic_write_json(path, cfg)
+
+
 def _atomic_write_json(path: str, obj) -> None:
     tmp = path + ".tmp"
     with open(tmp, "w") as f:
@@ -269,6 +337,10 @@ def run(n=40, iters=300, roots=None, solver="cpu", dtype="float64",
     eff_full = int(round(mean_full)) if mean_full else full_range_size
     eff_hands = min(n, eff_full) if eff_full else n
 
+    cfg = _solve_config(n, iters, solver, dtype, pot, bet_frac, raise_x, board_idx)
+    if not aggregate_only:
+        _ensure_checkpoint_config(out, cfg, fresh=fresh)
+
     if not aggregate_only:
         make = _make_solver(solver, dtype, raise_x=raise_x)
         t0 = time.time()
@@ -284,6 +356,15 @@ def run(n=40, iters=300, roots=None, solver="cpu", dtype="float64",
                 oop = subsample([c for c, _ in expand_range(BB_SRP, flop)], n)
                 ip = subsample([c for c, _ in expand_range(BTN_SRP, flop)], n)
                 recs = extract_records(bstr, oop, ip, iters, make, pot, bet_frac)
+                problems = validate_records(recs)
+                if problems:
+                    json.dump({"board": bstr, "problems": problems[:50],
+                               "n_problems": len(problems)},
+                              open(os.path.join(boards_dir, f"board_{i:02d}.VALIDATE.json"), "w"),
+                              indent=2)
+                    print(f"[{k}/{len(board_idx)}] board {i:02d} {bstr}: "
+                          f"{len(problems)} validate warnings "
+                          f"(see board_{i:02d}.VALIDATE.json)", flush=True)
                 # Drop only the individual records with non-finite EV/freq (a
                 # float32 blow-up on one hand must not discard the whole board's
                 # 30-min solve, nor leak a NaN into the signed pack).

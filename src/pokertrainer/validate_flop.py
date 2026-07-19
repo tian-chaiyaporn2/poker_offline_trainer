@@ -4,11 +4,10 @@ Executes the team's validation plan (docs/flop_training_validation_plan.md):
 does the flop-only abstraction change the flop recommendation vs a full
 flop->turn->river solve under IDENTICAL assumptions?
 
-Design: the flop-only model is `BatchedCFR(streets=1)` and the full-street
-reference is `BatchedCFR(streets=3)`. They share the exact same betting tree,
-ranges, pot, stacks, bet size, and acting player — the ONLY difference is whether
-turn/river betting follows the flop. This is the assumption-matched comparison
-the plan's Configuration Freeze (§5) demands (no bet-size or tree mismatch).
+Design: both models use `streets=3` (turn+river always dealt). Flop-only is
+`bet_streets=1` (flop betting, then pure runout); full-street is `bet_streets=3`.
+They share the exact same betting tree, ranges, pot, stacks, bet size, and acting
+player — the ONLY difference is whether turn/river betting follows the flop.
 
 Stability (§7.5): the full-street model is snapshotted at a mid checkpoint and at
 the end (same solve); any hand whose full-street preferred action flips between
@@ -25,6 +24,7 @@ import json
 import os
 import statistics
 import time
+import traceback
 from typing import Dict, List
 
 import numpy as np
@@ -117,70 +117,91 @@ def validate(n=20, iters=280, pot=5.5, bet_frac=0.66, out="output/validation",
     boards = ([BOARDS[i] for i in board_indices] if board_indices
               else BOARDS[:max_boards])
 
+    failed = []
     for bi, entry in enumerate(boards, 1):
         board_str = entry["board"]
-        flop = parse_cards(board_str)
-        oop = subsample([c for c, _ in expand_range(BB_SRP, flop)], n)
-        ip = subsample([c for c, _ in expand_range(BTN_SRP, flop)], n)
-        r1, r3, r3_mid = solve_board(flop, oop, ip, pot, bet_frac, iters, make)
+        try:
+            flop = parse_cards(board_str)
+            oop = subsample([c for c, _ in expand_range(BB_SRP, flop)], n)
+            ip = subsample([c for c, _ in expand_range(BTN_SRP, flop)], n)
+            r1, r3, r3_mid = solve_board(flop, oop, ip, pot, bet_frac, iters, make)
 
-        for h in r1:
-            fo, fs, fm = r1[h], r3[h], r3_mid[h]
-            fo_pref, fs_pref = fo["preferred"], fs["preferred"]
-            regret_bb = fs["ev"][fs_pref] - fs["ev"][fo_pref]
-            regret_pct = 100 * regret_bb / pot
-            fs_gap = abs(fs["ev"]["check"] - fs["ev"]["bet"])
-            fo_gap = abs(fo["ev"]["check"] - fo["ev"]["bet"])
-            indiff = (100 * fs_gap / pot) <= INDIFF_PCT
-            agree = fo_pref == fs_pref
-            clear_disagree = (not agree and not indiff
-                              and 100 * fo_gap / pot > CLEAR_GAP_PCT
-                              and 100 * fs_gap / pot > CLEAR_GAP_PCT)
-            freq_pp = abs(fo["freq"]["bet"] - fs["freq"]["bet"]) * 100
-            # Unstable = preferred action flipped between the mid and final
-            # snapshots AND the decision is non-indifferent (a flip between two
-            # near-equal actions is expected noise, not instability).
-            unstable = (fm["preferred"] != fs_pref) and not indiff
-            cls = classify(agree, regret_pct, indiff, freq_pp, clear_disagree, unstable)
-            hc0, hc1 = parse_cards(h)
-            desc = describe_hand((hc0, hc1), flop)
-            rows.append({
-                "scenario_id": f"srp_btn_bb_100bb_flop_{board_str}",
-                "board": board_str,
-                "hand": h,
-                "board_category": ";".join(entry["categories"]),
-                "hand_category": hand_category(desc),
-                "hand_descriptor": desc,
-                "flop_only_preferred_action": fo_pref,
-                "full_street_preferred_action": fs_pref,
-                "flop_only_bet_freq": round(fo["freq"]["bet"], 4),
-                "full_street_bet_freq": round(fs["freq"]["bet"], 4),
-                "flop_only_ev_check": round(fo["ev"]["check"], 4),
-                "flop_only_ev_bet": round(fo["ev"]["bet"], 4),
-                "full_street_ev_check": round(fs["ev"]["check"], 4),
-                "full_street_ev_bet": round(fs["ev"]["bet"], 4),
-                "full_street_regret_bb": round(regret_bb, 4),
-                "full_street_regret_pct_pot": round(regret_pct, 4),
-                "preferred_action_agreement": agree,
-                "indifference_flag": indiff,
-                "stability_flag": "unstable" if unstable else "stable",
-                "suit_isomorphism_flag": "validated_globally",
-                "classification": cls,
-                "reviewer_status": "pending",
-                "reviewer_notes": "",
-                "publishable": cls == "green",
-            })
+            for h in r1:
+                fo, fs, fm = r1[h], r3[h], r3_mid[h]
+                fo_pref, fs_pref = fo["preferred"], fs["preferred"]
+                regret_bb = fs["ev"][fs_pref] - fs["ev"][fo_pref]
+                regret_pct = 100 * regret_bb / pot
+                fs_gap = abs(fs["ev"]["check"] - fs["ev"]["bet"])
+                fo_gap = abs(fo["ev"]["check"] - fo["ev"]["bet"])
+                indiff = (100 * fs_gap / pot) <= INDIFF_PCT
+                agree = fo_pref == fs_pref
+                clear_disagree = (not agree and not indiff
+                                  and 100 * fo_gap / pot > CLEAR_GAP_PCT
+                                  and 100 * fs_gap / pot > CLEAR_GAP_PCT)
+                freq_pp = abs(fo["freq"]["bet"] - fs["freq"]["bet"]) * 100
+                # Unstable = preferred action flipped between the mid and final
+                # snapshots AND the decision is non-indifferent (a flip between two
+                # near-equal actions is expected noise, not instability).
+                unstable = (fm["preferred"] != fs_pref) and not indiff
+                cls = classify(agree, regret_pct, indiff, freq_pp, clear_disagree, unstable)
+                hc0, hc1 = parse_cards(h)
+                desc = describe_hand((hc0, hc1), flop)
+                rows.append({
+                    "scenario_id": f"srp_btn_bb_100bb_flop_{board_str}",
+                    "board": board_str,
+                    "hand": h,
+                    "board_category": ";".join(entry["categories"]),
+                    "hand_category": hand_category(desc),
+                    "hand_descriptor": desc,
+                    "flop_only_preferred_action": fo_pref,
+                    "full_street_preferred_action": fs_pref,
+                    "flop_only_bet_freq": round(fo["freq"]["bet"], 4),
+                    "full_street_bet_freq": round(fs["freq"]["bet"], 4),
+                    "flop_only_ev_check": round(fo["ev"]["check"], 4),
+                    "flop_only_ev_bet": round(fo["ev"]["bet"], 4),
+                    "full_street_ev_check": round(fs["ev"]["check"], 4),
+                    "full_street_ev_bet": round(fs["ev"]["bet"], 4),
+                    "full_street_regret_bb": round(regret_bb, 4),
+                    "full_street_regret_pct_pot": round(regret_pct, 4),
+                    "preferred_action_agreement": agree,
+                    "indifference_flag": indiff,
+                    "stability_flag": "unstable" if unstable else "stable",
+                    "suit_isomorphism_flag": "validated_globally",
+                    "classification": cls,
+                    "reviewer_status": "pending",
+                    "reviewer_notes": "",
+                    "publishable": cls == "green",
+                })
+        except Exception:
+            failed.append(board_str)
+            err_path = os.path.join(out, f"board_{bi:02d}.ERROR.txt")
+            with open(err_path, "w") as f:
+                f.write(traceback.format_exc())
+            print(f"[{bi:2d}/{len(boards)}] {board_str:8s} CRASHED — logged "
+                  f"{os.path.basename(err_path)}, continuing", flush=True)
+            continue
         # Incremental write after each board so a long run survives interruption.
         _write(rows, out, dict(n=n, iters=iters, pot=pot, bet_frac=bet_frac,
-                               boards_done=bi))
+                               boards_done=bi, boards_failed=failed))
         print(f"[{bi:2d}/{len(boards)}] {board_str:8s} done ({time.time()-t0:.0f}s "
               f"elapsed, {len(rows)} rows)", flush=True)
 
-    print(f"\nTotal: {len(rows)} hand-decisions across {len(boards)} boards "
-          f"in {time.time()-t0:.0f}s")
+    if rows:
+        _write(rows, out, dict(n=n, iters=iters, pot=pot, bet_frac=bet_frac,
+                               boards_done=len(boards) - len(failed),
+                               boards_failed=failed))
+    print(f"\nTotal: {len(rows)} hand-decisions across {len(boards) - len(failed)}/"
+          f"{len(boards)} boards in {time.time()-t0:.0f}s"
+          + (f" (failed: {failed})" if failed else ""))
 
 
 def _write(rows, out, cfg):
+    if not rows:
+        summary = {"config": cfg, "totals": {"hand_decisions": 0}, "note": "no boards completed"}
+        with open(os.path.join(out, "summary.json"), "w") as f:
+            json.dump(summary, f, indent=2)
+        print("wrote summary.json (empty — no successful boards)")
+        return
     # CSV (§11)
     csv_path = os.path.join(out, "flop_validation.csv")
     with open(csv_path, "w", newline="") as f:
