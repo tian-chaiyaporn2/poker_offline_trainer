@@ -95,6 +95,19 @@ computed from the same primitives as the solver pipeline (evaluator, board textu
 pot-odds arithmetic, MC equity). Trainer integration (serving these alongside flop
 decisions) is the next step.
 
+## 5b. Prioritize what to solve/teach next
+
+```bash
+python -m pokertrainer.priority --records output/content_yield/records.json --out output/priority
+```
+Ranks every accepted record by **frequency × impact × intuition-gap** (all read
+from the solve: P(board texture) × reach_mass, EV spread, and how non-obvious the
+GTO play is). Outputs `priority_report.json` with two backlogs: `lesson_backlog`
+(spot-types by total teaching value — what to surface first) and `solve_backlog`
+(board textures by real-world frequency vs current coverage — **what to solve
+next**; high-frequency + uncovered = top priority). Use it to steer board/runout
+selection with data instead of guesses.
+
 ## 6. Serve / preview
 
 ```bash
