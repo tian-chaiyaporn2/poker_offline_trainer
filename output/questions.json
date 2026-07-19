@@ -2024,7 +2024,7 @@
         "Jc"
       ],
       "hand_class": "AJs",
-      "hand_descriptor": "one pair",
+      "hand_descriptor": "high card",
       "pot_bb": 5.5,
       "available_actions": [
         "check",
@@ -2075,7 +2075,7 @@
         "Tc"
       ],
       "hand_class": "ATs",
-      "hand_descriptor": "one pair",
+      "hand_descriptor": "high card",
       "pot_bb": 5.5,
       "available_actions": [
         "check",
@@ -2175,7 +2175,7 @@
         "Jc"
       ],
       "hand_class": "QJs",
-      "hand_descriptor": "one pair",
+      "hand_descriptor": "high card",
       "pot_bb": 5.5,
       "available_actions": [
         "check",
@@ -2226,7 +2226,7 @@
         "Tc"
       ],
       "hand_class": "JTs",
-      "hand_descriptor": "one pair",
+      "hand_descriptor": "high card",
       "pot_bb": 5.5,
       "available_actions": [
         "check",
@@ -2276,7 +2276,7 @@
         "9c"
       ],
       "hand_class": "T9s",
-      "hand_descriptor": "one pair",
+      "hand_descriptor": "high card",
       "pot_bb": 5.5,
       "available_actions": [
         "check",
@@ -2326,7 +2326,7 @@
         "8c"
       ],
       "hand_class": "98s",
-      "hand_descriptor": "one pair",
+      "hand_descriptor": "high card",
       "pot_bb": 5.5,
       "available_actions": [
         "check",
@@ -2427,7 +2427,7 @@
         "4c"
       ],
       "hand_class": "54s",
-      "hand_descriptor": "one pair",
+      "hand_descriptor": "high card",
       "pot_bb": 5.5,
       "available_actions": [
         "check",
@@ -2477,7 +2477,7 @@
         "5c"
       ],
       "hand_class": "A5s",
-      "hand_descriptor": "one pair",
+      "hand_descriptor": "high card",
       "pot_bb": 5.5,
       "available_actions": [
         "check",
@@ -2527,7 +2527,7 @@
         "Jc"
       ],
       "hand_class": "AJs",
-      "hand_descriptor": "one pair",
+      "hand_descriptor": "high card",
       "pot_bb": 5.5,
       "available_actions": [
         "check",
@@ -2577,7 +2577,7 @@
         "Tc"
       ],
       "hand_class": "ATs",
-      "hand_descriptor": "one pair",
+      "hand_descriptor": "high card",
       "pot_bb": 5.5,
       "available_actions": [
         "check",
@@ -2627,7 +2627,7 @@
         "Qc"
       ],
       "hand_class": "KQs",
-      "hand_descriptor": "one pair",
+      "hand_descriptor": "high card",
       "pot_bb": 5.5,
       "available_actions": [
         "check",
@@ -2677,7 +2677,7 @@
         "Jc"
       ],
       "hand_class": "QJs",
-      "hand_descriptor": "one pair",
+      "hand_descriptor": "high card",
       "pot_bb": 5.5,
       "available_actions": [
         "check",
@@ -2727,7 +2727,7 @@
         "Tc"
       ],
       "hand_class": "JTs",
-      "hand_descriptor": "one pair",
+      "hand_descriptor": "high card",
       "pot_bb": 5.5,
       "available_actions": [
         "check",
@@ -2777,7 +2777,7 @@
         "9c"
       ],
       "hand_class": "T9s",
-      "hand_descriptor": "one pair",
+      "hand_descriptor": "high card",
       "pot_bb": 5.5,
       "available_actions": [
         "check",
@@ -2828,7 +2828,7 @@
         "8c"
       ],
       "hand_class": "98s",
-      "hand_descriptor": "one pair",
+      "hand_descriptor": "high card",
       "pot_bb": 5.5,
       "available_actions": [
         "check",
@@ -2879,7 +2879,7 @@
         "6c"
       ],
       "hand_class": "76s",
-      "hand_descriptor": "one pair",
+      "hand_descriptor": "high card",
       "pot_bb": 5.5,
       "available_actions": [
         "check",
@@ -5516,7 +5516,7 @@
         "bet_small": "good",
         "bet_large": "good"
       },
-      "recommended_action": "bet_large",
+      "recommended_action": "bet_small",
       "acceptable_actions": [
         "bet_small",
         "bet_large"
@@ -5717,7 +5717,7 @@
         "bet_small": "good",
         "bet_large": "acceptable"
       },
-      "recommended_action": "bet_small",
+      "recommended_action": "check",
       "acceptable_actions": [
         "check",
         "bet_small"

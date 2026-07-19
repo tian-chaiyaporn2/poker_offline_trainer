@@ -133,8 +133,10 @@ class BatchedCFR:
         UO = np.zeros((C, self.no)); UI = np.zeros((C, self.ni))
         np.add.at(UO, parent_idx, uo_c)
         np.add.at(UI, parent_idx, ui_c)
-        # current board has (street+2) cards; valid next cards per combo:
-        denom = (52 - (street + 2)) - 2
+        # Uniform average over cards that collide with neither private hand:
+        # 52 - board - 4. (Using board-2 under-weights showdown EV by ~45/47 per
+        # street and biases betting lines that realize fold equity.)
+        denom = (52 - (street + 2)) - 4
         return UO / denom, UI / denom
 
     def _get_strat(self, path, node, C, na):
@@ -318,6 +320,8 @@ class BatchedCFR:
         return _flop_decisions_from_cap(self)
 
     def run(self, iterations: int) -> Dict:
+        if iterations <= 0:
+            raise ValueError("iterations must be positive")
         tracemalloc.start()
         t0 = time.time()
         ev = []
@@ -330,12 +334,18 @@ class BatchedCFR:
             if t % max(1, iterations // 12) == 0 or t == iterations:
                 ev.append((t, float((self.w_o * uo[0]).sum())))
         self._done += iterations
+        # Report EV under the averaged strategy (CFR guarantee), not last iterate.
+        self._eval = True
+        uo_avg, _ = self._solve(1, [list(self.flop)], np.zeros(1), np.zeros(1),
+                                self.w_o[None, :].copy(), self.w_i[None, :].copy(), "")
+        self._eval = False
+        root_ev = float((self.w_o * uo_avg[0]).sum())
         rt = time.time() - t0
         _, peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
         return {
-            "root_ev_oop_bb": ev[-1][1],
-            "root_ev_pct_pot": 100 * ev[-1][1] / self.P0,
+            "root_ev_oop_bb": root_ev,
+            "root_ev_pct_pot": 100 * root_ev / self.P0,
             "ev_curve": ev,
             "iterations": iterations,
             "runtime_sec": rt,

@@ -22,6 +22,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 RESULTS_DB = os.path.join(HERE, "pack_results.db")
 INDEX = os.path.join(HERE, "pack_index.html")
+MAX_BODY = 64 * 1024
+_results_lock = __import__("threading").Lock()
+
+import sys
+if os.path.join(ROOT, "src") not in sys.path:
+    sys.path.insert(0, os.path.join(ROOT, "src"))
+from pokertrainer.content_pack import verify_pack
 
 SITUATION = {
     "bb_first": "You are the BB (out of position), first to act on the flop.",
@@ -35,6 +42,12 @@ QUESTIONS = {}
 PACK_META = {}
 
 
+def _connect(path: str) -> sqlite3.Connection:
+    conn = sqlite3.connect(path, timeout=30, check_same_thread=False)
+    conn.execute("PRAGMA journal_mode=WAL")
+    return conn
+
+
 def find_pack() -> str:
     packs = sorted(glob.glob(os.path.join(ROOT, "output", "packs", "flop_pack_*.db")))
     if not packs:
@@ -46,6 +59,22 @@ def find_pack() -> str:
 
 def load_pack():
     path = find_pack()
+    verdict = verify_pack(path)
+    if not (verdict.get("hash_ok") and verdict.get("signature_ok")):
+        # Common non-tamper cause: a POKERTRAINER_SIGNING_KEY is exported that
+        # differs from the key the pack was signed with (e.g. the shipped packs
+        # are dev-signed). Call that out so it isn't mistaken for tampering.
+        hint = ""
+        if os.environ.get("POKERTRAINER_SIGNING_KEY") and verdict.get("hash_ok") \
+                and not verdict.get("signature_ok"):
+            hint = ("\n  NOTE: POKERTRAINER_SIGNING_KEY is set but does not match this "
+                    "pack's signature.\n  Unset it to serve a dev-signed pack, or rebuild "
+                    "the pack with that key (content_pack --records ...).")
+        raise SystemExit(
+            f"Content pack failed integrity check: {path}\n"
+            f"  verify={verdict}\n"
+            "Refuse to serve a tampered or unsigned pack." + hint
+        )
     conn = sqlite3.connect(path)
     meta = dict(conn.execute("SELECT key, value FROM pack_meta").fetchall())
     rows = conn.execute(
@@ -66,7 +95,7 @@ def load_pack():
             "reason": reason, "headline": headline, "detail": json.loads(detail),
             "mixed": bool(mixed),
         }
-    return os.path.basename(path), meta, q
+    return os.path.basename(path), meta, q, verdict
 
 
 def public_question(q):
@@ -97,21 +126,22 @@ def grade_answer(q, action):
 
 
 def init_results():
-    conn = sqlite3.connect(RESULTS_DB)
+    conn = _connect(RESULTS_DB)
     conn.execute("CREATE TABLE IF NOT EXISTS results (id INTEGER PRIMARY KEY AUTOINCREMENT,"
                  "question_id TEXT, node TEXT, chosen TEXT, grade TEXT, ts TEXT)")
     conn.commit(); conn.close()
 
 
 def record(qid, node, action, grade):
-    conn = sqlite3.connect(RESULTS_DB)
-    conn.execute("INSERT INTO results (question_id,node,chosen,grade,ts) VALUES (?,?,?,?,?)",
-                 (qid, node, action, grade, dt.datetime.now().isoformat(timespec="seconds")))
-    conn.commit(); conn.close()
+    with _results_lock:
+        conn = _connect(RESULTS_DB)
+        conn.execute("INSERT INTO results (question_id,node,chosen,grade,ts) VALUES (?,?,?,?,?)",
+                     (qid, node, action, grade, dt.datetime.now().isoformat(timespec="seconds")))
+        conn.commit(); conn.close()
 
 
 def stats():
-    conn = sqlite3.connect(RESULTS_DB)
+    conn = _connect(RESULTS_DB)
     rows = dict(conn.execute("SELECT grade, COUNT(*) FROM results GROUP BY grade").fetchall())
     total = conn.execute("SELECT COUNT(*) FROM results").fetchone()[0]
     conn.close()
@@ -149,8 +179,16 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"error": "not found"}, 404)
 
     def do_POST(self):
-        length = int(self.headers.get("Content-Length", 0))
-        data = json.loads(self.rfile.read(length) or b"{}")
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+        except (TypeError, ValueError):
+            self._json({"error": "bad content-length"}, 400); return
+        if length < 0 or length > MAX_BODY:
+            self._json({"error": "payload too large"}, 413); return
+        try:
+            data = json.loads(self.rfile.read(length) or b"{}")
+        except json.JSONDecodeError:
+            self._json({"error": "invalid json"}, 400); return
         if urlparse(self.path).path == "/api/answer":
             q = QUESTIONS.get(data.get("question_id"))
             action = data.get("action")
@@ -165,9 +203,10 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     global QUESTIONS, PACK_META
-    name, meta, QUESTIONS = load_pack()
+    name, meta, QUESTIONS, verdict = load_pack()
     PACK_META = {"file": name, "version": meta.get("version"),
-                 "records": meta.get("record_count"), "signed": bool(meta.get("signature"))}
+                 "records": meta.get("record_count"),
+                 "signed": bool(verdict.get("hash_ok") and verdict.get("signature_ok"))}
     init_results()
     port = int(os.environ.get("PORT", "8000"))
     srv = ThreadingHTTPServer(("127.0.0.1", port), Handler)

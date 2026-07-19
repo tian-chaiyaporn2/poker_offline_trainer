@@ -120,4 +120,6 @@ class ReferenceCFR:
                    + avg["ovs"][:, 1] * self._sd_oop(bs, wi * avg["ipc"][:, 1])
                    + avg["ovl"][:, 1] * self._sd_oop(bl, wi * avg["ipc"][:, 2]))
         u_root = np.stack([u_check, u_bet_s, u_bet_l], axis=1)
-        return float((wo * (avg["root"] * u_root).sum(axis=1)).sum())
+        joint = float(wo @ (C @ wi))
+        joint = joint if joint > 1e-12 else 1.0
+        return float((wo * (avg["root"] * u_root).sum(axis=1)).sum()) / joint

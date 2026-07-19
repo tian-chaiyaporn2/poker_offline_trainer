@@ -30,16 +30,24 @@ from .solver import FlopSolver
 def _mc_spotcheck(scn, equity, n_pairs=6, seed=11) -> Dict:
     rng = random.Random(seed)
     diffs = []
-    for _ in range(n_pairs):
+    attempts = 0
+    max_attempts = n_pairs * 50
+    while len(diffs) < n_pairs and attempts < max_attempts:
+        attempts += 1
         i = rng.randrange(len(scn.oop_combos))
         j = rng.randrange(len(scn.ip_combos))
         hero, vill = scn.oop_combos[i], scn.ip_combos[j]
         if set(hero) & set(vill):
             continue
-        est = mc_equity(scn.board, hero, vill, samples=15000, seed=seed)
+        # Distinct deterministic seed per accepted pair for independent samples.
+        est = mc_equity(scn.board, hero, vill, samples=15000,
+                        seed=seed + 17 * len(diffs) + 1)
         diffs.append(abs(est - float(equity[i, j])))
-    return {"pairs": len(diffs), "max_abs_diff": round(max(diffs), 4) if diffs else 0.0,
-            "mean_abs_diff": round(sum(diffs) / len(diffs), 4) if diffs else 0.0}
+    if not diffs:
+        return {"pairs": 0, "max_abs_diff": None, "mean_abs_diff": None,
+                "note": "no compatible pairs sampled"}
+    return {"pairs": len(diffs), "max_abs_diff": round(max(diffs), 4),
+            "mean_abs_diff": round(sum(diffs) / len(diffs), 4)}
 
 
 def main() -> None:

@@ -30,11 +30,20 @@ def compare(a: NormalizedSolve, b: NormalizedSolve, pot_bb: float) -> Dict:
     indiff_bb = INDIFF_THRESHOLD_PCT / 100.0 * pot_bb
     major_bb = MAJOR_DISAGREE_PCT / 100.0 * pot_bb
 
+    if a.scenario_id != b.scenario_id:
+        raise ValueError(f"scenario_id mismatch: {a.scenario_id!r} vs {b.scenario_id!r}")
+    if a.board != b.board:
+        raise ValueError(f"board mismatch: {a.board} vs {b.board}")
+    if a.actions != b.actions:
+        raise ValueError(f"actions mismatch: {a.actions} vs {b.actions}")
+
     hands_a = set(a.per_hand)
     hands_b = set(b.per_hand)
     shared = sorted(hands_a & hands_b)
     missing_in_b = sorted(hands_a - hands_b)
     missing_in_a = sorted(hands_b - hands_a)
+    if not shared:
+        raise ValueError("compare() requires at least one shared hand")
 
     root_ev_diff = a.root_ev_oop_bb - b.root_ev_oop_bb
 
@@ -50,6 +59,9 @@ def compare(a: NormalizedSolve, b: NormalizedSolve, pot_bb: float) -> Dict:
         sa, sb = a.per_hand[h]["strategy"], b.per_hand[h]["strategy"]
         ea, eb = a.per_hand[h]["ev"], b.per_hand[h]["ev"]
         if abs(sum(sa.values()) - 1) > 1e-3 or abs(sum(sb.values()) - 1) > 1e-3:
+            prob_ok = False
+        if any(v < -1e-9 or v > 1.0 + 1e-9 for v in sa.values()) or \
+           any(v < -1e-9 or v > 1.0 + 1e-9 for v in sb.values()):
             prob_ok = False
 
         # max per-action EV difference for this hand
@@ -86,6 +98,7 @@ def compare(a: NormalizedSolve, b: NormalizedSolve, pot_bb: float) -> Dict:
         "freq_diff_target": avg_freq_diff <= TARGET_FREQ_DIFF_PP,
         "no_major_disagreement": len(major) == 0,
         "probabilities_valid": prob_ok,
+        "hands_complete": not missing_in_a and not missing_in_b,
     }
     return {
         "scenario_id": a.scenario_id,

@@ -50,6 +50,15 @@ def equity_matrix(
     """
     board = list(board)
     assert len(board) == 3, "flop must be 3 cards"
+    used_by_board = set(board)
+    if len(used_by_board) != 3:
+        raise ValueError("board cards must be unique")
+    for label, combos in (("oop", oop), ("ip", ip)):
+        for combo in combos:
+            if combo[0] in used_by_board or combo[1] in used_by_board:
+                raise ValueError(f"{label} combo {combo} collides with board")
+            if combo[0] == combo[1]:
+                raise ValueError(f"{label} combo has duplicate cards: {combo}")
     n_o, n_i = len(oop), len(ip)
     oc = _combo_cards(oop)
     ic = _combo_cards(ip)
@@ -58,7 +67,6 @@ def equity_matrix(
     wins = np.zeros((n_o, n_i), dtype=np.float64)   # accumulates 1.0 win, 0.5 tie
     count = np.zeros((n_o, n_i), dtype=np.float64)   # valid runouts per pair
 
-    used_by_board = set(board)
     deck = [c for c in range(52) if c not in used_by_board]
 
     oc0, oc1 = oc[:, 0], oc[:, 1]
@@ -86,4 +94,7 @@ def equity_matrix(
 
     with np.errstate(invalid="ignore", divide="ignore"):
         equity = np.where(count > 0, wins / count, 0.5)
+    # Incompatible private pairs are unused by CFR (masked by compat), but the
+    # API contract promises equity 0.5 for them.
+    equity = np.where(compat > 0, equity, 0.5)
     return equity, compat

@@ -57,21 +57,21 @@ def main():
         except Exception:
             pass
 
-    print(f"  {'combos':>7} {'build+1':>9} {'ms/iter':>9}")
+    print(f"  {'combos':>7} {'warmup':>9} {'ms/iter':>9}")
     for n in sizes:
         oop, ip = subsample(oop_full, n), subsample(ip_full, n)
         wo, wi = np.ones(len(oop)), np.ones(len(ip))
         try:
-            s = BatchedGPUCFR(flop, oop, ip, wo, wi, 5.5, 0.66, streets=streets, backend=prefer, dtype=dtype)
-            t = time.time(); s.run(1); build = time.time() - t
+            s = BatchedGPUCFR(flop, oop, ip, wo, wi, 5.5, 0.66, streets=streets,
+                              backend=prefer, dtype=dtype)
+            # Warm up construction + one iteration on the same instance.
+            t = time.time(); s.run(1); warmup = time.time() - t
+            K = 10
+            t = time.time(); r = s.run(K)
+            steady = r["runtime_sec"] / K
+            print(f"  {len(oop):>7} {warmup:>9.2f} {steady * 1000:>9.1f}", flush=True)
             xp = s.xp
-            del s; free_pool(xp)        # release before building the timed run
-            s2 = BatchedGPUCFR(flop, oop, ip, wo, wi, 5.5, 0.66, streets=streets, backend=prefer, dtype=dtype)
-            K = 11
-            t = time.time(); r = s2.run(K)
-            steady = (r["runtime_sec"] - build) / (K - 1) if K > 1 else r["runtime_sec"]
-            print(f"  {len(oop):>7} {build:>9.2f} {steady * 1000:>9.1f}", flush=True)
-            del s2; free_pool(xp)
+            del s; free_pool(xp)
         except Exception as e:          # e.g. OOM at large n — keep earlier rows
             print(f"  {len(oop):>7}   FAILED: {type(e).__name__}: {str(e)[:60]}", flush=True)
 

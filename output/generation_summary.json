@@ -1,6 +1,6 @@
 {
   "total_questions": 120,
-  "total_wall_sec": 142.09,
+  "total_wall_sec": 42.27,
   "iterations": 1500,
   "boards": [
     {
@@ -11,15 +11,15 @@
         "rainbow"
       ],
       "combos": "265x221",
-      "root_ev_pct_pot": 27.3114,
-      "exploit_pct_pot": 0.002066,
+      "root_ev_pct_pot": 30.2676,
+      "exploit_pct_pot": 0.00229,
       "range_freqs": {
         "check": 0.226641,
         "bet_small": 0.550325,
         "bet_large": 0.223034
       },
       "questions": 10,
-      "wall_sec": 11.87
+      "wall_sec": 3.54
     },
     {
       "board": "Kd9c4h",
@@ -29,15 +29,15 @@
         "rainbow"
       ],
       "combos": "258x231",
-      "root_ev_pct_pot": 42.2328,
-      "exploit_pct_pot": 0.002041,
+      "root_ev_pct_pot": 46.792,
+      "exploit_pct_pot": 0.002261,
       "range_freqs": {
         "check": 0.020152,
         "bet_small": 0.655636,
         "bet_large": 0.324212
       },
       "questions": 10,
-      "wall_sec": 11.54
+      "wall_sec": 3.52
     },
     {
       "board": "Th9h8d",
@@ -47,15 +47,15 @@
         "draw_heavy"
       ],
       "combos": "243x236",
-      "root_ev_pct_pot": 51.4699,
-      "exploit_pct_pot": 0.000259,
+      "root_ev_pct_pot": 57.0354,
+      "exploit_pct_pot": 0.000287,
       "range_freqs": {
         "check": 0.012397,
         "bet_small": 0.467598,
         "bet_large": 0.520005
       },
       "questions": 10,
-      "wall_sec": 11.08
+      "wall_sec": 3.33
     },
     {
       "board": "8s7s6c",
@@ -65,15 +65,15 @@
         "low"
       ],
       "combos": "268x241",
-      "root_ev_pct_pot": 47.7554,
-      "exploit_pct_pot": 0.000696,
+      "root_ev_pct_pot": 53.0115,
+      "exploit_pct_pot": 0.000772,
       "range_freqs": {
         "check": 0.029908,
         "bet_small": 0.405996,
         "bet_large": 0.564096
       },
       "questions": 10,
-      "wall_sec": 12.02
+      "wall_sec": 3.6
     },
     {
       "board": "KsKd6h",
@@ -82,15 +82,15 @@
         "high_card"
       ],
       "combos": "259x221",
-      "root_ev_pct_pot": 35.2164,
-      "exploit_pct_pot": 0.003713,
+      "root_ev_pct_pot": 38.9789,
+      "exploit_pct_pot": 0.00411,
       "range_freqs": {
         "check": 0.004101,
         "bet_small": 0.736813,
         "bet_large": 0.259086
       },
       "questions": 10,
-      "wall_sec": 11.54
+      "wall_sec": 3.44
     },
     {
       "board": "5c5d2h",
@@ -99,15 +99,15 @@
         "low"
       ],
       "combos": "277x243",
-      "root_ev_pct_pot": 30.7055,
-      "exploit_pct_pot": 0.001145,
+      "root_ev_pct_pot": 34.029,
+      "exploit_pct_pot": 0.001269,
       "range_freqs": {
         "check": 0.000228,
         "bet_small": 0.724975,
         "bet_large": 0.274798
       },
       "questions": 10,
-      "wall_sec": 12.52
+      "wall_sec": 3.68
     },
     {
       "board": "AhQh7c",
@@ -117,15 +117,15 @@
         "draw_heavy"
       ],
       "combos": "256x210",
-      "root_ev_pct_pot": 31.1781,
-      "exploit_pct_pot": 0.000893,
+      "root_ev_pct_pot": 34.5261,
+      "exploit_pct_pot": 0.000988,
       "range_freqs": {
         "check": 0.2132,
         "bet_small": 0.552437,
         "bet_large": 0.234364
       },
       "questions": 10,
-      "wall_sec": 11.16
+      "wall_sec": 3.31
     },
     {
       "board": "Jd8d3s",
@@ -134,15 +134,15 @@
         "mid"
       ],
       "combos": "257x232",
-      "root_ev_pct_pot": 42.5953,
-      "exploit_pct_pot": 0.000749,
+      "root_ev_pct_pot": 47.1109,
+      "exploit_pct_pot": 0.000829,
       "range_freqs": {
         "check": 0.023504,
         "bet_small": 0.545887,
         "bet_large": 0.430609
       },
       "questions": 10,
-      "wall_sec": 11.76
+      "wall_sec": 3.52
     },
     {
       "board": "Qh8h3h",
@@ -150,15 +150,15 @@
         "monotone"
       ],
       "combos": "264x232",
-      "root_ev_pct_pot": 39.9277,
-      "exploit_pct_pot": 0.001358,
+      "root_ev_pct_pot": 44.2335,
+      "exploit_pct_pot": 0.001505,
       "range_freqs": {
         "check": 0.119182,
         "bet_small": 0.612442,
         "bet_large": 0.268376
       },
       "questions": 10,
-      "wall_sec": 12.05
+      "wall_sec": 3.57
     },
     {
       "board": "7s5s2s",
@@ -167,15 +167,15 @@
         "low"
       ],
       "combos": "275x242",
-      "root_ev_pct_pot": 36.8735,
-      "exploit_pct_pot": 0.000545,
+      "root_ev_pct_pot": 40.8886,
+      "exploit_pct_pot": 0.000604,
       "range_freqs": {
         "check": 0.163982,
         "bet_small": 0.510118,
         "bet_large": 0.3259
       },
       "questions": 10,
-      "wall_sec": 12.83
+      "wall_sec": 3.73
     },
     {
       "board": "6h4d2c",
@@ -185,15 +185,15 @@
         "rainbow"
       ],
       "combos": "276x243",
-      "root_ev_pct_pot": 32.1734,
-      "exploit_pct_pot": 0.001369,
+      "root_ev_pct_pot": 35.6604,
+      "exploit_pct_pot": 0.001517,
       "range_freqs": {
         "check": 0.050598,
         "bet_small": 0.615238,
         "bet_large": 0.334164
       },
       "questions": 10,
-      "wall_sec": 12.9
+      "wall_sec": 3.77
     },
     {
       "board": "JcTs9d",
@@ -203,15 +203,15 @@
         "rainbow"
       ],
       "combos": "234x225",
-      "root_ev_pct_pot": 48.2323,
-      "exploit_pct_pot": 0.001744,
+      "root_ev_pct_pot": 53.223,
+      "exploit_pct_pot": 0.001925,
       "range_freqs": {
         "check": 0.034493,
         "bet_small": 0.687175,
         "bet_large": 0.278332
       },
       "questions": 10,
-      "wall_sec": 10.67
+      "wall_sec": 3.22
     }
   ]
 }

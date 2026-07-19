@@ -161,7 +161,8 @@ class BatchedGPUCFR:
                         continue
                     pk.append(k); pc.append(c); child_boards.append(boards[k] + [c])
             pk_h = np.array(pk); pc_h = np.array(pc)
-            denom = (52 - (street + 2)) - 2
+            # Uniform over cards that collide with neither private hand.
+            denom = (52 - (street + 2)) - 4
             cm = (xp.asarray(pk_h), xp.asarray(pc_h), pk_h, pc_h, child_boards, denom)
             self._child[path] = cm
         pk_d, pc_d, pk_h, pc_h, child_boards, denom = cm
@@ -345,19 +346,24 @@ class BatchedGPUCFR:
         return _flop_decisions_from_cap(self)
 
     def run(self, iterations: int) -> Dict:
+        if iterations <= 0:
+            raise ValueError("iterations must be positive")
         xp = self.xp
         t0 = time.time()
-        ev = []
         ro0 = self.w_o[None, :]
         ri0 = self.w_i[None, :]
         for t in range(1, iterations + 1):
             self._t = self._done + t
-            uo, ui = self._solve(1, [list(self.flop)],
-                                 xp.zeros(1, dtype=self.dtype), xp.zeros(1, dtype=self.dtype),
-                                 ro0 + 0, ri0 + 0, "")
-            if t == iterations:
-                root_ev = float(self.to_host((self.w_o * uo[0]).sum()))
+            self._solve(1, [list(self.flop)],
+                        xp.zeros(1, dtype=self.dtype), xp.zeros(1, dtype=self.dtype),
+                        ro0 + 0, ri0 + 0, "")
         self._done += iterations
+        self._eval = True
+        uo_avg, _ = self._solve(1, [list(self.flop)],
+                                xp.zeros(1, dtype=self.dtype), xp.zeros(1, dtype=self.dtype),
+                                self.w_o[None, :] + 0, self.w_i[None, :] + 0, "")
+        self._eval = False
+        root_ev = float(self.to_host((self.w_o * uo_avg[0]).sum()))
         if self.backend == "cupy":
             self.xp.cuda.Stream.null.synchronize()
         rt = time.time() - t0

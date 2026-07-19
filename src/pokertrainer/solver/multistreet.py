@@ -56,6 +56,7 @@ class MultiStreetSpike:
         self.S: Dict[tuple, np.ndarray] = {}
         self._Ecache: Dict[frozenset, np.ndarray] = {}
         self._t = 0
+        self._eval = False
 
     @staticmethod
     def _compat(oc, ic):
@@ -65,6 +66,16 @@ class MultiStreetSpike:
             a, b = oc[i]
             B[i, (ic[:, 0] == a) | (ic[:, 1] == a) | (ic[:, 0] == b) | (ic[:, 1] == b)] = 0.0
         return B
+
+    def _get_strat(self, key, n_actions):
+        """Regret-matched strategy while training; average strategy in eval mode."""
+        self._reg(key, n_actions)
+        if self._eval:
+            s = self.S[key]
+            tot = s.sum(axis=1, keepdims=True)
+            return np.where(tot > 0, s / np.where(tot > 0, tot, 1.0),
+                            np.full_like(s, 1.0 / n_actions))
+        return _strategy_from_regret(self.R[key])
 
     # --- showdown on a complete 5-card board (cached) ---
     def _E(self, board5: List[int]) -> np.ndarray:
@@ -113,7 +124,9 @@ class MultiStreetSpike:
                                         ro * live_o, ri * live_i, path)
             UO += uo * live_o
             UI += ui * live_i
-        denom = len(deck) - 2  # valid next cards per combo (uniform)
+        # Cards that collide with neither private hand: |deck| - 4.
+        # (|deck| - 2 under-weights showdown EV vs fold equity.)
+        denom = len(deck) - 4
         return UO / denom, UI / denom
 
     # --- one street's betting; returns (uo, ui) counterfactual values ---
@@ -130,10 +143,10 @@ class MultiStreetSpike:
         k_ipc = (bkey, "ipc")
         k_ovb = (bkey, "ovb")
         k_ivb = (bkey, "ivb")
-        s_root = _strategy_from_regret(self._reg(k_root, 2))
-        s_ipc = _strategy_from_regret(self._reg(k_ipc, 2))
-        s_ovb = _strategy_from_regret(self._reg(k_ovb, 2))
-        s_ivb = _strategy_from_regret(self._reg(k_ivb, 2))
+        s_root = self._get_strat(k_root, 2)
+        s_ipc = self._get_strat(k_ipc, 2)
+        s_ovb = self._get_strat(k_ovb, 2)
+        s_ivb = self._get_strat(k_ivb, 2)
 
         # Lines that reach advance (with reaches folded through strategies):
         # check-check
@@ -192,12 +205,12 @@ class MultiStreetSpike:
         b = self.bet_frac * pot
         R = self.raise_x * b                     # raise-to (raiser's street investment)
 
-        s_root = _strategy_from_regret(self._reg((bkey, "root"), 2))
-        s_ipc = _strategy_from_regret(self._reg((bkey, "ipc"), 2))
-        s_ovb = _strategy_from_regret(self._reg((bkey, "ovb"), 3))    # fold/call/raise
-        s_ivb = _strategy_from_regret(self._reg((bkey, "ivb"), 3))
-        s_orip = _strategy_from_regret(self._reg((bkey, "orip"), 2))  # IP vs OOP raise
-        s_iroop = _strategy_from_regret(self._reg((bkey, "iroop"), 2))  # OOP vs IP raise
+        s_root = self._get_strat((bkey, "root"), 2)
+        s_ipc = self._get_strat((bkey, "ipc"), 2)
+        s_ovb = self._get_strat((bkey, "ovb"), 3)    # fold/call/raise
+        s_ivb = self._get_strat((bkey, "ivb"), 3)
+        s_orip = self._get_strat((bkey, "orip"), 2)  # IP vs OOP raise
+        s_iroop = self._get_strat((bkey, "iroop"), 2)  # OOP vs IP raise
 
         ro_ck = ro * s_root[:, CHECK]; ro_bt = ro * s_root[:, BET]
         ri_ck = ri * s_ipc[:, CHECK]; ri_bt = ri * s_ipc[:, BET]
@@ -252,11 +265,15 @@ class MultiStreetSpike:
         return uo, ui
 
     def _t_update(self, key, strat, u, reach):
+        if self._eval:
+            return
         base = (strat * u).sum(axis=1, keepdims=True)
         self.R[key] = np.maximum(self.R[key] + (u - base), 0.0)
         self.S[key] += self._t * reach[:, None] * strat
 
     def run(self, iterations: int) -> Dict:
+        if iterations <= 0:
+            raise ValueError("iterations must be positive")
         tracemalloc.start()
         t0 = time.time()
         ev_curve = []
@@ -264,14 +281,18 @@ class MultiStreetSpike:
             self._t = t
             uo, ui = self._solve_street(1, self.flop, 0.0, 0.0, self.w_o.copy(), self.w_i.copy())
             if t % max(1, iterations // 15) == 0 or t == iterations:
-                root_ev = float((self.w_o * uo).sum())
-                ev_curve.append((t, root_ev))
+                ev_curve.append((t, float((self.w_o * uo).sum())))
+        # Report EV under the averaged strategy (CFR guarantee), not last iterate.
+        self._eval = True
+        uo_avg, _ = self._solve_street(1, self.flop, 0.0, 0.0, self.w_o.copy(), self.w_i.copy())
+        self._eval = False
+        root_ev = float((self.w_o * uo_avg).sum())
         runtime = time.time() - t0
         _, peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
         return {
-            "root_ev_oop_bb": ev_curve[-1][1],
-            "root_ev_pct_pot": 100 * ev_curve[-1][1] / self.P0,
+            "root_ev_oop_bb": root_ev,
+            "root_ev_pct_pot": 100 * root_ev / self.P0,
             "ev_curve": ev_curve,
             "iterations": iterations,
             "runtime_sec": runtime,
