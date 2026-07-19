@@ -39,6 +39,39 @@ BB_SRP: Dict[str, float] = {c: 1.0 for c in [
     "AJo", "ATo", "KQo", "KJo", "KTo", "QJo", "QTo", "JTo", "T9o", "98o",
 ]}
 
+# --- SB-vs-BB single-raised pot (blind vs blind). Postflop the SB acts first
+#     (OOP) and the BB acts last (IP) — note the OOP player is the PRE-FLOP
+#     AGGRESSOR here, inverting the BTN-vs-BB dynamic. Ranges are v1 engineering
+#     estimates for a poker reviewer to validate (like BB_SRP/BTN_SRP above).
+# SB opening (raise-first-in) range that goes to the flop as the raiser (OOP):
+SB_SRP: Dict[str, float] = {c: 1.0 for c in [
+    "AA", "KK", "QQ", "JJ", "TT", "99", "88", "77", "66", "55", "44", "33", "22",
+    "AKs", "AQs", "AJs", "ATs", "A9s", "A8s", "A7s", "A6s", "A5s", "A4s", "A3s", "A2s",
+    "KQs", "KJs", "KTs", "K9s", "K8s", "K7s", "QJs", "QTs", "Q9s", "Q8s",
+    "JTs", "J9s", "J8s", "T9s", "T8s", "98s", "97s", "87s", "86s", "76s", "65s", "54s",
+    "AKo", "AQo", "AJo", "ATo", "A9o", "KQo", "KJo", "KTo", "QJo", "QTo", "JTo", "T9o", "98o",
+]}
+# BB flat-call range vs the SB open (IP) — defends wide with position + odds:
+BB_vs_SB: Dict[str, float] = {c: 1.0 for c in [
+    "TT", "99", "88", "77", "66", "55", "44", "33", "22",
+    "AJs", "ATs", "A9s", "A8s", "A7s", "A6s", "A5s", "A4s", "A3s", "A2s",
+    "KQs", "KJs", "KTs", "K9s", "K8s", "QJs", "QTs", "Q9s", "Q8s", "JTs", "J9s", "J8s",
+    "T9s", "T8s", "97s", "98s", "87s", "86s", "76s", "75s", "65s", "54s", "43s",
+    "AJo", "ATo", "A9o", "KQo", "KJo", "KTo", "QJo", "QTo", "JTo", "T9o", "98o", "87o",
+]}
+
+# Scenario registry — parameterizes the content pipeline (--scenario). Each entry
+# names the OOP (first-to-act) and IP (last-to-act) ranges + position labels; the
+# solver is scenario-agnostic (it just takes the two ranges).
+SCENARIOS: Dict[str, Dict] = {
+    "btn_vs_bb_srp": {"oop_range": BB_SRP, "ip_range": BTN_SRP,
+                      "oop_pos": "BB", "ip_pos": "BTN", "pot": 5.5, "bet_frac": 0.66,
+                      "label": "BTN opens, BB calls (single-raised pot)"},
+    "sb_vs_bb_srp": {"oop_range": SB_SRP, "ip_range": BB_vs_SB,
+                     "oop_pos": "SB", "ip_pos": "BB", "pot": 6.0, "bet_frac": 0.66,
+                     "label": "SB opens, BB calls (blind vs blind, single-raised pot)"},
+}
+
 
 # --- The 12 POC boards (PRD §4: dry, connected, paired, two-suit, monotone,
 #     low-card must all be represented) -----------------------------------

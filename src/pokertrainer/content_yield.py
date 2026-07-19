@@ -29,13 +29,22 @@ from .explanations import explain
 from .handinfo import describe_hand
 from .presets import BOARDS
 from .ranges import expand_range
-from .presets import BB_SRP, BTN_SRP
+from .presets import BB_SRP, BTN_SRP, SCENARIOS
 from .validate_flop import _make_solver, hand_category, subsample
 
 # Acceptance thresholds (§9.3; engineering starting points).
 MIN_REACH = 0.05          # node must be practically reached (opp mass)
 CLEAR_SEP_PCT = 0.5       # EV gap above this = a clear (scorable) lesson; else "mixed"
 DEDUP_CAP = 30            # max accepted records per (node, board_cat, hand_cat, preferred)
+
+# The solver emits 4 decision nodes with fixed ROLES (BB=OOP-first-actor,
+# BTN=IP-responder — historical labels). Map each to (role, node-suffix) so the
+# content layer can relabel them with the actual scenario positions. For the
+# BTN-vs-BB scenario the relabel is the identity (bb_first, btn_vs_check, ...).
+NODE_ROLE = {
+    "bb_first": ("oop", "first"), "btn_vs_check": ("ip", "vs_check"),
+    "bb_vs_bet": ("oop", "vs_bet"), "btn_vs_bet": ("ip", "vs_bet"),
+}
 
 
 def board_texture(flop: List[int]) -> List[str]:
@@ -51,18 +60,22 @@ def board_texture(flop: List[int]) -> List[str]:
     return tags
 
 
-def extract_records(flop_str, oop, ip, iters, make, pot, bet_frac) -> List[Dict]:
+def extract_records(flop_str, oop, ip, iters, make, pot, bet_frac,
+                    oop_pos="BB", ip_pos="BTN", scenario="btn_vs_bb_srp") -> List[Dict]:
     flop = parse_cards(flop_str)
     s = make(flop, oop, ip, np.ones(len(oop)), np.ones(len(ip)), pot, bet_frac, 3)
     res = s.run(iters)
-    ev_pct = res.get("root_ev_pct_pot", 50.0)     # BB (OOP) share of pot
-    board_favored = "BTN" if ev_pct < 45 else ("BB" if ev_pct > 55 else None)
+    ev_pct = res.get("root_ev_pct_pot", 50.0)     # OOP share of pot
+    board_favored = ip_pos if ev_pct < 45 else (oop_pos if ev_pct > 55 else None)
     recs = s.flop_decisions_report()
     btags = board_texture(flop)
     for r in recs:
+        role, suffix = NODE_ROLE[r["node"]]       # r["node"] is still the solver role node
         r["board"] = flop_str
         r["board_texture"] = btags
         r["board_favored"] = board_favored
+        r["scenario"] = scenario
+        r["acting_player"] = oop_pos if role == "oop" else ip_pos
         r["hand_category"] = hand_category(describe_hand(parse_hand(r["hand"]), flop))
         r["decision_type"] = "first_action" if r["node"] in ("bb_first", "btn_vs_check") else "vs_bet"
         top2 = sorted(r["ev"].values(), reverse=True)[:2]     # best vs 2nd-best action
@@ -70,7 +83,10 @@ def extract_records(flop_str, oop, ip, iters, make, pot, bet_frac) -> List[Dict]
         r["mixed"] = r["ev_sep_pct"] < CLEAR_SEP_PCT
         # Accepted: practically reached (unstable/reduced-range handled elsewhere).
         r["accepted"] = r["reach_mass"] >= MIN_REACH
+        # explain() reads the ROLE node (first-action check) + the scenario
+        # acting_player (note text) — so relabel the node only AFTER explaining.
         r["explanation"] = explain(r, board_favored)
+        r["node"] = f"{r['acting_player'].lower()}_{suffix}"
     # free GPU memory between roots (prevents pool accumulation / OOM)
     xp = getattr(s, "xp", None)
     backend = getattr(s, "backend", "")
@@ -176,14 +192,14 @@ def _is_finite_record(r: Dict) -> bool:
     return all(_finite(r[k]) for k in ("reach_mass", "ev_sep_pct") if k in r)
 
 
-def _mean_range_size(board_idx: List[int]) -> float:
+def _mean_range_size(board_idx: List[int], oop_range=BB_SRP, ip_range=BTN_SRP) -> float:
     """Mean combos-per-side across the requested boards (full expanded ranges,
     no subsample) — the true 'full range' for the yield projection."""
     sizes: List[int] = []
     for i in board_idx:
         flop = parse_cards(BOARDS[i]["board"])
-        sizes.append(len(expand_range(BB_SRP, flop)))
-        sizes.append(len(expand_range(BTN_SRP, flop)))
+        sizes.append(len(expand_range(oop_range, flop)))
+        sizes.append(len(expand_range(ip_range, flop)))
     return sum(sizes) / len(sizes) if sizes else 0.0
 
 
@@ -324,20 +340,26 @@ def _aggregate(out: str, boards_dir: str, board_idx: List[int], hands_per_side: 
 
 
 def run(n=40, iters=300, roots=None, solver="cpu", dtype="float64",
-        out="output/content_yield", full_range_size=250, pot=5.5, bet_frac=0.66,
-        raise_x=None, fresh=False, aggregate_only=False):
+        out="output/content_yield", full_range_size=250, pot=None, bet_frac=None,
+        raise_x=None, fresh=False, aggregate_only=False, scenario="btn_vs_bb_srp"):
     os.makedirs(out, exist_ok=True)
     boards_dir = os.path.join(out, "boards")
     os.makedirs(boards_dir, exist_ok=True)
+    sc = SCENARIOS[scenario]
+    oop_range, ip_range = sc["oop_range"], sc["ip_range"]
+    oop_pos, ip_pos = sc["oop_pos"], sc["ip_pos"]
+    pot = sc["pot"] if pot is None else pot
+    bet_frac = sc["bet_frac"] if bet_frac is None else bet_frac
     board_idx = list(roots) if roots is not None else list(range(len(BOARDS)))
     # True full range for the projection: when --n >= the range, we solve every
     # combo, so hands_per_side == full range and the scale factor is 1.0 (avoids
     # the old bug where --n 400 vs a ~250-combo range deflated projections ~1.6x).
-    mean_full = _mean_range_size(board_idx)
+    mean_full = _mean_range_size(board_idx, oop_range, ip_range)
     eff_full = int(round(mean_full)) if mean_full else full_range_size
     eff_hands = min(n, eff_full) if eff_full else n
 
     cfg = _solve_config(n, iters, solver, dtype, pot, bet_frac, raise_x, board_idx)
+    cfg["scenario"] = scenario
     if not aggregate_only:
         _ensure_checkpoint_config(out, cfg, fresh=fresh)
 
@@ -353,9 +375,10 @@ def run(n=40, iters=300, roots=None, solver="cpu", dtype="float64",
                 continue
             try:
                 flop = parse_cards(bstr)
-                oop = subsample([c for c, _ in expand_range(BB_SRP, flop)], n)
-                ip = subsample([c for c, _ in expand_range(BTN_SRP, flop)], n)
-                recs = extract_records(bstr, oop, ip, iters, make, pot, bet_frac)
+                oop = subsample([c for c, _ in expand_range(oop_range, flop)], n)
+                ip = subsample([c for c, _ in expand_range(ip_range, flop)], n)
+                recs = extract_records(bstr, oop, ip, iters, make, pot, bet_frac,
+                                       oop_pos=oop_pos, ip_pos=ip_pos, scenario=scenario)
                 problems = validate_records(recs)
                 if problems:
                     json.dump({"board": bstr, "problems": problems[:50],
@@ -423,8 +446,10 @@ if __name__ == "__main__":
     ap.add_argument("--aggregate-only", action="store_true",
                     help="skip solving; just rebuild records.json + yield_report.json "
                          "from existing board checkpoints")
+    ap.add_argument("--scenario", default="btn_vs_bb_srp", choices=list(SCENARIOS),
+                    help="position matchup / ranges to solve (see presets.SCENARIOS)")
     a = ap.parse_args()
     roots = [int(x) for x in a.roots.split(",")] if a.roots else None
     run(n=a.n, iters=a.iters, roots=roots, solver=a.solver, dtype=a.dtype,
         out=a.out, full_range_size=a.full_range_size, raise_x=a.raise_x,
-        fresh=a.fresh, aggregate_only=a.aggregate_only)
+        fresh=a.fresh, aggregate_only=a.aggregate_only, scenario=a.scenario)

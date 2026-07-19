@@ -386,22 +386,35 @@ The scorer emits two backlogs that drive planning:
 1. **MVP (current)** — flop decisions for one scenario (BTN opens, BB calls,
    single-raised pot, 100 bb, 66% c-bet), on a prioritized board set. Launch gate:
    ≥1,200 accepted records with coverage across nodes, textures, hand categories,
-   and reasons (measured by the content-yield report).
-2. **Broaden board coverage** — add the highest-frequency uncovered textures the
-   solve backlog flags (e.g. the two-tone high-disconnected family, ~⅓ of flops),
-   toward the ~40-board reference library. Cheap: board-parallel, checkpointed.
-3. **Turn & river decisions** — extract from the *same* solves via
+   and reasons (measured by the content-yield report). **Status: met** — the
+   full-range run produced 5,737 signed records; ~95.5% flop-texture coverage after
+   the coverage boards (§13.2 solve backlog).
+2. **Breadth first — additional positions (committed, next).** The highest-value
+   expansion is *more scenarios*, not more depth on one: a player faces many
+   position matchups daily, so covering them widens what the trainer teaches far
+   more than adding an action to a single spot. The pipeline is scenario-
+   parameterized (`--scenario`); each matchup supplies its own preflop ranges and
+   reuses the board/priority machinery. **Next scenario: SB vs BB single-raised
+   pot** (blind-vs-blind; note the OOP player is the pre-flop aggressor here,
+   inverting the BTN-vs-BB range dynamic).
+3. **Raise action (committed, depth pass).** fold/call/**raise** (FR-011) is
+   important and *will* be solved — as a re-solve of each shipped scenario's boards
+   with the raise action enabled (~3× cost, multi-commit). Sequenced after the
+   first breadth expansion, then layered onto each scenario.
+4. **Turn & river decisions** — extract from the *same* full-street solves via
    representative-runout sampling (brick / flush-completing / pairing / overcard),
    prioritized by the same scorer. No additional GPU budget beyond the flop runs.
-4. **Scope expansion (compute-bounded)** — other positions, 3-bet/4-bet pots,
-   stack depths, and multiple bet sizes. Each is a *new solve family* that
-   multiplies compute and pushes GPU memory (already near the T4 float32 limit at
-   full range with the raise action), so these are sequenced deliberately, not
-   bundled.
+5. **Further scope (compute-bounded)** — 3-bet/4-bet pots, stack depths, and
+   multiple bet sizes. Each is a *new solve family* that multiplies compute and
+   pushes GPU memory (near the T4 float32 limit at full range with raise), so these
+   are sequenced deliberately, not bundled.
 
-Items 2–4 move the corresponding entries in §8 from "out of POC scope" to
-"roadmapped after validation"; the single-scenario, flop-only §8 boundary still
-describes the **MVP**, not the product ceiling.
+Prioritization: **breadth (positions) before depth (raise, turn/river)** for the
+next investment, because it expands the product's real-world coverage most per
+solve; raise and turn/river then deepen each shipped scenario. Items 2–5 move the
+corresponding entries in §8 from "out of POC scope" to "roadmapped after
+validation"; the single-scenario, flop-only §8 boundary describes the **MVP**, not
+the product ceiling.
 
 ### 13.4 Foundations content (complementary stream)
 
