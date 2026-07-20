@@ -276,12 +276,18 @@ TEMPLATE = r'''<style>
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
 .wrap{max-width:640px;margin:0 auto;padding:20px 16px 56px}
-header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .brand{font-family:var(--disp);font-weight:600;font-size:19px}
 .brand .sp{color:var(--brass)}
-.score{display:flex;gap:12px;font-family:var(--mono);font-size:12px;color:var(--muted);align-items:baseline}
-.score b{color:var(--ink)}
-.score .acc{font-size:15px;color:var(--brass);font-weight:700}
+.score{display:flex;gap:10px;align-items:baseline}
+.score .acc{font-family:var(--mono);font-size:18px;color:var(--brass);font-weight:700;font-variant-numeric:tabular-nums}
+.score .sbits{font-size:11.5px;color:var(--muted)}
+.score .sbits b{font-variant-numeric:tabular-nums}
+.cSolid{color:var(--best)}.cOk{color:var(--accept)}.cLeak{color:var(--costly)}
+.controls{margin-bottom:14px}
+.level{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+.lvl-cap{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.lvl-hint{margin:9px 0 0;font-size:12px;color:var(--muted);line-height:1.45}
 .bar-top{height:4px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:16px}
 .bar-top>i{display:block;height:100%;background:var(--brass);transition:width .3s}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
@@ -334,6 +340,9 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .track>i{display:block;height:100%;border-radius:5px;background:var(--rc,var(--muted))}
 .tag{font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px;color:#fff;background:var(--rc)}
 .g-best{--rc:var(--best)}.g-good{--rc:var(--good)}.g-acceptable{--rc:var(--accept)}.g-costly{--rc:var(--costly)}.g-major_error{--rc:var(--major)}
+.read{margin:0 0 5px;font-size:14.5px;font-weight:600;color:var(--ink)}
+.read b{color:var(--brass)}
+.stand{margin:0 0 10px;font-size:12.5px;color:var(--muted);line-height:1.45}
 .cost{margin:-2px 0 8px;font-size:12.5px;color:var(--ink);background:color-mix(in srgb,var(--brass) 10%,transparent);border-left:3px solid var(--brass);padding:7px 11px;border-radius:0 7px 7px 0;font-variant-numeric:tabular-nums}
 .row.best-row,.row.you-row{padding:6px 9px;border-radius:9px;margin:6px -9px}
 .row.best-row{background:color-mix(in srgb,var(--rc) 12%,transparent)}
@@ -344,7 +353,6 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .foot code{font-family:var(--mono)}.foot a{color:var(--brass)}
 .hint{font-size:11px;color:var(--muted);text-align:center;margin-top:10px}
 kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--ink) 8%,transparent);border:1px solid var(--line);border-radius:4px;padding:0 4px}
-.hright{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .lang{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;font-size:11.5px;flex:none}
 .lang button{appearance:none;border:none;background:transparent;color:var(--muted);padding:5px 11px;cursor:pointer;font-family:var(--sans);font-weight:600;white-space:nowrap}
 .lang button.on{background:var(--brass);color:#fff}
@@ -371,20 +379,22 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 <div class="wrap">
   <header>
     <div class="brand"><span class="sp">&spades;</span> Full-Street Flop Trainer</div>
-    <div class="hright">
+    <div class="score" id="score" hidden>
+      <span class="acc" id="acc">—</span>
+      <span class="sbits"><b id="n">0</b> played · <b class="cSolid" id="solid">0</b> solid ·
+        <b class="cOk" id="ok">0</b> ok · <b class="cLeak" id="leak">0</b> leak</span>
+    </div>
+  </header>
+  <div class="controls">
+    <div class="level">
+      <span class="lvl-cap">Language</span>
       <div class="lang" id="lang" role="group" aria-label="Language level">
         <button data-m="progressive" type="button">Adaptive</button><button data-m="plain" type="button">Beginner</button><button data-m="learning" type="button">Learning</button><button data-m="poker" type="button">Pro</button>
       </div>
       <span class="vocab" id="vocab" hidden></span>
-      <div class="score" id="score" hidden>
-        <span class="acc" id="acc">—</span>
-        <span>played <b id="n">0</b></span>
-        <span style="color:var(--best)">solid <b id="solid">0</b></span>
-        <span style="color:var(--accept)">ok <b id="ok">0</b></span>
-        <span style="color:var(--costly)">leak <b id="leak">0</b></span>
-      </div>
     </div>
-  </header>
+    <p class="lvl-hint" id="levelhint"></p>
+  </div>
   <div class="bar-top"><i id="prog" style="width:0"></i></div>
 
   <details class="intro" id="intro">
@@ -415,12 +425,14 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
       <div class="verdict" id="verdict"></div>
       <div class="unlock" id="unlock" hidden></div>
       <div class="why">
+        <p class="read" id="read"></p>
+        <p class="stand" id="stand" hidden></p>
         <span class="reason" id="reason"></span>
         <p class="head" id="head"></p>
         <p class="cost" id="cost" hidden></p>
         <ul class="det" id="det"></ul>
       </div>
-      <div class="mix"><h4>Solver mix — how often each action is right, and its EV</h4><div id="bars"></div></div>
+      <div class="mix"><h4 id="mixhead"></h4><div id="bars"></div></div>
       <button class="next" id="next">Next hand &nbsp;&#8629;</button>
     </div>
   </div>
@@ -478,6 +490,77 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 <script>
 const Q = __DATA__;
 const SUIT = {s:["♠",0],h:["♥",1],d:["♦",1],c:["♣",0]};
+
+// Plain-English hand reader — tells the player WHAT they hold and where they stand
+// (top pair / overpair / a set / just a draw). This is the piece beginners lack:
+// they can't yet read their own hand, so every "why" falls flat. Computed live from
+// the hero cards + board; validated against the pack's real hands.
+const RV={2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,T:10,J:11,Q:12,K:13,A:14};
+const ONE={2:"Two",3:"Three",4:"Four",5:"Five",6:"Six",7:"Seven",8:"Eight",9:"Nine",10:"Ten",11:"Jack",12:"Queen",13:"King",14:"Ace"};
+const MANY={2:"Twos",3:"Threes",4:"Fours",5:"Fives",6:"Sixes",7:"Sevens",8:"Eights",9:"Nines",10:"Tens",11:"Jacks",12:"Queens",13:"Kings",14:"Aces"};
+function hasStraight(vals){const s=new Set(vals);if(s.has(14))s.add(1);
+  for(let lo=1;lo<=10;lo++){let ok=true;for(let k=0;k<5;k++)if(!s.has(lo+k)){ok=false;break;}if(ok)return true;}return false;}
+function straightDraw(vals){if(hasStraight(vals))return null;const base=new Set(vals);const comp=[];
+  for(let r=2;r<=14;r++){if(base.has(r))continue;if(hasStraight([...base,r]))comp.push(r);}
+  if(!comp.length)return null;return comp.length>=2?"an open-ended straight draw":"a gutshot straight draw";}
+function handRead(hero,board){
+  const hs=hero.map(c=>c[1]),bs=board.map(c=>c[1]);
+  const hv=hero.map(c=>RV[c[0]]),bv=board.map(c=>RV[c[0]]);
+  const allV=[...hv,...bv],allS=[...hs,...bs],river=board.length>=5;
+  const cnt={};allV.forEach(v=>cnt[v]=(cnt[v]||0)+1);
+  const groups=Object.keys(cnt).map(Number).sort((a,b)=>cnt[b]-cnt[a]||b-a);
+  const suitCnt={};allS.forEach(s=>suitCnt[s]=(suitCnt[s]||0)+1);
+  const flush=Object.keys(suitCnt).some(s=>suitCnt[s]>=5);
+  const straight=hasStraight(allV),maxB=Math.max(...bv),sortB=[...new Set(bv)].sort((a,b)=>b-a),pocket=hv[0]===hv[1];
+  const top=cnt[groups[0]],second=cnt[groups[1]]||0;
+  let made,strength=null,cat="high",pairKind=null,overs=[];
+  if(flush&&straight){made="a straight flush";cat="sflush";}
+  else if(top===4){made="four of a kind ("+MANY[groups[0]]+")";cat="quads";}
+  else if(top===3&&second>=2){made="a full house";cat="full";}
+  else if(flush){made="a flush";cat="flush";}
+  else if(straight){made="a straight";cat="straight";}
+  else if(top===3){made=(pocket&&hv[0]===groups[0])?"a set of "+MANY[groups[0]]:"three "+MANY[groups[0]];cat="trips";}
+  else if(top===2&&second===2){made="two pair";cat="twopair";}
+  else if(top===2){const pr=groups[0];made="a pair of "+MANY[pr];cat="pair";
+    overs=[...new Set(bv.filter(v=>v>pr))].sort((a,b)=>b-a);
+    if(pocket&&hv[0]===pr){if(pr>maxB){pairKind="over";strength="an overpair (higher than every board card)";}
+      else{pairKind="under";strength="the "+ONE[maxB]+" on the board outranks it";}}
+    else if(pr===sortB[0]){pairKind="top";strength="top pair (you matched the highest board card)";}
+    else if(pr===sortB[1]){pairKind="mid";strength="middle pair";}
+    else{pairKind="low";strength="a low pair";}}
+  else made=ONE[Math.max(...hv)]+" high (no pair)";
+  let draw=null;
+  if(!river&&!flush&&!straight){const parts=[];
+    if(Object.keys(suitCnt).some(s=>suitCnt[s]===4&&hs.includes(s)))parts.push("a flush draw (four to a flush)");
+    const sd=straightDraw(allV);if(sd)parts.push(sd);
+    if(parts.length)draw=parts.join(" and ");}
+  return {made,strength,draw,cat,pairKind,overs};
+}
+// "Where you stand" — plain relative strength: what you beat and what beats you.
+// The single most important read for a beginner; hedged so it stays true regardless
+// of the exact board (a set only loses to a straight/flush "if the board allows it").
+function nm(v){const w=ONE[v];return (/^[AE]/.test(w)?"an ":"a ")+w;}   // an Ace, an Eight
+function orList(vals){const a=vals.map(nm);
+  if(a.length<=1)return a[0]||"";
+  if(a.length===2)return a[0]+" or "+a[1];
+  return a.slice(0,-1).join(", ")+", or "+a[a.length-1];}
+function standingText(rd){
+  switch(rd.cat){
+    case "pair":
+      if(rd.pairKind==="over")return "You're ahead of every worse pair and all the bluffs — mostly just two pair or a set beats you now.";
+      if(rd.pairKind==="top")return "You beat worse pairs and the draws — a better kicker, two pair, or a set has you beat.";
+      return "You beat high cards and bluffs, but "+orList(rd.overs)+" makes a better pair, and two pair or a set is ahead too.";
+    case "twopair":return "You're ahead of every one-pair hand — mainly a set or better beats you.";
+    case "trips":return "Very strong — only a straight, flush, or full house could beat you, and only if the board allows it.";
+    case "straight":return "A big hand — only a flush or a full house beats you here.";
+    case "flush":return "A big hand — only a full house or better beats you.";
+    case "full":case "quads":case "sflush":return "You've got a monster — just about nothing beats this.";
+    default:return rd.draw
+      ? "Nothing made yet, but your draw can still get there — for now you're behind any pair."
+      : "No pair yet — you're behind almost any made hand; you'd need to improve or get them to fold.";
+  }
+}
+
 // Plain (no jargon) vs Poker (real terminology) — the same data, two vocabularies.
 const TERMS = {
   poker:{
@@ -536,6 +619,27 @@ const ACT_SHORT={check:"Check",bet:"Bet",fold:"Fold",call:"Call",raise:"Raise"};
 function shortAct(a){return ACT_SHORT[a]||a;}
 function fmtEv(v){return (v>=0?"+":"")+v;}
 function reasonLabel(r){return (TERMS[eff("reason:"+r)].reason[r]||r);}
+// Beginner "why": explains the LOGIC of the play in plain words, not just names the
+// action. Replaces the generic per-reason phrase for plain mode; Learning keeps the
+// term-tagged phrase, Pro keeps the solver's baked headline.
+const PLAIN_HEAD={
+  value:"You're ahead of the hands that would call — bet so the weaker ones pay you off.",
+  protection:"You're probably best, but cards could come that beat you — bet so the chasing hands have to pay.",
+  bluff:"You won't win if you just show it down, so bet to push better hands into folding.",
+  semi_bluff:"Betting can make better hands fold now — and if you're called, your hand can still improve to the best.",
+  pot_control:"A decent hand, but not strong enough to build a big pot — check to keep it small and cheap.",
+  trap:"You're very strong here — checking hides it and lets your opponent bluff or catch up before you pounce.",
+  realization:"Not much yet — check to see the next card for free instead of throwing chips in.",
+  value_call:"You're ahead of enough of their betting hands — call to keep collecting from the worse ones.",
+  bluff_catch:"Your hand beats the ones they'd bluff with — call to catch those bluffs.",
+  call_odds:"Your draw is cheap enough to chase here — call and try to complete it.",
+  fold:"There isn't enough here to keep going — fold and save your chips for a better spot.",
+  raise_value:"You're strong — raise to build a bigger pot while the worse hands pay.",
+  raise_bluff:"Raising tells the story of a big hand — do it to pressure them into folding.",
+  raise_semibluff:"Raise: you can fold out better hands now, and still improve if they call.",
+  mixed:"This one's genuinely close — either play is fine here."
+};
+function plainHead(q){return PLAIN_HEAD[q.reason]||TERMS.plain.reason[q.reason]||q.headline;}
 function situation(q){
   const first=q.node.endsWith("_first"), vscheck=q.node.endsWith("_vs_check");
   const sm=eff("positions");
@@ -595,38 +699,58 @@ function renderFeedback(q,a,gained){
   const you=shortAct(a),best=shortAct(pref);
   const v=document.getElementById("verdict");v.className="verdict v-"+g;
   v.textContent="";const dot=document.createElement("span");dot.className="dot";v.appendChild(dot);
-  // Verdict follows the precomputed grade (EV-loss), not "did you match preferred".
-  // Preferred is max-EV (freq tie-break); when two actions both grade "best" (or the
-  // spot is marked mixed), picking the non-starred one is still correct — do not
-  // fall through to the "costly leak" branch.
+  // Key off the GRADE, not a===pref: a co-best action (graded "best" but not the
+  // single top-EV one) must still read as correct, not as a leak. Preferred is
+  // max-EV (freq tie-break); mixed spots get soft copy when the pick is close.
   let vmsg;
-  if(a===pref)vmsg="✓ "+you+" — the best play here.";
-  else if(g==="best")vmsg="✓ "+you+" — also a top play (effectively tied with "+best+").";
+  if(g==="best")vmsg=(a===pref)?"✓ "+you+" — the best play here.":"✓ "+you+" — also a top play here.";
   else if(q.mixed&&(g==="good"||g==="acceptable"))vmsg="✓ "+you+" — close enough; any play is fine here (listed preferred: "+best+").";
   else if(g==="good")vmsg="✓ "+you+" works — "+best+" is only a touch better.";
   else if(g==="acceptable")vmsg="~ "+you+" is OK, but "+best+" is the better play.";
   else vmsg="✗ You picked "+you+" — "+(g==="major_error"?"a big mistake":"a costly leak")+". The play is "+best+".";
   v.appendChild(document.createTextNode(vmsg));
+  // Ground the explanation in the actual holding: "You held a pair of Jacks — the
+  // Ace on the board outranks it." Beginners can't read their own hand yet, so this
+  // is what makes the 'why' land.
+  const rd=handRead(q.hero,q.board);
+  const readEl=document.getElementById("read");readEl.innerHTML="";
+  readEl.appendChild(document.createTextNode("You held "));
+  const mb=document.createElement("b");mb.textContent=rd.made;readEl.appendChild(mb);
+  if(rd.strength)readEl.appendChild(document.createTextNode(" — "+rd.strength));
+  if(rd.draw)readEl.appendChild(document.createTextNode(", plus "+rd.draw));
+  readEl.appendChild(document.createTextNode("."));
+  // "Where you stand" — plain relative strength. Beginner-oriented, so hide it in Pro.
+  const standEl=document.getElementById("stand");
+  if(mode==="poker"){standEl.hidden=true;}
+  else{standEl.hidden=false;standEl.textContent=standingText(rd);}
   // explanation adapts to the level: Beginner = plain 'why' only; Learning = term
   // tag + explaining headline; Pro = term tag + richer baked headline + bullets.
   const rm=eff("reason:"+q.reason);
+  const unit=(rm==="plain")?"chips":"bb";     // plain mode avoids the "bb" jargon
   const rp=document.getElementById("reason");
   if(rm==="plain"){rp.style.display="none";}
   else{rp.style.display="";rp.textContent=TERMS.poker.reason[q.reason]||q.reason;}
-  document.getElementById("head").textContent=(rm==="poker")?q.headline:(TERMS[rm].reason[q.reason]||q.headline);
+  document.getElementById("head").textContent=(rm==="poker")?q.headline:(rm==="plain")?plainHead(q):(TERMS[rm].reason[q.reason]||q.headline);
   // Concrete cost: when the pick isn't the top play, show how much it gives up so
   // "why is this wrong?" has a number behind it, not just a color.
   const cost=document.getElementById("cost");
   const dEv=Math.round((q.ev[pref]-q.ev[a])*100)/100;
-  if(a!==pref&&dEv>=0.05){cost.hidden=false;
-    cost.textContent=best+" averages "+fmtEv(q.ev[pref])+" bb here vs your "+you+" at "+fmtEv(q.ev[a])+" bb — about "+dEv+" bb per hand left behind.";
+  if(g!=="best"&&dEv>=0.05){cost.hidden=false;
+    cost.textContent=best+" averages "+fmtEv(q.ev[pref])+" "+unit+" here vs your "+you+" at "+fmtEv(q.ev[a])+" "+unit+" — about "+dEv+" "+unit+" per hand left behind.";
   }else{cost.hidden=true;}
   const dl=document.getElementById("det");dl.innerHTML="";
-  if(rm==="poker"){q.detail.forEach(d=>{const li=document.createElement("li");li.textContent=d;dl.appendChild(li);});}
+  // Pro detail: keep the baked bullets but tame the false precision ("~7.951%") and
+  // the meaningless >100% figures that pop out on tiny pots.
+  if(rm==="poker"){q.detail.forEach(d=>{
+    const clean=d.replace(/~?(\d+(?:\.\d+)?)%/g,(m,n)=>{const v=Math.round(parseFloat(n));return v>100?"a large amount":v+"%";});
+    const li=document.createElement("li");li.textContent=clean;dl.appendChild(li);});}
   const ut=document.getElementById("unlock");
   if(gained&&gained.length){ut.hidden=false;ut.innerHTML="";
     gained.forEach(t=>{const d=document.createElement("div");d.className="ul-row";d.textContent="🔓 New term learned — "+unlockText(t);ut.appendChild(d);});
   }else{ut.hidden=true;}
+  document.getElementById("mixhead").textContent=(unit==="chips")
+    ?"How the solver plays it — how often each action is right, and its average payoff"
+    :"Solver mix — how often each action is right, and its EV";
   const bars=document.getElementById("bars");bars.innerHTML="";
   const maxf=Math.max(1,...q.actions.map(x=>q.freq[x]));
   q.actions.slice().sort((x,y)=>q.freq[y]-q.freq[x]).forEach(x=>{
@@ -640,7 +764,7 @@ function renderFeedback(q,a,gained){
     if(you){const yp=document.createElement("span");yp.className="you";yp.textContent="YOUR PICK";nm.appendChild(yp);}
     const num=document.createElement("span");num.className="num";
     const ev=q.ev[x];
-    num.appendChild(document.createTextNode(q.freq[x]+"% · "+(ev>=0?"+":"")+ev+" bb "));
+    num.appendChild(document.createTextNode(q.freq[x]+"% · "+(ev>=0?"+":"")+ev+" "+unit+" "));
     const tag=document.createElement("span");tag.className="tag";tag.textContent=ga.replace("_"," ");
     num.appendChild(tag);
     rlab.appendChild(nm);rlab.appendChild(num);
@@ -686,9 +810,15 @@ function unlockText(t){
 function updateVocab(){const v=document.getElementById("vocab");
   v.hidden=(mode!=="progressive");
   v.textContent="🔓 "+learned.size+" / "+VOCAB_TOTAL+" terms";}
+const LEVEL_HINT={
+  progressive:"Starts in plain words; poker terms unlock as you play them well.",
+  plain:"Plain English — no poker jargon.",
+  learning:"Real poker terms, each with a short explanation.",
+  poker:"Full terminology and solver detail."};
+function updateLevelHint(){const el=document.getElementById("levelhint");if(el)el.textContent=LEVEL_HINT[mode]||"";}
 
 function applyModeUI(){document.querySelectorAll("#lang button").forEach(b=>b.classList.toggle("on",b.dataset.m===mode));}
-function setMode(m){mode=m;try{localStorage.setItem("lang",m);}catch(e){}applyModeUI();updateVocab();
+function setMode(m){mode=m;try{localStorage.setItem("lang",m);}catch(e){}applyModeUI();updateVocab();updateLevelHint();
   if(cur){renderQuestion(cur);if(answered)renderFeedback(cur,chosen,[]);}}
 document.querySelectorAll("#lang button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
 // intro: open by default, remember if the reader dismisses it
@@ -702,7 +832,7 @@ document.addEventListener("keydown",e=>{
   if(!answered){const i=parseInt(e.key);if(cur&&i>=1&&i<=cur.actions.length)answer(cur.actions[i-1]);}
   else if(e.key==="Enter"||e.key===" "){e.preventDefault();next();}
 });
-applyModeUI();updateVocab();order=shuffle([...Q.keys()]);deal();
+applyModeUI();updateVocab();updateLevelHint();order=shuffle([...Q.keys()]);deal();
 </script>'''
 
 if __name__ == "__main__":
