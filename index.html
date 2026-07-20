@@ -95,7 +95,11 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .read{margin:0 0 5px;font-size:14.5px;font-weight:600;color:var(--ink)}
 .read b{color:var(--brass)}
 .stand{margin:0 0 10px;font-size:12.5px;color:var(--muted);line-height:1.45}
-.rule{margin:8px 0 10px;font-size:12.5px;color:var(--ink);line-height:1.5;padding:8px 11px;border-radius:8px;background:color-mix(in srgb,var(--best) 9%,transparent)}
+.more{appearance:none;background:none;border:none;color:var(--brass);font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;padding:2px 0;margin:2px 0 8px}
+.more:hover{text-decoration:underline}
+.more:focus-visible{outline:2px solid var(--brass);outline-offset:2px;border-radius:3px}
+.morebody{margin:0 0 4px}
+.rule{margin:8px 0 4px;font-size:12.5px;color:var(--ink);line-height:1.5;padding:8px 11px;border-radius:8px;background:color-mix(in srgb,var(--best) 9%,transparent)}
 .rule b{display:block;color:var(--best);text-transform:uppercase;font-size:10px;letter-spacing:.1em;margin-bottom:2px;font-weight:700}
 .cost{margin:-2px 0 8px;font-size:12.5px;color:var(--ink);background:color-mix(in srgb,var(--brass) 10%,transparent);border-left:3px solid var(--brass);padding:7px 11px;border-radius:0 7px 7px 0;font-variant-numeric:tabular-nums}
 .row.best-row,.row.you-row{padding:6px 9px;border-radius:9px;margin:6px -9px}
@@ -182,10 +186,13 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
       <div class="unlock" id="unlock" hidden></div>
       <div class="why">
         <p class="read" id="read"></p>
-        <p class="stand" id="stand" hidden></p>
         <span class="reason" id="reason"></span>
         <p class="head" id="head"></p>
-        <p class="rule" id="rule" hidden></p>
+        <button class="more" id="moretoggle" type="button" hidden>Explain more ▸</button>
+        <div class="morebody" id="morebody" hidden>
+          <p class="stand" id="stand"></p>
+          <p class="rule" id="rule"></p>
+        </div>
         <p class="cost" id="cost" hidden></p>
         <ul class="det" id="det"></ul>
       </div>
@@ -196,7 +203,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 
   <div class="hint">Pick with <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> · next hand with <kbd>Enter</kbd></div>
   <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8253</b> signed records, build <code>4dd0118</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8253</b> signed records, build <code>2afd683</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots come from the full-range launch pack. Spots marked <span class="demo">raise demo</span>
     (Fold/Call/Raise) and <span class="demo">turn / river</span> (later-street boards, reduced range,
@@ -361,6 +368,9 @@ let mode=(function(){try{const m=localStorage.getItem("lang");return (m==="poker
 // Adaptive mode: each concept shows in plain words until you've EARNED it (played a
 // spot that uses it well); then it graduates to the poker term + its meaning.
 let learned=(function(){try{return new Set(JSON.parse(localStorage.getItem("learned")||"[]"));}catch(e){return new Set();}})();
+// "Explain more" (where-you-stand + rule of thumb) — default closed for a calm view,
+// remembered once a reader opens it so they don't re-tap every hand.
+let moreOpen=(function(){try{return localStorage.getItem("moreOpen")==="1";}catch(e){return false;}})();
 const VOCAB_TOTAL=2+Object.keys(TERMS.poker.reason).length;
 function eff(term){return mode!=="progressive"?mode:(learned.has(term)?"learning":"plain");}
 function T(){return TERMS[eff("streets")];}
@@ -491,10 +501,9 @@ function renderFeedback(q,a,gained){
   if(rd.strength)readEl.appendChild(document.createTextNode(" — "+rd.strength));
   if(rd.draw)readEl.appendChild(document.createTextNode(", plus "+rd.draw));
   readEl.appendChild(document.createTextNode("."));
-  // "Where you stand" — plain relative strength. Beginner-oriented, so hide it in Pro.
-  const standEl=document.getElementById("stand");
-  if(mode==="poker"){standEl.hidden=true;}
-  else{standEl.hidden=false;standEl.textContent=standingText(rd);}
+  // "Where you stand" is populated here but lives inside the collapsible "more" block
+  // (set up further down), so the default view stays calm.
+  document.getElementById("stand").textContent=standingText(rd);
   // explanation adapts to the level: Beginner = plain 'why' only; Learning = term
   // tag + explaining headline; Pro = term tag + richer baked headline + bullets.
   const rm=eff("reason:"+q.reason);
@@ -503,12 +512,20 @@ function renderFeedback(q,a,gained){
   if(rm==="plain"){rp.style.display="none";}
   else{rp.style.display="";rp.textContent=TERMS.poker.reason[q.reason]||q.reason;}
   document.getElementById("head").textContent=(rm==="poker")?q.headline:(rm==="plain")?plainHead(q):(TERMS[rm].reason[q.reason]||q.headline);
-  // The portable takeaway. Beginner-oriented, so hide it in Pro (like "where you stand").
+  // The portable takeaway, also inside the collapsible block.
   const ruleEl=document.getElementById("rule");
-  if(mode==="poker"||!RULES[q.reason]){ruleEl.hidden=true;}
-  else{ruleEl.hidden=false;ruleEl.innerHTML="";
+  ruleEl.innerHTML="";
+  if(RULES[q.reason]){ruleEl.hidden=false;
     const lab=document.createElement("b");lab.textContent="Rule of thumb";ruleEl.appendChild(lab);
     ruleEl.appendChild(document.createTextNode(RULES[q.reason]));}
+  else{ruleEl.hidden=true;}
+  // Depth (where-you-stand + rule) lives behind "Explain more" so the default view is
+  // just verdict -> held -> why -> cost -> payoffs. Hidden entirely in Pro (which
+  // shows the solver detail bullets instead). Remembers the reader's open/closed choice.
+  const depth=(mode!=="poker");
+  const moreT=document.getElementById("moretoggle"),moreB=document.getElementById("morebody");
+  if(depth){moreT.hidden=false;moreB.hidden=!moreOpen;moreT.textContent=moreOpen?"Show less ▾":"Explain more ▸";}
+  else{moreT.hidden=true;moreB.hidden=true;}
   // Concrete cost: when the pick isn't the top play, show how much it gives up so
   // "why is this wrong?" has a number behind it, not just a color.
   const cost=document.getElementById("cost");
@@ -629,8 +646,12 @@ try{intro.open=localStorage.getItem("introOpen")==="1";}catch(e){intro.open=fals
 intro.addEventListener("toggle",()=>{try{localStorage.setItem("introOpen",intro.open?"1":"0");}catch(e){}});
 
 document.getElementById("next").onclick=next;
+document.getElementById("moretoggle").onclick=function(){
+  moreOpen=!moreOpen;try{localStorage.setItem("moreOpen",moreOpen?"1":"0");}catch(e){}
+  document.getElementById("morebody").hidden=!moreOpen;
+  this.textContent=moreOpen?"Show less ▾":"Explain more ▸";};
 document.addEventListener("keydown",e=>{
-  if(e.target.tagName==="SUMMARY")return;
+  if(e.target.tagName==="SUMMARY"||e.target.id==="moretoggle")return;   // let the toggle handle its own Enter/Space
   if(!answered){const i=parseInt(e.key);if(cur&&i>=1&&i<=cur.actions.length)answer(cur.actions[i-1]);}
   else if(e.key==="Enter"||e.key===" "){e.preventDefault();next();}
 });
