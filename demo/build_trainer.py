@@ -303,6 +303,12 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .glossary dl{margin:0 0 14px;font-size:12.5px;line-height:1.5}
 .glossary dt{font-weight:700;margin-top:9px}
 .glossary dd{margin:1px 0 0;color:var(--muted)}
+.intro{margin:0 0 16px;border:1px solid var(--brass-soft);border-radius:12px;background:color-mix(in srgb,var(--brass) 6%,var(--panel));padding:0 16px}
+.intro summary{cursor:pointer;font-weight:700;padding:13px 0;font-size:13.5px;color:var(--brass);list-style:none}
+.intro summary::-webkit-details-marker{display:none}
+.intro p{margin:0 0 10px;font-size:13px;color:var(--ink);line-height:1.6}
+.intro p:first-of-type{margin-top:2px}
+.intro b{color:var(--ink)}
 </style>
 <div class="wrap">
   <header>
@@ -322,12 +328,26 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
   </header>
   <div class="bar-top"><i id="prog" style="width:0"></i></div>
 
+  <details class="intro" id="intro">
+    <summary>🔰 New to poker? Start here (30 seconds)</summary>
+    <p>You and one opponent each get <b>2 secret cards</b> (only you see yours). Then <b>5 shared cards</b>
+      everyone can use are dealt in stages: <b>3 at once</b>, then a <b>4th</b>, then a <b>5th</b>. You make your
+      best five-card hand from your 2 cards plus the shared ones.</p>
+    <p>At each stage you choose: <b>Check</b> (pass, bet nothing), <b>Bet</b> (put chips in), <b>Call</b>
+      (match a bet), <b>Raise</b> (bet even more), or <b>Fold</b> (give up the hand). The chips already in the
+      middle are the <b>pot</b> — that's what you're playing for.</p>
+    <p>One player <b>acts first</b>, the other <b>acts last</b>. Acting last is an advantage — you see what your
+      opponent does before deciding. The trainer tells you which you are each hand.</p>
+    <p>Your job: pick the action a strong player would. You're graded instantly and told why. Flip to
+      <b>Poker</b> mode (top right) once the words feel familiar — that's part of the training.</p>
+  </details>
+
   <div class="card">
     <div class="sit"><span class="pos" id="pos"></span><span id="sit"></span><span class="demo" id="demotag" hidden>raise demo</span></div>
     <div class="felt">
       <div class="cap" id="boardcap">Flop</div>
       <div class="cards" id="board"></div>
-      <div class="hero"><div class="cap">Your hand</div><div class="cards" id="hero"></div></div>
+      <div class="hero"><div class="cap" id="herocap">Your hand</div><div class="cards" id="hero"></div></div>
     </div>
     <div class="acts" id="acts"></div>
     <div class="fb" id="fb">
@@ -355,6 +375,18 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
   <details class="glossary">
     <summary>Poker terms — tap to learn the lingo</summary>
     <dl>
+      <dt>The board / shared cards</dt>
+      <dd>The cards in the middle everyone can use — up to 5 of them.</dd>
+      <dt>Flop, turn, river</dt>
+      <dd>The stages the shared cards arrive in: the flop is the first 3, the turn is the 4th, the river is the 5th (last).</dd>
+      <dt>Your hand (hole cards)</dt>
+      <dd>Your 2 secret cards that only you can see.</dd>
+      <dt>Pot</dt>
+      <dd>The chips already in the middle — what you're playing to win.</dd>
+      <dt>Blinds (small / big)</dt>
+      <dd>Forced bets two players post before the cards, so there's always something to play for.</dd>
+      <dt>Check · Bet · Call · Raise · Fold</dt>
+      <dd>Pass (no bet) · put chips in · match a bet · bet even more · give up the hand.</dd>
       <dt>Position — Button (BTN), Big Blind (BB), Small Blind (SB)</dt>
       <dd>Where you sit. The Button acts last after the flop (an advantage); the blinds act first.</dd>
       <dt>In / out of position</dt>
@@ -394,18 +426,22 @@ const TERMS = {
       pot_control:"Pot control",trap:"Trap",realization:"Give up / realize equity",value_call:"Value call",
       bluff_catch:"Bluff-catch",call_odds:"Call on odds",raise_value:"Value raise",raise_bluff:"Bluff raise",
       raise_semibluff:"Semi-bluff raise",fold:"Fold",mixed:"Mixed / close"},
-    ev:"EV"},
+    ev:"EV",boardcap:{flop:"Flop",turn:"Turn",river:"River"},herocap:"Your hand"},
   plain:{
-    pos:{BTN:"In position",BB:"Out of position",SB:"Out of position"},
-    act:{check:"Check (pass)",bet:"Bet ⅔ pot",fold:"Fold",call:"Call (match)",raise:"Raise"},
-    reason:{value:"Bet a strong hand for profit",protection:"Bet so draws pay to chase",
-      bluff:"Bet a weak hand to fold them out",semi_bluff:"Bet a draw that can improve",
-      pot_control:"Check to keep the pot small",trap:"Check a monster to trap",
-      realization:"Check a weak hand for a free card",value_call:"Call — you're likely ahead",
-      bluff_catch:"Call to catch a bluff",call_odds:"Call — the price is right",
-      raise_value:"Raise a strong hand to build the pot",raise_bluff:"Raise as a bluff",
-      raise_semibluff:"Raise a draw",fold:"Fold a weak hand",mixed:"Close — either works"},
-    ev:"profit"}
+    pos:{BTN:"You act last",BB:"You act first",SB:"You act first"},
+    act:{check:"Check (pass, no bet)",bet:"Bet (put chips in)",fold:"Fold (give up the hand)",
+      call:"Call (match their bet)",raise:"Raise (bet even more)"},
+    reason:{value:"Bet a strong hand to get paid",protection:"Bet so drawing hands pay to chase",
+      bluff:"Bet a weak hand to make them give up",semi_bluff:"Bet a hand that can still improve",
+      pot_control:"Just check to keep the pot small",trap:"Check a very strong hand to trap them",
+      realization:"Check a weak hand and see the next card free",value_call:"Call — you're probably ahead",
+      bluff_catch:"Call — you beat the hands they'd bluff with",call_odds:"Call — cheap enough to keep going",
+      raise_value:"Raise a strong hand to build the pot",raise_bluff:"Raise as a bluff to make them fold",
+      raise_semibluff:"Raise a hand that can improve",fold:"Fold — not strong enough to continue",
+      mixed:"It's close — either choice is fine"},
+    ev:"profit",
+    boardcap:{flop:"The 3 shared cards",turn:"The 4th shared card is out",river:"The last (5th) shared card"},
+    herocap:"Your 2 cards (only you can see these)"}
 };
 let order=[], pos=0, answered=false, cur=null, chosen=null, stats={n:0,solid:0,ok:0,leak:0};
 let mode=(function(){try{return localStorage.getItem("lang")==="poker"?"poker":"plain";}catch(e){return "plain";}})();
@@ -414,13 +450,15 @@ function posLabel(p){return (T().pos[p]||p);}
 function actLabel(a){return (T().act[a]||a);}
 function reasonLabel(r){return (T().reason[r]||r);}
 function situation(q){
-  const pre=q.street==="turn"?"On the turn, ":q.street==="river"?"On the river, ":"On the flop, ";
-  const who=mode==="poker"?("you're the "+q.acting_player):("you're "+posLabel(q.acting_player).toLowerCase());
-  let role;
-  if(q.node.endsWith("_first")) role=", first to act.";
-  else if(q.node.endsWith("_vs_check")) role=" and it's checked to you.";
-  else role=mode==="poker"?" facing a 66% c-bet.":" facing a two-thirds-pot bet.";
-  return pre+who+role;
+  if(mode==="poker"){
+    const pre=q.street==="turn"?"On the turn, ":q.street==="river"?"On the river, ":"On the flop, ";
+    const role=q.node.endsWith("_first")?", first to act.":q.node.endsWith("_vs_check")?" and it's checked to you.":" facing a 66% c-bet.";
+    return pre+"you're the "+q.acting_player+role;
+  }
+  // plain — no street/position jargon (the caption + pill carry those)
+  if(q.node.endsWith("_first")) return "It's your turn, and you go first — you decide before your opponent does.";
+  if(q.node.endsWith("_vs_check")) return "Your opponent passed (checked) to you. It's your turn.";
+  return "Your opponent just put chips in (bet). It's on you — match it, put in even more, or give up?";
 }
 
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
@@ -435,7 +473,8 @@ function renderQuestion(q){
   const posEl=document.getElementById("pos");posEl.textContent=posLabel(q.acting_player);posEl.className="pos "+q.acting_player;
   document.getElementById("sit").textContent=situation(q);
   const bd=document.getElementById("demotag");bd.hidden=!q.badge;bd.textContent=q.badge||"";
-  document.getElementById("boardcap").textContent=q.street?q.street[0].toUpperCase()+q.street.slice(1):"Flop";
+  document.getElementById("boardcap").textContent=(T().boardcap&&T().boardcap[q.street])||"Flop";
+  document.getElementById("herocap").textContent=T().herocap;
   render(q.board,document.getElementById("board"));
   render(q.hero,document.getElementById("hero"));
   const box=document.getElementById("acts");box.innerHTML="";
@@ -501,6 +540,10 @@ function applyModeUI(){document.querySelectorAll("#lang button").forEach(b=>b.cl
 function setMode(m){mode=m;try{localStorage.setItem("lang",m);}catch(e){}applyModeUI();
   if(cur){renderQuestion(cur);if(answered)renderFeedback(cur,chosen);}}
 document.querySelectorAll("#lang button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+// intro: open by default, remember if the reader dismisses it
+const intro=document.getElementById("intro");
+try{intro.open=localStorage.getItem("introClosed")!=="1";}catch(e){intro.open=true;}
+intro.addEventListener("toggle",()=>{try{localStorage.setItem("introClosed",intro.open?"0":"1");}catch(e){}});
 
 document.getElementById("next").onclick=next;
 document.addEventListener("keydown",e=>{
