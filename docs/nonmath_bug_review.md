@@ -194,3 +194,39 @@ All items below were independently reproduced. Status reflects this PR.
 - **Where:** `demo/build_trainer.py`
 - **Fix:** Require verified raise + turn/river packs by default; opt out with
   `--allow-missing-demo-packs`. Assert street/action coverage.
+
+---
+
+## Pass 3 (2026-07-20)
+
+### H6. Preferred action could contradict grades/explanations — **FIXED**
+- **Where:** `content_pack._require_finite`, `content_yield._is_finite_record`
+- **Bug:** Packs accepted `preferred` that was not max-EV, so the trainer could
+  recommend an action graded `major_error`.
+- **Fix:** Require preferred EV equals the best EV (ties allowed).
+
+### H7. Action grades used one global pot — **FIXED**
+- **Where:** `content_pack.build_pack`, `content_yield.extract_records`
+- **Bug:** SB-vs-BB (pot 6.0) graded with default pot 5.5 flipped near-threshold
+  grades.
+- **Fix:** Store `pot_bb` per record; grade each row with its own pot.
+
+### M15. Frequencies outside `[0,1]` still packed — **FIXED**
+- Reject per-action frequencies below 0 or above 1.
+
+### M16. Pack situation/roles for mixed scenarios — **FIXED**
+- Store `oop_pos` / `ip_pos` per decision row; pack server prefers row roles
+  over a single global config OOP.
+
+### M17. Checkpoint fingerprint omitted board strings — **FIXED**
+- `solve_config` now includes `board_strings` so editing `BOARDS[i]` under the
+  same index cannot silently reuse stale checkpoints.
+
+### M18. Scenario bet sizes only checked for finiteness — **FIXED**
+- Require `0 < small <= large`.
+
+### M19. Priority ignored flattened `reason` and mutated inputs — **FIXED**
+- Read top-level `reason`; `score_records` returns copies.
+
+### M20. Raise labels hard-coded to 3x — **FIXED**
+- Derive from pack `config.raise_x` (default 3x for legacy packs).

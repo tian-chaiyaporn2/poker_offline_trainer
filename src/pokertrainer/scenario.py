@@ -113,6 +113,14 @@ def load_scenario(raw: Dict) -> Scenario:
     pot_bb = _require_finite("pot_bb", raw["pot_bb"])
     small = _require_finite("bet_sizes_pct_pot.small", sizes["small"])
     large = _require_finite("bet_sizes_pct_pot.large", sizes["large"])
+    if small <= 0 or large <= 0:
+        raise ValidationError(
+            f"bet sizes must be > 0, got small={small}, large={large}"
+        )
+    if small > large:
+        raise ValidationError(
+            f"bet_sizes_pct_pot.small ({small}) must be <= large ({large})"
+        )
     iterations = int(_require_finite("solver.iterations", raw["solver"]["iterations"]))
     if iterations <= 0:
         raise ValidationError(f"solver.iterations must be > 0, got {iterations}")

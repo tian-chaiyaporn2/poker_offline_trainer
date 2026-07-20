@@ -30,10 +30,27 @@ if os.path.join(ROOT, "src") not in sys.path:
     sys.path.insert(0, os.path.join(ROOT, "src"))
 from pokertrainer.content_pack import verify_pack
 
-ACTION_LABEL = {"check": "Check", "bet": "Bet 66%", "fold": "Fold",
-                "call": "Call", "raise": "Raise 3x"}
+ACTION_LABEL_BASE = {"check": "Check", "bet": "Bet 66%", "fold": "Fold", "call": "Call"}
 QUESTIONS = {}
 PACK_META = {}
+ACTION_LABEL = dict(ACTION_LABEL_BASE)
+ACTION_LABEL["raise"] = "Raise 3x"
+
+
+def _action_labels(bet_pct: int = 66, raise_x=None) -> dict:
+    labels = {
+        "check": "Check",
+        "bet": f"Bet {bet_pct}%",
+        "fold": "Fold",
+        "call": "Call",
+    }
+    if raise_x is None:
+        # Legacy packs omit raise_x; demos historically used 3x.
+        labels["raise"] = "Raise 3x"
+    else:
+        x = float(raise_x)
+        labels["raise"] = f"Raise {x:g}x" if x != int(x) else f"Raise {int(x)}x"
+    return labels
 
 
 def _connect(path: str) -> sqlite3.Connection:
@@ -102,22 +119,38 @@ def load_pack():
         )
     conn = sqlite3.connect(path)
     meta = dict(conn.execute("SELECT key, value FROM pack_meta").fetchall())
-    rows = conn.execute(
+    cols = {d[1] for d in conn.execute("PRAGMA table_info(flop_decision)")}
+    has_roles = "oop_pos" in cols
+    select = (
         "SELECT id, board, node, acting_player, hand, actions, ev, freq, "
-        "preferred_action, action_grades, reason, headline, detail, mixed "
-        "FROM flop_decision").fetchall()
+        "preferred_action, action_grades, reason, headline, detail, mixed"
+        + (", oop_pos, ip_pos" if has_roles else "")
+        + " FROM flop_decision"
+    )
+    rows = conn.execute(select).fetchall()
     conn.close()
     try:
         cfg = json.loads(meta.get("config") or "{}")
         bet_pct = int(cfg.get("bet_pct_pot", 66))
         positions = cfg.get("positions") or {}
-        oop = positions.get("oop")
+        cfg_oop = positions.get("oop")
+        raise_x = cfg.get("raise_x")
     except (TypeError, ValueError, json.JSONDecodeError):
         bet_pct = 66
-        oop = None
+        cfg_oop = None
+        raise_x = None
+    global ACTION_LABEL
+    ACTION_LABEL = _action_labels(bet_pct, raise_x)
     q = {}
-    for (rid, board, node, actor, hand, actions, ev, freq, pref, grades,
-         reason, headline, detail, mixed) in rows:
+    for row in rows:
+        if has_roles:
+            (rid, board, node, actor, hand, actions, ev, freq, pref, grades,
+             reason, headline, detail, mixed, oop_pos, ip_pos) = row
+            oop = oop_pos or cfg_oop
+        else:
+            (rid, board, node, actor, hand, actions, ev, freq, pref, grades,
+             reason, headline, detail, mixed) = row
+            oop = cfg_oop
         cards = board.split() if " " in board else [board[i:i + 2] for i in range(0, len(board), 2)]
         q[rid] = {
             "id": rid, "board": cards, "node": node, "acting_player": actor,

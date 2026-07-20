@@ -85,6 +85,9 @@ def extract_records(flop_str, oop, ip, iters, make, pot, bet_frac,
         r["board_texture"] = btags
         r["board_favored"] = board_favored
         r["scenario"] = scenario
+        r["pot_bb"] = float(pot)
+        r["oop_pos"] = oop_pos
+        r["ip_pos"] = ip_pos
         r["acting_player"] = oop_pos if role == "oop" else ip_pos
         r["hand_category"] = hand_category(describe_hand(parse_hand(r["hand"]), flop))
         r["decision_type"] = "first_action" if r["node"] in ("bb_first", "btn_vs_check") else "vs_bet"
@@ -203,7 +206,12 @@ def _is_finite_record(r: Dict) -> bool:
     # Malformed frequencies were previously only soft-warned, then signed into packs.
     if abs(sum(fr.values()) - 1.0) > 0.02:
         return False
-    if r.get("preferred") not in ev:
+    if any(v < -1e-9 or v > 1.0 + 1e-9 for v in fr.values()):
+        return False
+    pref = r.get("preferred")
+    if pref not in ev:
+        return False
+    if ev[pref] < max(ev.values()) - 1e-9:
         return False
     # reach_mass / ev_sep_pct also become SQLite REAL columns; a NaN there would
     # be coerced to NULL and silently break the pack signature at the very end of
@@ -244,8 +252,14 @@ def validate_records(recs: List[Dict]) -> List[str]:
         fs = sum(v for v in fr.values() if _finite(v))
         if not _finite(fs) or abs(fs - 1.0) > 0.02:
             problems.append(f"{tag}: freq sums to {fs:.4f} (expected 1.0)")
+        for a, v in fr.items():
+            if _finite(v) and (v < -1e-9 or v > 1.0 + 1e-9):
+                problems.append(f"{tag}: freq[{a}]={v} outside [0, 1]")
         if r.get("preferred") not in ev:
             problems.append(f"{tag}: preferred={r.get('preferred')!r} not in ev keys {list(ev)}")
+        elif _finite(ev.get(r["preferred"])) and ev[r["preferred"]] < max(
+                v for v in ev.values() if _finite(v)) - 1e-9:
+            problems.append(f"{tag}: preferred={r.get('preferred')!r} is not max-EV")
     return problems
 
 
@@ -270,6 +284,9 @@ def _solve_config(n, iters, solver, dtype, pot, bet_frac, raise_x, board_idx) ->
         "bet_frac": bet_frac,
         "raise_x": raise_x,
         "boards": list(board_idx),
+        # Board strings (not just indices) so BOARDS edits under the same index
+        # cannot silently reuse stale checkpoints.
+        "board_strings": [BOARDS[i]["board"] for i in board_idx],
     }
 
 

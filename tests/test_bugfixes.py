@@ -382,3 +382,101 @@ def test_pack_server_situation_distinguishes_ip_oop_vs_bet():
     ip = ps._situation("btn_vs_bet", "BTN", 66, oop="BB")
     assert "checked" in oop and "led" not in oop
     assert "led" in ip and "checked" not in ip
+
+
+def test_preferred_not_max_ev_rejected(tmp_path):
+    from pokertrainer.content_pack import build_pack, DEFAULT_CONFIG
+    from pokertrainer.content_yield import _is_finite_record
+    rec = {
+        "board": "As7h2d", "board_texture": ["rainbow"], "board_favored": "BTN",
+        "node": "bb_first", "acting_player": "BB", "decision_type": "first_action",
+        "hand": "AhKh", "hand_category": "air", "actions": ["check", "bet"],
+        "ev": {"check": 0.0, "bet": 1.0}, "freq": {"check": 0.1, "bet": 0.9},
+        "preferred": "check", "ev_sep_pct": 18.0, "mixed": False,
+        "reach_mass": 0.8, "accepted": True, "scenario": "btn_vs_bb_srp",
+        "pot_bb": 5.5, "oop_pos": "BB", "ip_pos": "BTN",
+    }
+    assert not _is_finite_record(rec)
+    try:
+        build_pack([rec], DEFAULT_CONFIG, out_dir=str(tmp_path), version="vpref")
+        assert False, "expected ValueError"
+    except ValueError as e:
+        assert "best EV" in str(e)
+
+
+def test_freq_outside_unit_interval_rejected(tmp_path):
+    from pokertrainer.content_pack import build_pack, DEFAULT_CONFIG
+    rec = {
+        "board": "As7h2d", "board_texture": ["rainbow"], "board_favored": "BTN",
+        "node": "bb_first", "acting_player": "BB", "decision_type": "first_action",
+        "hand": "AhKh", "hand_category": "air", "actions": ["check", "bet"],
+        "ev": {"check": 0.2, "bet": 0.0}, "freq": {"check": 1.2, "bet": -0.2},
+        "preferred": "check", "ev_sep_pct": 3.6, "mixed": False,
+        "reach_mass": 0.8, "accepted": True, "scenario": "btn_vs_bb_srp",
+    }
+    try:
+        build_pack([rec], DEFAULT_CONFIG, out_dir=str(tmp_path), version="vfreq")
+        assert False, "expected ValueError"
+    except ValueError as e:
+        assert "outside [0, 1]" in str(e)
+
+
+def test_pack_grades_use_per_record_pot(tmp_path):
+    from pokertrainer.content_pack import build_pack, DEFAULT_CONFIG
+    import sqlite3, json, os
+    rec = {
+        "board": "As7h2d", "board_texture": ["rainbow"], "board_favored": "BTN",
+        "node": "bb_first", "acting_player": "BB", "decision_type": "first_action",
+        "hand": "AhKh", "hand_category": "air", "actions": ["check", "bet"],
+        "ev": {"check": 1.0, "bet": 0.941}, "freq": {"check": 0.9, "bet": 0.1},
+        "preferred": "check", "ev_sep_pct": 1.07, "mixed": False,
+        "reach_mass": 0.8, "accepted": True, "scenario": "sb_vs_bb_srp",
+        "pot_bb": 6.0, "oop_pos": "SB", "ip_pos": "BB",
+    }
+    build_pack([rec], DEFAULT_CONFIG, out_dir=str(tmp_path), version="vpot", pot=5.5)
+    db = os.path.join(str(tmp_path), "flop_pack_vpot.db")
+    grades = json.loads(sqlite3.connect(db).execute(
+        "SELECT action_grades FROM flop_decision").fetchone()[0])
+    # 0.059 regret / 6.0 pot = 0.983% → good; with wrong pot 5.5 would be acceptable
+    assert grades["bet"] == "good"
+    row = sqlite3.connect(db).execute(
+        "SELECT pot_bb, oop_pos, ip_pos FROM flop_decision").fetchone()
+    assert row == (6.0, "SB", "BB")
+
+
+def test_scenario_rejects_inverted_bet_sizes():
+    from pokertrainer.presets import BOARDS, build_scenario
+    from pokertrainer.scenario import load_scenario, ValidationError
+    raw = build_scenario(BOARDS[0])
+    raw["actions"]["bet_sizes_pct_pot"] = {"small": 100, "large": 33}
+    with pytest.raises(ValidationError, match="must be <="):
+        load_scenario(raw)
+
+
+def test_priority_reads_top_level_reason_without_mutating():
+    from pokertrainer.priority import score_records, _reason, INTUITION
+    rec = {
+        "node": "bb_first", "board": "As7h2d",
+        "board_texture": ["unpaired", "rainbow", "high_card", "disconnected"],
+        "hand_category": "strong_made", "preferred": "check",
+        "reach_mass": 0.8, "ev": {"check": 2.0, "bet": 1.0},
+        "freq": {"check": 0.9, "bet": 0.1}, "accepted": True,
+        "reason": "trap",
+    }
+    assert _reason(rec) == "trap"
+    original = dict(rec)
+    scored = score_records([rec])
+    assert "priority" not in original
+    value_rec = dict(rec)
+    value_rec["reason"] = "value"
+    s2 = score_records([rec, value_rec])
+    by = {r["reason"]: r for r in s2}
+    assert by["trap"]["priority_parts"]["intuition"] > by["value"]["priority_parts"]["intuition"]
+    assert INTUITION["trap"] > INTUITION["value"]
+
+
+def test_checkpoint_config_includes_board_strings():
+    from pokertrainer.content_yield import _solve_config
+    from pokertrainer.presets import BOARDS
+    cfg = _solve_config(40, 100, "cpu", "float64", 5.5, 0.66, None, [0, 2])
+    assert cfg["board_strings"] == [BOARDS[0]["board"], BOARDS[2]["board"]]

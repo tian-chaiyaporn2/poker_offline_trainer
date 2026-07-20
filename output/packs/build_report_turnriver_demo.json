@@ -14,7 +14,7 @@
     "solver_model": "full_street_cfr_plus"
   },
   "provenance": {
-    "git_commit": "f42a91327ca7d88c905f3b307d4edef78fcaf268",
+    "git_commit": "d22813f5af749f5890e1cfb54cc28a2b8b751a4d",
     "solver_model": "full_street_cfr_plus"
   },
   "grade_thresholds_pct_pot": {
@@ -25,10 +25,11 @@
   },
   "record_count": "1602",
   "signing_scheme": "hmac-sha256-dev",
-  "content_hash": "b52e51c2ef8bb3b1713b8f6f05485b714dee35317369e0924fc29e69c512f514",
-  "signature": "13b57d2dc433459e654a14d6d48aa99ebf17323be6967b7d68f887b7a6fc611f",
-  "db_bytes": 1257472,
-  "gz_bytes": 244118,
+  "default_pot_bb": "5.5",
+  "content_hash": "d7cf32fdf7e5ee4ac2a8dccc22733b3bffaa949ac31488e78ed6f8e5c05806f4",
+  "signature": "22bb7c60e2e66f870b8a1fe2b4fd4c6015fdb7289a16ee7f1a900c170035590c",
+  "db_bytes": 1286144,
+  "gz_bytes": 244713,
   "records_accepted": 1736,
   "records_after_dedup": 1602
 }

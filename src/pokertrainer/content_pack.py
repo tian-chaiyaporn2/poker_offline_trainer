@@ -95,9 +95,23 @@ def _require_finite(rec: Dict) -> None:
             f"freq sums to {sum(freq.values()):.4f} (expected ~1) "
             f"in record {rec.get('hand')}"
         )
-    if rec.get("preferred") not in (rec.get("ev") or {}):
+    for a, val in freq.items():
+        if val < -1e-9 or val > 1.0 + 1e-9:
+            raise ValueError(
+                f"freq[{a}]={val!r} outside [0, 1] in record {rec.get('hand')}"
+            )
+    ev = rec.get("ev") or {}
+    pref = rec.get("preferred")
+    if pref not in ev:
         raise ValueError(
-            f"preferred={rec.get('preferred')!r} missing from ev "
+            f"preferred={pref!r} missing from ev in record {rec.get('hand')}"
+        )
+    # Preferred must be a max-EV action — otherwise grades/explanations contradict
+    # the recommended action the trainer shows.
+    best = max(ev.values())
+    if ev[pref] < best - 1e-9:
+        raise ValueError(
+            f"preferred={pref!r} EV {ev[pref]} < best EV {best} "
             f"in record {rec.get('hand')}"
         )
 
@@ -127,7 +141,7 @@ CREATE TABLE flop_decision (
   ev_sep_pct REAL, mixed INTEGER, reach_mass REAL,
   reason TEXT, headline TEXT, detail TEXT,
   solver_model TEXT, validation_status TEXT,
-  scenario TEXT
+  scenario TEXT, pot_bb REAL, oop_pos TEXT, ip_pos TEXT
 );
 CREATE INDEX idx_node ON flop_decision(node);
 CREATE INDEX idx_hand_cat ON flop_decision(hand_category);
@@ -183,17 +197,18 @@ def build_pack(records: List[Dict], config: Dict, out_dir: str, version: str,
     for r in deduped:
         expl = r.get("explanation") or explain(r, r.get("board_favored"))
         scenario = r.get("scenario", "")
+        rec_pot = float(r["pot_bb"]) if r.get("pot_bb") is not None else float(pot)
         rid = record_id(r["board"], r["node"], r["hand"], version, scenario)
         rows.append((
             rid, r["board"], json.dumps(r.get("board_texture", [])), r.get("board_favored"),
             r["node"], r["acting_player"], r.get("decision_type", ""),
             r["hand"], r["hand_category"],
             json.dumps(r["actions"]), json.dumps(r["ev"]), json.dumps(r["freq"]),
-            r["preferred"], json.dumps(_action_grades(r, pot)),
+            r["preferred"], json.dumps(_action_grades(r, rec_pot)),
             r.get("ev_sep_pct"), int(bool(r.get("mixed"))), r.get("reach_mass"),
             expl["reason"], expl["headline"], json.dumps(expl["detail"]),
             config.get("solver_model", "full_street_cfr_plus"), "passed",
-            scenario,
+            scenario, rec_pot, r.get("oop_pos"), r.get("ip_pos"),
         ))
 
     foundation_rows = list(FOUNDATION_SEEDS)
@@ -206,6 +221,7 @@ def build_pack(records: List[Dict], config: Dict, out_dir: str, version: str,
         "grade_thresholds_pct_pot": json.dumps(dict(GRADE_THRESHOLDS)),
         "record_count": str(len(rows)),
         "signing_scheme": "hmac-sha256-dev",
+        "default_pot_bb": str(pot),
     }
     content_hash = hashlib.sha256(
         _canonical(rows, foundation_rows, list(meta.items())).encode()
@@ -219,7 +235,7 @@ def build_pack(records: List[Dict], config: Dict, out_dir: str, version: str,
         os.remove(db_path)
     conn = sqlite3.connect(db_path)
     conn.executescript(SCHEMA)
-    conn.executemany("INSERT INTO flop_decision VALUES (%s)" % ",".join("?" * 23), rows)
+    conn.executemany("INSERT INTO flop_decision VALUES (%s)" % ",".join("?" * 26), rows)
     conn.executemany("INSERT INTO foundation_template VALUES (?,?,?,?)", foundation_rows)
     conn.executemany("INSERT INTO pack_meta VALUES (?,?)", list(meta.items()))
     conn.commit()

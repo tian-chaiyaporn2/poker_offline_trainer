@@ -58,6 +58,20 @@ SITUATION = {
     "sb_vs_bet": "You're the SB — you checked and the BB bet 66% of the pot.",
 }
 ALAB = {"check": "Check", "bet": "Bet 66%", "fold": "Fold", "call": "Call", "raise": "Raise 3×"}
+
+
+def _raise_label_from_pack(path: str) -> str:
+    """Derive raise button label from pack config.raise_x when present."""
+    try:
+        meta = dict(sqlite3.connect(path).execute("SELECT key, value FROM pack_meta"))
+        cfg = json.loads(meta.get("config") or "{}")
+        rx = cfg.get("raise_x")
+        if rx is None:
+            return "Raise 3×"
+        x = float(rx)
+        return f"Raise {x:g}×" if x != int(x) else f"Raise {int(x)}×"
+    except Exception:
+        return "Raise 3×"
 RLAB = {"value": "Value bet", "protection": "Protection", "bluff": "Bluff", "semi_bluff": "Semi-bluff",
         "pot_control": "Pot control", "trap": "Trap", "realization": "Give up / realize equity",
         "value_call": "Value call", "bluff_catch": "Bluff-catch", "call_odds": "Call on odds",
@@ -115,6 +129,7 @@ def load_raise(n=RAISE_Q, required=True):
         print(f"  warn: {msg} — skipping")
         return []
     _require_verified(RAISE_DB)
+    raise_lab = _raise_label_from_pack(RAISE_DB)
     c = sqlite3.connect(RAISE_DB)
     rows = c.execute(f"SELECT {','.join(COLS)} FROM flop_decision "
                      "WHERE actions LIKE '%raise%'").fetchall()
@@ -128,6 +143,7 @@ def load_raise(n=RAISE_Q, required=True):
     picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
     out = []
     for q in (_to_q(d) for d in picked):
+        q["labels"] = {**q["labels"], "raise": raise_lab}
         q["badge"] = "raise demo"     # flag so the UI can note the reduced-range source
         out.append(q)
     if required and len(out) < 3:
