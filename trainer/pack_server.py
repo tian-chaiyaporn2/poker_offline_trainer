@@ -30,16 +30,27 @@ if os.path.join(ROOT, "src") not in sys.path:
     sys.path.insert(0, os.path.join(ROOT, "src"))
 from pokertrainer.content_pack import verify_pack
 
-SITUATION = {
-    "bb_first": "You are the BB (out of position), first to act on the flop.",
-    "btn_vs_check": "You are the BTN. The BB checked to you.",
-    "bb_vs_bet": "You are the BB. You checked; the BTN bet 66% of the pot.",
-    "btn_vs_bet": "You are the BTN. The BB bet 66% of the pot into you.",
-}
-ACTION_LABEL = {"check": "Check", "bet": "Bet 66%", "fold": "Fold",
-                "call": "Call", "raise": "Raise 3x"}
+ACTION_LABEL_BASE = {"check": "Check", "bet": "Bet 66%", "fold": "Fold", "call": "Call"}
 QUESTIONS = {}
 PACK_META = {}
+ACTION_LABEL = dict(ACTION_LABEL_BASE)
+ACTION_LABEL["raise"] = "Raise 3x"
+
+
+def _action_labels(bet_pct: int = 66, raise_x=None) -> dict:
+    labels = {
+        "check": "Check",
+        "bet": f"Bet {bet_pct}%",
+        "fold": "Fold",
+        "call": "Call",
+    }
+    if raise_x is None:
+        # Legacy packs omit raise_x; demos historically used 3x.
+        labels["raise"] = "Raise 3x"
+    else:
+        x = float(raise_x)
+        labels["raise"] = f"Raise {x:g}x" if x != int(x) else f"Raise {int(x)}x"
+    return labels
 
 
 def _connect(path: str) -> sqlite3.Connection:
@@ -48,13 +59,44 @@ def _connect(path: str) -> sqlite3.Connection:
     return conn
 
 
+def _situation(node: str, actor: str, bet_pct: int = 66,
+               oop: str | None = None) -> str:
+    """Build situation text from structured fields — works across scenarios.
+
+    Facing-bet copy differs for OOP (checked, then faced a bet) vs IP (opponent
+    led into them). Infer OOP from pack config when provided.
+    """
+    if node.endswith("_first"):
+        return f"You are the {actor}, first to act on the flop."
+    if node.endswith("_vs_check"):
+        return f"You are the {actor}. The opponent checked to you."
+    if node.endswith("_vs_bet"):
+        if oop is not None and actor == oop:
+            return (f"You are the {actor}. You checked and face a "
+                    f"{bet_pct}% pot bet.")
+        return (f"You are the {actor}. The opponent led into you for "
+                f"{bet_pct}% of the pot.")
+    return f"You are the {actor} ({node})."
+
+
 def find_pack() -> str:
-    packs = sorted(glob.glob(os.path.join(ROOT, "output", "packs", "flop_pack_*.db")))
+    env = os.environ.get("POKERTRAINER_PACK")
+    if env:
+        if not os.path.exists(env):
+            raise SystemExit(f"POKERTRAINER_PACK not found: {env}")
+        return env
+    packs = glob.glob(os.path.join(ROOT, "output", "packs", "flop_pack_*.db"))
     if not packs:
         raise SystemExit("No content pack found. Build one:\n"
                          "  PYTHONPATH=src python -m pokertrainer.content_pack "
                          "--records output/content_yield_preview/records.json --version v0_preview")
-    return packs[-1]
+    # Prefer non-demo/non-preview packs; pick newest by mtime (not lexicographic —
+    # v9 sorts after v10).
+    primary = [p for p in packs
+               if "demo" not in os.path.basename(p)
+               and "preview" not in os.path.basename(p)]
+    candidates = primary or packs
+    return max(candidates, key=os.path.getmtime)
 
 
 def load_pack():
@@ -77,19 +119,43 @@ def load_pack():
         )
     conn = sqlite3.connect(path)
     meta = dict(conn.execute("SELECT key, value FROM pack_meta").fetchall())
-    rows = conn.execute(
+    cols = {d[1] for d in conn.execute("PRAGMA table_info(flop_decision)")}
+    has_roles = "oop_pos" in cols
+    select = (
         "SELECT id, board, node, acting_player, hand, actions, ev, freq, "
-        "preferred_action, action_grades, reason, headline, detail, mixed "
-        "FROM flop_decision").fetchall()
+        "preferred_action, action_grades, reason, headline, detail, mixed"
+        + (", oop_pos, ip_pos" if has_roles else "")
+        + " FROM flop_decision"
+    )
+    rows = conn.execute(select).fetchall()
     conn.close()
+    try:
+        cfg = json.loads(meta.get("config") or "{}")
+        bet_pct = int(cfg.get("bet_pct_pot", 66))
+        positions = cfg.get("positions") or {}
+        cfg_oop = positions.get("oop")
+        raise_x = cfg.get("raise_x")
+    except (TypeError, ValueError, json.JSONDecodeError):
+        bet_pct = 66
+        cfg_oop = None
+        raise_x = None
+    global ACTION_LABEL
+    ACTION_LABEL = _action_labels(bet_pct, raise_x)
     q = {}
-    for (rid, board, node, actor, hand, actions, ev, freq, pref, grades,
-         reason, headline, detail, mixed) in rows:
+    for row in rows:
+        if has_roles:
+            (rid, board, node, actor, hand, actions, ev, freq, pref, grades,
+             reason, headline, detail, mixed, oop_pos, ip_pos) = row
+            oop = oop_pos or cfg_oop
+        else:
+            (rid, board, node, actor, hand, actions, ev, freq, pref, grades,
+             reason, headline, detail, mixed) = row
+            oop = cfg_oop
         cards = board.split() if " " in board else [board[i:i + 2] for i in range(0, len(board), 2)]
         q[rid] = {
             "id": rid, "board": cards, "node": node, "acting_player": actor,
             "hero_cards": [hand[0:2], hand[2:4]],
-            "situation": SITUATION.get(node, node),
+            "situation": _situation(node, actor, bet_pct, oop=oop),
             "actions": json.loads(actions), "ev": json.loads(ev), "freq": json.loads(freq),
             "preferred_action": pref, "action_grades": json.loads(grades),
             "reason": reason, "headline": headline, "detail": json.loads(detail),
@@ -172,6 +238,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(body)))
             self.end_headers(); self.wfile.write(body)
         elif p == "/api/next":
+            if not QUESTIONS:
+                self._json({"error": "no questions available"}, 503); return
             self._json(public_question(random.choice(list(QUESTIONS.values()))))
         elif p == "/api/stats":
             self._json({**stats(), "pack": PACK_META})
@@ -204,8 +272,11 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     global QUESTIONS, PACK_META
     name, meta, QUESTIONS, verdict = load_pack()
+    if not QUESTIONS:
+        raise SystemExit(f"Content pack {name} has zero decision records.")
+    # records count comes from verified row count, never unsigned pack_meta
     PACK_META = {"file": name, "version": meta.get("version"),
-                 "records": meta.get("record_count"),
+                 "records": verdict.get("records"),
                  "signed": bool(verdict.get("hash_ok") and verdict.get("signature_ok"))}
     init_results()
     port = int(os.environ.get("PORT", "8000"))

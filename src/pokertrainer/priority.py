@@ -81,15 +81,16 @@ def _pctrank(values: List[float]) -> List[float]:
 
 
 def _reason(r: Dict) -> str:
-    return (r.get("explanation") or {}).get("reason", "value")
+    nested = (r.get("explanation") or {}).get("reason")
+    return nested or r.get("reason") or "value"
 
 
 def score_records(records: List[Dict], pot: float = 5.5, weights=None) -> List[Dict]:
     """Attach frequency/impact/intuition components + combined priority to each
-    accepted record. Returns the scored (accepted) records."""
+    accepted record. Returns new scored dicts (does not mutate inputs)."""
     weights = weights or DEFAULT_WEIGHTS
     freqs = flop_texture_freqs()
-    recs = [r for r in records if r.get("accepted", True)]
+    recs = [dict(r) for r in records if r.get("accepted", True)]
     if not recs:
         return []
     raw_freq, raw_impact, raw_intu = [], [], []

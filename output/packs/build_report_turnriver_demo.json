@@ -9,12 +9,12 @@
     "stack_bb": 100,
     "pot_bb": 5.5,
     "bet_pct_pot": 66,
-    "line": "checked_through",
-    "note": "turn/river demo (reduced range)",
+    "line": "unconditioned_later_street",
+    "note": "turn/river demo (reduced range; NOT check-check filtered)",
     "solver_model": "full_street_cfr_plus"
   },
   "provenance": {
-    "git_commit": "f11bf2ff7a0ba618c5a808a1c57d1cef0b0bbacd",
+    "git_commit": "d22813f5af749f5890e1cfb54cc28a2b8b751a4d",
     "solver_model": "full_street_cfr_plus"
   },
   "grade_thresholds_pct_pot": {
@@ -23,12 +23,13 @@
     "acceptable": 3.0,
     "costly": 10.0
   },
-  "record_count": "2900",
-  "content_hash": "6d2b5826a1da515b983608f9f8454278d840e14de77ad693b5b08fbce03f7024",
-  "signature": "23b2b27dc2f7742f526597acc226ee238902c37e45c8e9b09e0941596ec26fb3",
+  "record_count": "1602",
   "signing_scheme": "hmac-sha256-dev",
-  "db_bytes": 2138112,
-  "gz_bytes": 424684,
-  "records_accepted": 5166,
-  "records_after_dedup": 2900
+  "default_pot_bb": "5.5",
+  "content_hash": "d7cf32fdf7e5ee4ac2a8dccc22733b3bffaa949ac31488e78ed6f8e5c05806f4",
+  "signature": "22bb7c60e2e66f870b8a1fe2b4fd4c6015fdb7289a16ee7f1a900c170035590c",
+  "db_bytes": 1286144,
+  "gz_bytes": 244713,
+  "records_accepted": 1736,
+  "records_after_dedup": 1602
 }

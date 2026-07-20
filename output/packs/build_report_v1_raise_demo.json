@@ -10,10 +10,11 @@
     "pot_bb": 5.5,
     "bet_pct_pot": 66,
     "rake": 0,
-    "solver_model": "full_street_cfr_plus"
+    "solver_model": "full_street_cfr_plus",
+    "raise_x": 3
   },
   "provenance": {
-    "git_commit": "ac570093451c20f140526813cacbce739abbf2e7",
+    "git_commit": "d22813f5af749f5890e1cfb54cc28a2b8b751a4d",
     "solver_model": "full_street_cfr_plus"
   },
   "grade_thresholds_pct_pot": {
@@ -23,11 +24,12 @@
     "costly": 10.0
   },
   "record_count": "240",
-  "content_hash": "729a0001dc401c789d73c2ecce895229bc62434801122bbf1c766340d64b48a2",
-  "signature": "df95306edbd1a863de9bb23624979fcd05291e9d0073fa189e5bbaaedd9b93e9",
   "signing_scheme": "hmac-sha256-dev",
-  "db_bytes": 225280,
-  "gz_bytes": 42507,
+  "default_pot_bb": "5.5",
+  "content_hash": "618fce95a3437dc66a051bbf0629569271c20f8aa9592ed7cd3f2485962b3e6a",
+  "signature": "4987386e12c177d9edf2ee4c70435251c6980ab335d5e6216e0ae0935ef59cf7",
+  "db_bytes": 241664,
+  "gz_bytes": 44478,
   "records_accepted": 240,
   "records_after_dedup": 240
 }

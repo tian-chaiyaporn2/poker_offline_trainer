@@ -65,3 +65,11 @@ def test_explanation_shape():
     e = explain(rec("bb_first", "strong_made", "bet", 3.0, 2.0, ("check", "bet")),
                 board_favored="BB")
     assert e["reason"] and e["headline"] and isinstance(e["detail"], list) and e["detail"]
+
+
+def test_relabeled_first_action_is_value_not_fold():
+    """SB-vs-BB relabel must not misclassify first-action bets as folds."""
+    r = rec("sb_first", "strong_made", "bet", 3.0, 2.0, ("check", "bet"))
+    r["decision_type"] = "first_action"
+    r["acting_player"] = "SB"
+    assert classify_reason(r) == "value"

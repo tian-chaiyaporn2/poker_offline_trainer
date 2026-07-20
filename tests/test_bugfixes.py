@@ -257,3 +257,226 @@ def test_validate_flop_write_empty_rows(tmp_path):
     import json
     summary = json.load(open(tmp_path / "summary.json"))
     assert summary["totals"]["hand_decisions"] == 0
+
+
+def test_scenario_rejects_partial_allowed():
+    from pokertrainer.presets import BOARDS, build_scenario
+    from pokertrainer.scenario import load_scenario, ValidationError
+    raw = build_scenario(BOARDS[0])
+    raw["actions"]["allowed"] = ["check"]
+    with pytest.raises(ValidationError, match="full FlopSolver set"):
+        load_scenario(raw)
+
+
+def test_export_acceptable_includes_acceptable_grade():
+    from pokertrainer.export import build_questions
+    # Synthetic solve payload: second action is within 2% pot of best → acceptable
+    solve = {
+        "scenario_id": "t", "board": ["As", "7h", "2d"], "pot_bb": 5.5,
+        "actions": ["check", "bet_small"],
+        "solver": "test",
+        "per_hand": [{
+            "hand": "AcJc",  # first free AJs combo vs As7h2d board
+            "strategy": {"check": 0.8, "bet_small": 0.2},
+            "action_ev_bb": {"check": 1.0, "bet_small": 0.95},  # ~0.9% pot loss
+        }],
+    }
+    qs = build_questions(solve, max_per_board=1)
+    assert qs
+    assert "bet_small" in qs[0]["acceptable_actions"]
+    assert qs[0]["action_grade"]["bet_small"] == "acceptable"
+
+
+def test_turn_board_uses_correct_street_count():
+    """Turn/river demos must not hard-code a 3-street flop tree (6-card boards)."""
+    from pokertrainer.validate_flop import _make_solver
+    flop = parse_cards("Th9h8d2c")
+    oop = [parse_hand(h) for h in ["AhAc", "KsKc"]]
+    ip = [parse_hand(h) for h in ["AhQh", "JsJh"]]
+    make = _make_solver("cpu", "float64")
+    s = make(flop, oop, ip, np.ones(2), np.ones(2), 5.5, 0.66, 2)
+    assert s.n_streets == 2 and s.bet_streets == 2
+    s.run(4)
+    sizes = {len(k) for k in s._Ecache}
+    assert sizes == {5}, f"expected 5-card showdowns, got {sizes}"
+
+
+def test_aggregate_only_checks_checkpoint_config(tmp_path):
+    from pokertrainer.content_yield import (
+        _atomic_write_json, run as cy_run, _solve_config,
+    )
+    out = tmp_path / "cy"
+    boards = out / "boards"
+    boards.mkdir(parents=True)
+    cfg = _solve_config(40, 100, "cpu", "float64", 5.5, 0.66, None, [0])
+    cfg["scenario"] = "btn_vs_bb_srp"
+    _atomic_write_json(str(out / "solve_config.json"), cfg)
+    _atomic_write_json(str(boards / "board_00.json"), [{
+        "accepted": True, "node": "bb_first", "board_texture": [],
+        "hand_category": "air", "preferred": "check",
+    }])
+    try:
+        cy_run(n=40, iters=100, roots=[0], out=str(out), aggregate_only=True,
+               scenario="sb_vs_bb_srp")
+        assert False, "expected SystemExit on aggregate-only scenario mismatch"
+    except SystemExit as e:
+        assert "mismatch" in str(e)
+
+
+def test_find_pack_prefers_mtime_not_lexicographic(tmp_path, monkeypatch):
+    import time
+    import trainer.pack_server as ps
+    packs = tmp_path / "output" / "packs"
+    packs.mkdir(parents=True)
+    older = packs / "flop_pack_v10.db"
+    newer = packs / "flop_pack_v9.db"
+    older.write_text("x"); time.sleep(0.02); newer.write_text("y")
+    monkeypatch.setattr(ps, "ROOT", str(tmp_path))
+    assert ps.find_pack() == str(newer)
+
+
+def test_range_rejects_nan_weights():
+    from pokertrainer.ranges import expand_range
+    with pytest.raises(ValueError, match="finite"):
+        expand_range({"AKs": float("nan")}, [])
+
+
+def test_scenario_rejects_mismatched_positions():
+    from pokertrainer.presets import BOARDS, build_scenario
+    from pokertrainer.scenario import load_scenario, ValidationError
+    raw = build_scenario(BOARDS[0])
+    raw["positions"] = {"ip": "CO", "oop": "SB"}
+    with pytest.raises(ValidationError, match="positions"):
+        load_scenario(raw)
+
+
+def test_board_texture_pairs_turn_boards():
+    from pokertrainer.content_yield import board_texture
+    tags = board_texture(parse_cards("As7h2d7c"))
+    assert "paired" in tags
+    assert "unpaired" not in tags
+
+
+def test_bad_freq_rejected_by_pack_and_finite_filter(tmp_path):
+    from pokertrainer.content_pack import build_pack, DEFAULT_CONFIG
+    from pokertrainer.content_yield import _is_finite_record
+    rec = {
+        "board": "As7h2d", "board_texture": ["rainbow"], "board_favored": "BTN",
+        "node": "bb_first", "acting_player": "BB", "decision_type": "first_action",
+        "hand": "AhKh", "hand_category": "air", "actions": ["check", "bet"],
+        "ev": {"check": 0.2, "bet": 0.0}, "freq": {"check": 0.5, "bet": 0.3},
+        "preferred": "check", "ev_sep_pct": 3.6, "mixed": False,
+        "reach_mass": 0.8, "accepted": True, "scenario": "btn_vs_bb_srp",
+    }
+    assert not _is_finite_record(rec)
+    try:
+        build_pack([rec], DEFAULT_CONFIG, out_dir=str(tmp_path), version="vbad")
+        assert False, "expected ValueError"
+    except ValueError as e:
+        assert "freq sums" in str(e)
+
+
+def test_pack_server_situation_distinguishes_ip_oop_vs_bet():
+    import trainer.pack_server as ps
+    oop = ps._situation("bb_vs_bet", "BB", 66, oop="BB")
+    ip = ps._situation("btn_vs_bet", "BTN", 66, oop="BB")
+    assert "checked" in oop and "led" not in oop
+    assert "led" in ip and "checked" not in ip
+
+
+def test_preferred_not_max_ev_rejected(tmp_path):
+    from pokertrainer.content_pack import build_pack, DEFAULT_CONFIG
+    from pokertrainer.content_yield import _is_finite_record
+    rec = {
+        "board": "As7h2d", "board_texture": ["rainbow"], "board_favored": "BTN",
+        "node": "bb_first", "acting_player": "BB", "decision_type": "first_action",
+        "hand": "AhKh", "hand_category": "air", "actions": ["check", "bet"],
+        "ev": {"check": 0.0, "bet": 1.0}, "freq": {"check": 0.1, "bet": 0.9},
+        "preferred": "check", "ev_sep_pct": 18.0, "mixed": False,
+        "reach_mass": 0.8, "accepted": True, "scenario": "btn_vs_bb_srp",
+        "pot_bb": 5.5, "oop_pos": "BB", "ip_pos": "BTN",
+    }
+    assert not _is_finite_record(rec)
+    try:
+        build_pack([rec], DEFAULT_CONFIG, out_dir=str(tmp_path), version="vpref")
+        assert False, "expected ValueError"
+    except ValueError as e:
+        assert "best EV" in str(e)
+
+
+def test_freq_outside_unit_interval_rejected(tmp_path):
+    from pokertrainer.content_pack import build_pack, DEFAULT_CONFIG
+    rec = {
+        "board": "As7h2d", "board_texture": ["rainbow"], "board_favored": "BTN",
+        "node": "bb_first", "acting_player": "BB", "decision_type": "first_action",
+        "hand": "AhKh", "hand_category": "air", "actions": ["check", "bet"],
+        "ev": {"check": 0.2, "bet": 0.0}, "freq": {"check": 1.2, "bet": -0.2},
+        "preferred": "check", "ev_sep_pct": 3.6, "mixed": False,
+        "reach_mass": 0.8, "accepted": True, "scenario": "btn_vs_bb_srp",
+    }
+    try:
+        build_pack([rec], DEFAULT_CONFIG, out_dir=str(tmp_path), version="vfreq")
+        assert False, "expected ValueError"
+    except ValueError as e:
+        assert "outside [0, 1]" in str(e)
+
+
+def test_pack_grades_use_per_record_pot(tmp_path):
+    from pokertrainer.content_pack import build_pack, DEFAULT_CONFIG
+    import sqlite3, json, os
+    rec = {
+        "board": "As7h2d", "board_texture": ["rainbow"], "board_favored": "BTN",
+        "node": "bb_first", "acting_player": "BB", "decision_type": "first_action",
+        "hand": "AhKh", "hand_category": "air", "actions": ["check", "bet"],
+        "ev": {"check": 1.0, "bet": 0.941}, "freq": {"check": 0.9, "bet": 0.1},
+        "preferred": "check", "ev_sep_pct": 1.07, "mixed": False,
+        "reach_mass": 0.8, "accepted": True, "scenario": "sb_vs_bb_srp",
+        "pot_bb": 6.0, "oop_pos": "SB", "ip_pos": "BB",
+    }
+    build_pack([rec], DEFAULT_CONFIG, out_dir=str(tmp_path), version="vpot", pot=5.5)
+    db = os.path.join(str(tmp_path), "flop_pack_vpot.db")
+    grades = json.loads(sqlite3.connect(db).execute(
+        "SELECT action_grades FROM flop_decision").fetchone()[0])
+    # 0.059 regret / 6.0 pot = 0.983% → good; with wrong pot 5.5 would be acceptable
+    assert grades["bet"] == "good"
+    row = sqlite3.connect(db).execute(
+        "SELECT pot_bb, oop_pos, ip_pos FROM flop_decision").fetchone()
+    assert row == (6.0, "SB", "BB")
+
+
+def test_scenario_rejects_inverted_bet_sizes():
+    from pokertrainer.presets import BOARDS, build_scenario
+    from pokertrainer.scenario import load_scenario, ValidationError
+    raw = build_scenario(BOARDS[0])
+    raw["actions"]["bet_sizes_pct_pot"] = {"small": 100, "large": 33}
+    with pytest.raises(ValidationError, match="must be <="):
+        load_scenario(raw)
+
+
+def test_priority_reads_top_level_reason_without_mutating():
+    from pokertrainer.priority import score_records, _reason, INTUITION
+    rec = {
+        "node": "bb_first", "board": "As7h2d",
+        "board_texture": ["unpaired", "rainbow", "high_card", "disconnected"],
+        "hand_category": "strong_made", "preferred": "check",
+        "reach_mass": 0.8, "ev": {"check": 2.0, "bet": 1.0},
+        "freq": {"check": 0.9, "bet": 0.1}, "accepted": True,
+        "reason": "trap",
+    }
+    assert _reason(rec) == "trap"
+    original = dict(rec)
+    scored = score_records([rec])
+    assert "priority" not in original
+    value_rec = dict(rec)
+    value_rec["reason"] = "value"
+    s2 = score_records([rec, value_rec])
+    by = {r["reason"]: r for r in s2}
+    assert by["trap"]["priority_parts"]["intuition"] > by["value"]["priority_parts"]["intuition"]
+    assert INTUITION["trap"] > INTUITION["value"]
+
+
+def test_checkpoint_config_includes_board_strings():
+    from pokertrainer.content_yield import _solve_config
+    from pokertrainer.presets import BOARDS
+    cfg = _solve_config(40, 100, "cpu", "float64", 5.5, 0.66, None, [0, 2])
+    assert cfg["board_strings"] == [BOARDS[0]["board"], BOARDS[2]["board"]]

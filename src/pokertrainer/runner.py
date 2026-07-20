@@ -19,7 +19,10 @@ from .solver import FlopSolver
 
 
 def _range_frequencies(strategy: np.ndarray, weights: np.ndarray) -> List[float]:
-    w = weights / weights.sum()
+    total = float(weights.sum())
+    if not np.isfinite(total) or total <= 0:
+        raise ValueError(f"range weights must sum to a positive finite value, got {total}")
+    w = weights / total
     return [round(float(x), 6) for x in (strategy * w[:, None]).sum(axis=0)]
 
 

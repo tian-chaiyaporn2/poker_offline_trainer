@@ -11,11 +11,15 @@ import json
 import os
 import sqlite3
 import subprocess
+import sys
 from collections import defaultdict
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+from pokertrainer.content_pack import verify_pack
 
 DB = "output/packs/flop_pack_v1_fullrange.db"
 RAISE_DB = "output/packs/flop_pack_v1_raise_demo.db"   # reduced-range, but HAS fold/call/raise
-TR_DB = "output/packs/flop_pack_turnriver_demo.db"     # turn/river decisions (checked-through line)
+TR_DB = "output/packs/flop_pack_turnriver_demo.db"     # turn/river decisions (later-street demo)
 PER_REASON = 6          # cap questions per reason for variety
 MAX_Q = 60
 RAISE_Q = 12            # extra 3-action spots blended in to show the raise UX
@@ -24,11 +28,20 @@ TR_Q = 16               # turn/river spots blended in
 STREET = {6: "flop", 8: "turn", 10: "river"}       # by board-string length
 
 
+def _require_verified(path: str) -> dict:
+    if not os.path.exists(path):
+        raise SystemExit(f"required pack not found: {path}")
+    verdict = verify_pack(path)
+    if not (verdict.get("hash_ok") and verdict.get("signature_ok")):
+        raise SystemExit(f"pack failed integrity check: {path} verify={verdict}")
+    return verdict
+
+
 def _situation(node, actor, street):
     if street == "flop":
         return SITUATION.get(node, f"You're the {actor}, on the flop.")
-    pre = ("The flop checked through — now on the turn, " if street == "turn"
-           else "Flop and turn checked through — now on the river, ")
+    # Unconditioned later-street demo — do not claim a check-through range.
+    pre = ("On the turn, " if street == "turn" else "On the river, ")
     if node.endswith("_first"):
         return pre + f"you're the {actor}, first to act."
     if node.endswith("_vs_check"):
@@ -45,6 +58,20 @@ SITUATION = {
     "sb_vs_bet": "You're the SB — you checked and the BB bet 66% of the pot.",
 }
 ALAB = {"check": "Check", "bet": "Bet 66%", "fold": "Fold", "call": "Call", "raise": "Raise 3×"}
+
+
+def _raise_label_from_pack(path: str) -> str:
+    """Derive raise button label from pack config.raise_x when present."""
+    try:
+        meta = dict(sqlite3.connect(path).execute("SELECT key, value FROM pack_meta"))
+        cfg = json.loads(meta.get("config") or "{}")
+        rx = cfg.get("raise_x")
+        if rx is None:
+            return "Raise 3×"
+        x = float(rx)
+        return f"Raise {x:g}×" if x != int(x) else f"Raise {int(x)}×"
+    except Exception:
+        return "Raise 3×"
 RLAB = {"value": "Value bet", "protection": "Protection", "bluff": "Bluff", "semi_bluff": "Semi-bluff",
         "pot_control": "Pot control", "trap": "Trap", "realization": "Give up / realize equity",
         "value_call": "Value call", "bluff_catch": "Bluff-catch", "call_odds": "Call on odds",
@@ -74,8 +101,10 @@ def _to_q(d):
 
 
 def load_questions():
+    verdict = _require_verified(DB)
     c = sqlite3.connect(DB)
     meta = dict(c.execute("SELECT key, value FROM pack_meta").fetchall())
+    meta["record_count"] = str(verdict["records"])
     rows = c.execute(f"SELECT {','.join(COLS)} FROM flop_decision").fetchall()
     c.close()
     buckets = defaultdict(list)
@@ -90,11 +119,17 @@ def load_questions():
     return meta, [_to_q(d) for d in picked]
 
 
-def load_raise(n=RAISE_Q):
+def load_raise(n=RAISE_Q, required=True):
     """A few real fold/call/raise spots from the raise-enabled (reduced-range) pack,
     so the trainer demonstrates the 3-action UX until the full-range raise run lands."""
     if not os.path.exists(RAISE_DB):
+        msg = f"optional raise pack missing ({RAISE_DB})"
+        if required:
+            raise SystemExit(msg + " — pass --allow-missing-demo-packs to skip")
+        print(f"  warn: {msg} — skipping")
         return []
+    _require_verified(RAISE_DB)
+    raise_lab = _raise_label_from_pack(RAISE_DB)
     c = sqlite3.connect(RAISE_DB)
     rows = c.execute(f"SELECT {','.join(COLS)} FROM flop_decision "
                      "WHERE actions LIKE '%raise%'").fetchall()
@@ -108,15 +143,23 @@ def load_raise(n=RAISE_Q):
     picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
     out = []
     for q in (_to_q(d) for d in picked):
+        q["labels"] = {**q["labels"], "raise": raise_lab}
         q["badge"] = "raise demo"     # flag so the UI can note the reduced-range source
         out.append(q)
+    if required and len(out) < 3:
+        raise SystemExit(f"raise pack produced only {len(out)} spots (need ≥3)")
     return out
 
 
-def load_turnriver(n=TR_Q):
-    """Turn + river decisions (checked-through line) from the reduced-range demo pack."""
+def load_turnriver(n=TR_Q, required=True):
+    """Turn + river decisions from the reduced-range later-street demo pack."""
     if not os.path.exists(TR_DB):
+        msg = f"optional turn/river pack missing ({TR_DB})"
+        if required:
+            raise SystemExit(msg + " — pass --allow-missing-demo-packs to skip")
+        print(f"  warn: {msg} — skipping")
         return []
+    _require_verified(TR_DB)
     c = sqlite3.connect(TR_DB)
     rows = c.execute(f"SELECT {','.join(COLS)} FROM flop_decision").fetchall()
     c.close()
@@ -132,20 +175,24 @@ def load_turnriver(n=TR_Q):
     for q in (_to_q(d) for d in picked):
         q["badge"] = q["street"] + " · demo"
         out.append(q)
+    streets = {q["street"] for q in out}
+    if required and not ({"turn", "river"} <= streets):
+        raise SystemExit(f"turn/river pack missing street coverage: {streets}")
     return out
 
 
-def build():
+def build(allow_missing_demo_packs=False):
     meta, qs = load_questions()
-    raise_qs = load_raise()
-    tr_qs = load_turnriver()
+    raise_qs = load_raise(required=not allow_missing_demo_packs)
+    tr_qs = load_turnriver(required=not allow_missing_demo_packs)
     qs = qs + raise_qs + tr_qs
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
                             capture_output=True, text=True).stdout.strip() or "local"
     print(f"  ({len(raise_qs)} raise + {len(tr_qs)} turn/river spots blended from reduced-range demo packs)")
-    data = json.dumps(qs, separators=(",", ":"))
-    body = TEMPLATE.replace("__DATA__", data).replace("__VERSION__", meta.get("version", "")) \
-                   .replace("__RECORDS__", str(meta.get("record_count", ""))).replace("__COMMIT__", commit)
+    # Escape </script> so pack strings cannot break out of the inline script.
+    data = json.dumps(qs, separators=(",", ":")).replace("<", "\\u003c")
+    body = TEMPLATE.replace("__DATA__", data).replace("__VERSION__", html.escape(meta.get("version", ""))) \
+                   .replace("__RECORDS__", html.escape(str(meta.get("record_count", "")))).replace("__COMMIT__", html.escape(commit))
     os.makedirs("demo", exist_ok=True)
     open("demo/trainer_demo.html", "w").write(body)
     doc = ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
@@ -282,9 +329,9 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
     Real solver output — pack <code>__VERSION__</code>, <b>__RECORDS__</b> signed records, build <code>__COMMIT__</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots come from the full-range launch pack. Spots marked <span class="demo">raise demo</span>
-    (Fold/Call/Raise) and <span class="demo">turn / river</span> (checked-through lines, 4- and 5-card
-    boards) are real solver output from reduced-range demo packs — the full-range raise + turn/river
-    passes are the next depth work.<br>
+    (Fold/Call/Raise) and <span class="demo">turn / river</span> (later-street boards, reduced range,
+    unconditioned — not check-check filtered) are real solver output from demo packs — the full-range
+    raise + turn/river passes are the next depth work.<br>
     Prefer to review the answers at a glance? See the <a href="preview.html">content gallery</a>.
   </div>
 </div>
@@ -298,7 +345,9 @@ let order=[], pos=0, answered=false, stats={n:0,solid:0,ok:0,leak:0};
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 function card(t){const r=t[0],s=(t[1]||"").toLowerCase(),su=SUIT[s]||[s,0];
   const e=document.createElement("div");e.className="pc"+(su[1]?" red":"");
-  e.innerHTML="<b>"+(r==="T"?"10":r)+"</b><i>"+su[0]+"</i>";return e;}
+  const b=document.createElement("b");b.textContent=(r==="T"?"10":r);
+  const i=document.createElement("i");i.textContent=su[0];
+  e.appendChild(b);e.appendChild(i);return e;}
 function render(cs,el){el.innerHTML="";cs.forEach(c=>el.appendChild(card(c)));}
 
 function deal(){
@@ -314,7 +363,9 @@ function deal(){
   const box=document.getElementById("acts");box.innerHTML="";
   q.actions.forEach((a,i)=>{
     const b=document.createElement("button");b.className="act";b.dataset.a=a;
-    b.innerHTML="<span>"+q.labels[a]+"</span><span class='k'>"+(i+1)+"</span>";
+    const lab=document.createElement("span");lab.textContent=q.labels[a];
+    const k=document.createElement("span");k.className="k";k.textContent=String(i+1);
+    b.appendChild(lab);b.appendChild(k);
     b.onclick=()=>answer(a);box.appendChild(b);
   });
   document.getElementById("prog").style.width=(100*pos/Q.length)+"%";
@@ -334,7 +385,8 @@ function answer(a){
   document.getElementById("acc").textContent=Math.round(100*(stats.solid+stats.ok)/stats.n)+"%";
   // verdict + why
   const v=document.getElementById("verdict");v.className="verdict v-"+g;
-  v.innerHTML="<span class='dot'></span>"+VERD[g];
+  v.textContent="";const dot=document.createElement("span");dot.className="dot";v.appendChild(dot);
+  v.appendChild(document.createTextNode(VERD[g]||g));
   document.getElementById("reason").textContent=q.reason_label;
   document.getElementById("head").textContent=q.headline;
   const dl=document.getElementById("det");dl.innerHTML="";q.detail.forEach(d=>{const li=document.createElement("li");li.textContent=d;dl.appendChild(li);});
@@ -344,12 +396,19 @@ function answer(a){
   q.actions.slice().sort((x,y)=>q.freq[y]-q.freq[x]).forEach(x=>{
     const ga=q.grades[x],rec=x===q.preferred,you=x===a;
     const row=document.createElement("div");row.className="row g-"+ga;
-    row.innerHTML="<div class='rlab'><span class='nm'>"+q.labels[x]+
-      (rec?" <span class='star'>&#9733;</span>":"")+(you?" <span class='you'>YOUR PICK</span>":"")+
-      "</span><span class='num'>"+q.freq[x]+"%&nbsp;&middot;&nbsp;"+(q.ev[x]>=0?"+":"")+q.ev[x]+" bb"+
-      " <span class='tag'>"+ga.replace("_"," ")+"</span></span></div>"+
-      "<div class='track'><i style='width:"+Math.max(3,Math.round(100*q.freq[x]/maxf))+"%'></i></div>";
-    bars.appendChild(row);
+    const rlab=document.createElement("div");rlab.className="rlab";
+    const nm=document.createElement("span");nm.className="nm";nm.textContent=q.labels[x]+" ";
+    if(rec){const st=document.createElement("span");st.className="star";st.innerHTML="&#9733;";nm.appendChild(st);nm.appendChild(document.createTextNode(" "));}
+    if(you){const yp=document.createElement("span");yp.className="you";yp.textContent="YOUR PICK";nm.appendChild(yp);}
+    const num=document.createElement("span");num.className="num";
+    const ev=q.ev[x];
+    num.appendChild(document.createTextNode(q.freq[x]+"% · "+(ev>=0?"+":"")+ev+" bb "));
+    const tag=document.createElement("span");tag.className="tag";tag.textContent=ga.replace("_"," ");
+    num.appendChild(tag);
+    rlab.appendChild(nm);rlab.appendChild(num);
+    const track=document.createElement("div");track.className="track";
+    const i=document.createElement("i");i.style.width=Math.max(3,Math.round(100*q.freq[x]/maxf))+"%";
+    track.appendChild(i);row.appendChild(rlab);row.appendChild(track);bars.appendChild(row);
   });
   document.getElementById("fb").className="fb on";
   document.getElementById("next").focus();
@@ -364,4 +423,9 @@ order=shuffle([...Q.keys()]);deal();
 </script>'''
 
 if __name__ == "__main__":
-    build()
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--allow-missing-demo-packs", action="store_true",
+                    help="skip raise/turn-river packs if absent (default: require them)")
+    a = ap.parse_args()
+    build(allow_missing_demo_packs=a.allow_missing_demo_packs)

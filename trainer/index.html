@@ -107,7 +107,10 @@ function render(cards, el){ el.innerHTML=""; cards.forEach(c=>el.appendChild(car
 
 async function loadNext(){
   document.getElementById("feedback").style.display="none";
-  const q = await (await fetch("/api/next")).json();
+  let q;
+  try{q=await(await fetch("/api/next")).json();}
+  catch(e){document.getElementById("situation").textContent="Can't reach the trainer server. Is it running?";return;}
+  if(q.error){document.getElementById("situation").textContent=q.error;return;}
   current = q;
   document.getElementById("situation").textContent = q.situation;
   render(q.board, document.getElementById("board"));
@@ -126,9 +129,20 @@ async function loadNext(){
 
 async function answer(action){
   document.querySelectorAll("#actions button").forEach(b=>b.disabled=true);
-  const fb = await (await fetch("/api/answer",{method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({question_id:current.id, action})})).json();
+  let fb;
+  try{
+    const resp=await fetch("/api/answer",{method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({question_id:current.id, action})});
+    if(!resp.ok)throw new Error("HTTP "+resp.status);
+    fb=await resp.json();
+  }catch(e){
+    const v=document.getElementById("verdict");
+    v.className="verdict costly"; v.textContent="Couldn't grade that answer — check the server and try Next.";
+    document.getElementById("feedback").style.display="block";
+    document.querySelectorAll("#actions button").forEach(b=>b.disabled=false);
+    return;
+  }
 
   const v=document.getElementById("verdict");
   v.className="verdict "+fb.grade; v.textContent=fb.verdict;
@@ -141,13 +155,19 @@ async function answer(action){
     const ev=fb.action_ev_bb[a];
     const g=fb.action_grade[a];
     const chosen = a===action ? " ← you" : "";
-    const rec = a===fb.recommended_action ? '<span class="tag rec">GTO pick</span>' : "";
     const row=document.createElement("div"); row.className="row";
-    row.innerHTML=`<div class="barlabel"><span>${ALABEL[a]||a}
-        <span class="tag ${g}">${g}</span>${rec}<b>${chosen}</b></span>
-        <span class="muted">${freq.toFixed(0)}% · EV ${ev.toFixed(2)}bb</span></div>
-        <div class="bar"><i style="width:${freq}%"></i></div>`;
-    bars.appendChild(row);
+    const label=document.createElement("div"); label.className="barlabel";
+    const left=document.createElement("span");
+    left.appendChild(document.createTextNode((ALABEL[a]||a)+" "));
+    const gtag=document.createElement("span"); gtag.className="tag "+g; gtag.textContent=g; left.appendChild(gtag);
+    if(a===fb.recommended_action){const r=document.createElement("span");r.className="tag rec";r.textContent="GTO pick";left.appendChild(r);}
+    if(chosen){const b=document.createElement("b");b.textContent=chosen;left.appendChild(b);}
+    const right=document.createElement("span"); right.className="muted";
+    right.textContent=freq.toFixed(0)+"% · EV "+ev.toFixed(2)+"bb";
+    label.appendChild(left); label.appendChild(right);
+    const bar=document.createElement("div"); bar.className="bar";
+    const i=document.createElement("i"); i.style.width=freq+"%"; bar.appendChild(i);
+    row.appendChild(label); row.appendChild(bar); bars.appendChild(row);
   });
   document.getElementById("disclaim").textContent =
     "Strategy from our MIT CFR+ solver, model: "+fb.model_abstraction+
@@ -158,12 +178,18 @@ async function answer(action){
 
 async function loadStats(){
   const s=await (await fetch("/api/stats")).json();
-  document.getElementById("stats").innerHTML =
-    `<span>Answered <b>${s.total}</b></span>
-     <span style="color:#7ee787">Good <b>${s.good}</b></span>
-     <span style="color:#e3b341">OK <b>${s.acceptable}</b></span>
-     <span style="color:#ff7b72">Costly <b>${s.costly}</b></span>
-     <span>Avg EV loss <b>${s.avg_ev_loss_pct_pot}%</b> pot</span>`;
+  const el=document.getElementById("stats"); el.textContent="";
+  function add(label, value, color){
+    const span=document.createElement("span"); if(color)span.style.color=color;
+    span.appendChild(document.createTextNode(label+" "));
+    const b=document.createElement("b"); b.textContent=String(value); span.appendChild(b);
+    el.appendChild(span);
+  }
+  add("Answered", s.total);
+  add("Good", s.good, "#7ee787");
+  add("OK", s.acceptable, "#e3b341");
+  add("Costly", s.costly, "#ff7b72");
+  add("Avg EV loss", s.avg_ev_loss_pct_pot+"% pot");
 }
 
 document.getElementById("next").onclick=loadNext;

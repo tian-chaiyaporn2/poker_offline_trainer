@@ -1,7 +1,10 @@
-"""Generate the full POC library: solve all 12 boards, export questions (MIT).
+"""Generate the POC library: solve every entry in presets.BOARDS, export questions (MIT).
 
 Usage:
     python -m pokertrainer.generate [--iterations N] [--per-board K] [--out DIR]
+
+`presets.BOARDS` currently has 12 core boards plus coverage additions; the
+progress line uses the live list length.
 """
 
 from __future__ import annotations
@@ -54,7 +57,7 @@ def main() -> None:
             "wall_sec": round(wall, 2),
         }
         summary.append(row)
-        print(f"[{i:2d}/12] {row['board']:8s} {str(entry['categories']):45s} "
+        print(f"[{i:2d}/{len(BOARDS)}] {row['board']:8s} {str(entry['categories']):45s} "
               f"combos {row['combos']:9s} EV {row['root_ev_pct_pot']:5.1f}%  "
               f"expl {row['exploit_pct_pot']:.4f}%  q={row['questions']}  "
               f"{row['wall_sec']:.1f}s")
