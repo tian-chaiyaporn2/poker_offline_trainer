@@ -60,7 +60,7 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 /* feedback */
 .fb{display:none;border-top:1px solid var(--line)}
 .fb.on{display:block;animation:rise .25s ease}
-@keyframes rise{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@keyframes rise{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){.fb.on{animation:none}.act:hover:not(:disabled){transform:none}}
 .verdict{padding:13px 18px;font-weight:700;font-size:15px;display:flex;align-items:center;gap:9px}
 .verdict .dot{width:10px;height:10px;border-radius:50%;background:var(--vc)}
@@ -113,8 +113,10 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .glossary dt{font-weight:700;margin-top:9px}
 .glossary dd{margin:1px 0 0;color:var(--muted)}
 .intro{margin:0 0 16px;border:1px solid var(--brass-soft);border-radius:12px;background:color-mix(in srgb,var(--brass) 6%,var(--panel));padding:0 16px}
-.intro summary{cursor:pointer;font-weight:700;padding:13px 0;font-size:13.5px;color:var(--brass);list-style:none}
+.intro summary{cursor:pointer;font-weight:700;padding:12px 0;font-size:13.5px;color:var(--brass);list-style:none;position:relative;padding-right:22px}
 .intro summary::-webkit-details-marker{display:none}
+.intro summary::after{content:"▸";position:absolute;right:2px;top:12px;color:var(--brass);transition:transform .15s}
+.intro[open] summary::after{transform:rotate(90deg)}
 .intro p{margin:0 0 10px;font-size:13px;color:var(--ink);line-height:1.6}
 .intro p:first-of-type{margin-top:2px}
 .intro b{color:var(--ink)}
@@ -122,7 +124,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 <div class="wrap">
   <header>
     <div class="brand"><span class="sp">&spades;</span> Full-Street Flop Trainer</div>
-    <div class="score" id="score" hidden>
+    <div class="score" id="score">
       <span class="acc" id="acc">—</span>
       <span class="sbits"><b id="n">0</b> played · <b class="cSolid" id="solid">0</b> solid ·
         <b class="cOk" id="ok">0</b> ok · <b class="cLeak" id="leak">0</b> leak</span>
@@ -182,7 +184,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 
   <div class="hint">Pick with <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> · next hand with <kbd>Enter</kbd></div>
   <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8253</b> signed records, build <code>a7eb23f</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8253</b> signed records, build <code>4779f22</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots come from the full-range launch pack. Spots marked <span class="demo">raise demo</span>
     (Fold/Call/Raise) and <span class="demo">turn / river</span> (later-street boards, reduced range,
@@ -518,14 +520,16 @@ function answer(a){
   const g=cur.grades[a];
   stats.n++;
   if(g==="best"||g==="good")stats.solid++;else if(g==="acceptable")stats.ok++;else stats.leak++;
-  document.getElementById("score").hidden=false;
   document.getElementById("n").textContent=stats.n;document.getElementById("solid").textContent=stats.solid;
   document.getElementById("ok").textContent=stats.ok;document.getElementById("leak").textContent=stats.leak;
   document.getElementById("acc").textContent=Math.round(100*(stats.solid+stats.ok)/stats.n)+"%";
   const gained=tryUnlock(cur,g);
-  if(gained.length)renderQuestion(cur);  // this hand's buttons/situation graduate too, in sync with the unlock
+  // Don't re-render the question on unlock — swapping the button labels mid-answer
+  // shifts the layout under the user's cursor. The feedback already reflects the new
+  // vocabulary, and the next hand deals in the upgraded language.
   renderFeedback(cur,a,gained);
-  document.getElementById("next").focus();
+  // preventScroll: focusing Next must not yank the viewport to the bottom of the card.
+  document.getElementById("next").focus({preventScroll:true});
 }
 function next(){pos=(pos+1)%Q.length;if(pos===0)order=shuffle(order.slice());deal();}
 
@@ -562,8 +566,9 @@ function setMode(m){mode=m;try{localStorage.setItem("lang",m);}catch(e){}applyMo
 document.querySelectorAll("#lang button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
 // intro: open by default, remember if the reader dismisses it
 const intro=document.getElementById("intro");
-try{intro.open=localStorage.getItem("introClosed")!=="1";}catch(e){intro.open=true;}
-intro.addEventListener("toggle",()=>{try{localStorage.setItem("introClosed",intro.open?"0":"1");}catch(e){}});
+// Collapsed by default so the game sits at the top; remember if the reader opens it.
+try{intro.open=localStorage.getItem("introOpen")==="1";}catch(e){intro.open=false;}
+intro.addEventListener("toggle",()=>{try{localStorage.setItem("introOpen",intro.open?"1":"0");}catch(e){}});
 
 document.getElementById("next").onclick=next;
 document.addEventListener("keydown",e=>{
