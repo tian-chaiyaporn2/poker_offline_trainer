@@ -156,3 +156,17 @@ def test_mixed_detail_lists_all_three_actions():
     parts = e["detail"][1].replace("Solver frequency: ", "").split(", ")
     pcts = [int(p.rsplit(" ", 1)[1].rstrip("%")) for p in parts]
     assert sum(pcts) == 100
+
+
+def test_river_realization_headline_has_no_free_card():
+    r = {
+        "node": "bb_first", "acting_player": "BB", "hand": "Ah5h",
+        "board": "Th9h8d2c7c", "hand_category": "air", "preferred": "check",
+        "actions": ["check", "bet"], "ev": {"check": 0.2, "bet": 0.0},
+        "freq": {"check": 0.9, "bet": 0.1}, "ev_sep_pct": 3.6, "mixed": False,
+        "board_texture": ["rainbow"], "decision_type": "first_action",
+    }
+    e = explain(r)
+    assert e["reason"] == "realization"
+    assert "free card" not in e["headline"].lower()
+    assert "improve" not in e["headline"].lower()

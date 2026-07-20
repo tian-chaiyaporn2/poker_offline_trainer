@@ -508,26 +508,41 @@ function handRead(hero,board){
   const hv=hero.map(c=>RV[c[0]]),bv=board.map(c=>RV[c[0]]);
   const allV=[...hv,...bv],allS=[...hs,...bs],river=board.length>=5;
   const cnt={};allV.forEach(v=>cnt[v]=(cnt[v]||0)+1);
+  const bCnt={};bv.forEach(v=>bCnt[v]=(bCnt[v]||0)+1);
+  const boardPaired=Object.keys(bCnt).some(v=>bCnt[v]>=2);
   const groups=Object.keys(cnt).map(Number).sort((a,b)=>cnt[b]-cnt[a]||b-a);
   const suitCnt={};allS.forEach(s=>suitCnt[s]=(suitCnt[s]||0)+1);
   const flush=Object.keys(suitCnt).some(s=>suitCnt[s]>=5);
   const straight=hasStraight(allV),maxB=Math.max(...bv),sortB=[...new Set(bv)].sort((a,b)=>b-a),pocket=hv[0]===hv[1];
   const top=cnt[groups[0]],second=cnt[groups[1]]||0;
   let made,strength=null,cat="high",pairKind=null,overs=[];
+  function pairOf(pr){
+    made="a pair of "+MANY[pr];cat="pair";
+    overs=[...new Set(bv.filter(v=>v>pr))].sort((a,b)=>b-a);
+    if(pocket&&hv[0]===pr){if(pr>maxB){pairKind="over";strength="an overpair (higher than every board card)";}
+      else{pairKind="under";strength="the "+ONE[maxB]+" on the board outranks it";}}
+    else if(pr===sortB[0]){pairKind="top";strength="top pair (you matched the highest board card)";}
+    else if(pr===sortB[1]){pairKind="mid";strength="middle pair";}
+    else{pairKind="low";strength="a low pair";}
+  }
   if(flush&&straight){made="a straight flush";cat="sflush";}
   else if(top===4){made="four of a kind ("+MANY[groups[0]]+")";cat="quads";}
   else if(top===3&&second>=2){made="a full house";cat="full";}
   else if(flush){made="a flush";cat="flush";}
   else if(straight){made="a straight";cat="straight";}
   else if(top===3){made=(pocket&&hv[0]===groups[0])?"a set of "+MANY[groups[0]]:"three "+MANY[groups[0]];cat="trips";}
-  else if(top===2&&second===2){made="two pair";cat="twopair";}
-  else if(top===2){const pr=groups[0];made="a pair of "+MANY[pr];cat="pair";
-    overs=[...new Set(bv.filter(v=>v>pr))].sort((a,b)=>b-a);
-    if(pocket&&hv[0]===pr){if(pr>maxB){pairKind="over";strength="an overpair (higher than every board card)";}
-      else{pairKind="under";strength="the "+ONE[maxB]+" on the board outranks it";}}
-    else if(pr===sortB[0]){pairKind="top";strength="top pair (you matched the highest board card)";}
-    else if(pr===sortB[1]){pairKind="mid";strength="middle pair";}
-    else{pairKind="low";strength="a low pair";}}
+  else if(top===2&&second===2){
+    // Pocket + separate board pair is two pair at showdown, but teach it as the pocket.
+    if(pocket&&boardPaired&&(bCnt[hv[0]]||0)<2)pairOf(hv[0]);
+    else{made="two pair";cat="twopair";}
+  }
+  else if(top===2){
+    const pr=groups[0];
+    const heroInPair=pocket?hv[0]===pr:hv.includes(pr);
+    // Board-pair-only (hero doesn't participate) is high-card / air — not "a pair of Kings".
+    if(!heroInPair){made=ONE[Math.max(...hv)]+" high (no pair)";cat="high";}
+    else pairOf(pr);
+  }
   else made=ONE[Math.max(...hv)]+" high (no pair)";
   let draw=null;
   if(!river&&!flush&&!straight){const parts=[];
@@ -624,7 +639,7 @@ function reasonLabel(r){return (TERMS[eff("reason:"+r)].reason[r]||r);}
 // term-tagged phrase, Pro keeps the solver's baked headline.
 const PLAIN_HEAD={
   value:"You're ahead of the hands that would call — bet so the weaker ones pay you off.",
-  protection:"You're probably best, but cards could come that beat you — bet so the chasing hands have to pay.",
+  protection:"Your hand is vulnerable to overcards and draws — bet so the chasing hands have to pay.",
   bluff:"You won't win if you just show it down, so bet to push better hands into folding.",
   semi_bluff:"Betting can make better hands fold now — and if you're called, your hand can still improve to the best.",
   pot_control:"A decent hand, but not strong enough to build a big pot — check to keep it small and cheap.",
@@ -637,9 +652,19 @@ const PLAIN_HEAD={
   raise_value:"You're strong — raise to build a bigger pot while the worse hands pay.",
   raise_bluff:"Raising tells the story of a big hand — do it to pressure them into folding.",
   raise_semibluff:"Raise: you can fold out better hands now, and still improve if they call.",
-  mixed:"This one's genuinely close — either play is fine here."
+  mixed:"This one's genuinely close — any play is fine here."
 };
-function plainHead(q){return PLAIN_HEAD[q.reason]||TERMS.plain.reason[q.reason]||q.headline;}
+const RIVER_PLAIN={
+  realization:"Not much here — check it down; there are no more cards to come.",
+  semi_bluff:"You won't win if you just show it down, so bet to push better hands into folding.",
+  call_odds:"The price is right to continue — call.",
+  raise_semibluff:"Raising tells the story of a big hand — do it to pressure them into folding.",
+  protection:"Bet to charge worse hands while the board is final."
+};
+function plainHead(q){
+  if(q.street==="river"&&RIVER_PLAIN[q.reason])return RIVER_PLAIN[q.reason];
+  return PLAIN_HEAD[q.reason]||TERMS.plain.reason[q.reason]||q.headline;
+}
 function situation(q){
   const first=q.node.endsWith("_first"), vscheck=q.node.endsWith("_vs_check");
   const sm=eff("positions");
@@ -749,8 +774,8 @@ function renderFeedback(q,a,gained){
     gained.forEach(t=>{const d=document.createElement("div");d.className="ul-row";d.textContent="🔓 New term learned — "+unlockText(t);ut.appendChild(d);});
   }else{ut.hidden=true;}
   document.getElementById("mixhead").textContent=(unit==="chips")
-    ?"How the solver plays it — how often each action is right, and its average payoff"
-    :"Solver mix — how often each action is right, and its EV";
+    ?"How the solver mixes — how often each action is used (★ = highest EV)"
+    :"Solver mix — action frequencies (★ = best EV), and EV";
   const bars=document.getElementById("bars");bars.innerHTML="";
   const maxf=Math.max(1,...q.actions.map(x=>q.freq[x]));
   q.actions.slice().sort((x,y)=>q.freq[y]-q.freq[x]).forEach(x=>{

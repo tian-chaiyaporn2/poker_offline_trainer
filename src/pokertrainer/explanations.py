@@ -19,7 +19,7 @@ from typing import Dict, List, Optional
 # response (fold/call) nodes add bluff-catch / odds / fold.
 HEADLINES = {
     "value":         "Bet for value — you're ahead of the hands that call, so get money in.",
-    "protection":    "Bet to protect — likely ahead but vulnerable, so charge the draws.",
+    "protection":    "Bet to protect — vulnerable to draws and overcards, so charge them.",
     "bluff":         "Bet as a bluff — little showdown value, so pressure better hands to fold.",
     "semi_bluff":    "Bet as a semi-bluff — you can fold out better hands now and still improve.",
     "pot_control":   "Check to keep the pot small — decent showdown value, but don't bloat it.",
@@ -35,11 +35,31 @@ HEADLINES = {
     "mixed":         "All actions are close here — any of them is acceptable.",
 }
 
+# River has no more cards — drop "improve" / "free card" / draw-chase wording.
+RIVER_HEADLINES = {
+    "realization":   "Check — weak holding; there's no more cards to come.",
+    "semi_bluff":    "Bet as a bluff — little showdown value, so pressure better hands to fold.",
+    "call_odds":     "Call — you have the pot odds to continue.",
+    "raise_semibluff": "Raise as a bluff — represent strength and pressure their bets.",
+    "protection":    "Bet for thin value / denial — charge worse hands while the board is final.",
+}
+
 # Casual board-texture phrasing (§6.4 style).
 _TEXTURE = {
     "monotone": "all one suit", "two_tone": "two of a suit", "rainbow": "three suits",
     "paired": "a paired board", "connected": "a connected board",
 }
+
+
+def _street_from_rec(rec: Dict) -> str:
+    board = rec.get("board") or ""
+    if isinstance(board, list):
+        n = len(board)
+    else:
+        cards = board.split() if " " in str(board) else [str(board)[i:i + 2]
+                                                         for i in range(0, len(str(board)), 2)]
+        n = len(cards)
+    return {3: "flop", 4: "turn", 5: "river"}.get(n, "flop")
 
 
 def freq_pct_ints(freq: Dict[str, float],
@@ -137,7 +157,9 @@ def explain(rec: Dict, board_favored: Optional[str] = None) -> Dict:
     """Return {reason, headline, detail:[...]} for a decision record."""
     reason = classify_reason(rec)
     pref = rec["preferred"]
-    headline = HEADLINES[reason]
+    street = _street_from_rec(rec)
+    headline = RIVER_HEADLINES.get(reason, HEADLINES[reason]) if street == "river" \
+        else HEADLINES[reason]
 
     # EV detail (expandable): how much better the preferred action is.
     evs = rec["ev"]

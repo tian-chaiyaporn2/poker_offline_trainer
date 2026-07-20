@@ -315,12 +315,16 @@ _CLEAR_SEP_PCT = 0.5
 
 def refresh_pack_lessons(db_path: str, signing_key: Optional[bytes] = None,
                          pot_default: float = 5.5) -> Dict:
-    """Recompute mixed / explanations from stored EVs and backfill role/pot cols.
+    """Recompute mixed / hand_category / explanations from stored cards+EVs.
 
-    Does not re-solve. Fixes packs where top-2 indifference labeled a 3-action
-    spot "mixed" while a third action was dominated, and adds pot_bb / oop_pos /
-    ip_pos when missing so multi-scenario tooling stays consistent.
+    Does not re-solve. Repairs indifference labeling, river draw categories,
+    pocket-under-board-pair teaching labels, and backfills pot_bb / oop_pos /
+    ip_pos when missing.
     """
+    from .cards import parse_cards, parse_hand
+    from .handinfo import describe_hand
+    from .validate_flop import hand_category
+
     signing_key = _resolve_signing_key(signing_key)
     conn = sqlite3.connect(db_path)
     cols = {d[1] for d in conn.execute("PRAGMA table_info(flop_decision)")}
@@ -361,9 +365,13 @@ def refresh_pack_lessons(db_path: str, signing_key: Optional[bytes] = None,
         regrets = [100.0 * (best - v) / rec_pot for v in ev.values()]
         new_sep = round(sorted(regrets)[1], 3) if len(regrets) > 1 else 0.0
         new_mixed = all(g < _CLEAR_SEP_PCT for g in regrets)
+        try:
+            new_hcat = hand_category(describe_hand(parse_hand(hand), parse_cards(board)))
+        except Exception:
+            new_hcat = hcat
         rec = {
-            "node": node, "acting_player": actor, "hand": hand,
-            "hand_category": hcat, "preferred": pref, "actions": actions,
+            "node": node, "acting_player": actor, "hand": hand, "board": board,
+            "hand_category": new_hcat, "preferred": pref, "actions": actions,
             "ev": ev, "freq": freq, "ev_sep_pct": new_sep, "mixed": new_mixed,
             "board_texture": texture,
             "decision_type": dtype or (
@@ -374,16 +382,17 @@ def refresh_pack_lessons(db_path: str, signing_key: Optional[bytes] = None,
         new_oop = oop_pos or oop_fallback
         new_ip = ip_pos or ip_fallback
         changed = (
-            bool(mixed) != new_mixed or sep != new_sep or reason != expl["reason"]
-            or headline != expl["headline"] or detail_s != json.dumps(expl["detail"])
+            bool(mixed) != new_mixed or sep != new_sep or hcat != new_hcat
+            or reason != expl["reason"] or headline != expl["headline"]
+            or detail_s != json.dumps(expl["detail"])
             or pot_bb is None or oop_pos != new_oop or ip_pos != new_ip
         )
         if not changed:
             continue
         conn.execute(
-            "UPDATE flop_decision SET ev_sep_pct=?, mixed=?, reason=?, headline=?, "
-            "detail=?, pot_bb=?, oop_pos=?, ip_pos=? WHERE id=?",
-            (new_sep, int(new_mixed), expl["reason"], expl["headline"],
+            "UPDATE flop_decision SET hand_category=?, ev_sep_pct=?, mixed=?, reason=?, "
+            "headline=?, detail=?, pot_bb=?, oop_pos=?, ip_pos=? WHERE id=?",
+            (new_hcat, new_sep, int(new_mixed), expl["reason"], expl["headline"],
              json.dumps(expl["detail"]), rec_pot, new_oop, new_ip, rid),
         )
         updated += 1

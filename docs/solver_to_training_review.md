@@ -121,6 +121,31 @@ Integrity checks reject `preferred` that is not max-EV before a pack is signed.
 
 ---
 
+## Pass 4 findings (fixed)
+
+### H7. River still labeled as draws / “free card” / “still improve” — **FIXED**
+- **Where:** `handinfo.describe_hand`, `explanations` river headlines, trainer
+  `plainHead`
+- **Bug:** 4-to-a-flush on a 5-card board stayed a draw → `semi_bluff` /
+  “take a free card” while JS standing correctly said no more cards.
+- **Fix:** No draw tags when `len(board) >= 5`; river-specific headlines/plain
+  copy; refresh recomputes `hand_category` from cards.
+
+### H8. `handRead` treated board pairs as hero’s made hand — **FIXED**
+- Board-pair-only → high card; pocket under a board pair → pocket pair (not
+  two pair / “ahead of every one-pair”).
+
+### H9. Pocket under board pair → `strong_made` in packs — **FIXED**
+- `describe_hand` teaches it as `pocket pair` → `weak_pair`.
+
+### M8. Protection “you're probably best” vs underpair standing — **FIXED**
+- Softened protection copy (vulnerable / charge draws), not “probably best.”
+
+### M9. Mixhead “how often … is right” vs ★ = best EV — **FIXED**
+- Mixhead now says frequencies; ★ marked as best/highest EV.
+
+---
+
 ## Design notes (not bugs)
 
 1. **★ vs frequency bars** — Preferred ≠ modal frequency in ~6% of full-range
@@ -135,8 +160,7 @@ Integrity checks reject `preferred` that is not max-EV before a pack is signed.
 
 ## Tests / tooling
 
-- `tests/test_solver_to_training.py` — preferred, export tie-break, priority pot,
-  all-action mixed refresh, pot/role backfill, `acts_first`, freq ints, mixed
-  detail, classify fallthrough.
-- `tests/test_explanations.py` — 3-action near-top-2 is not `mixed`.
+- `tests/test_solver_to_training.py` — preferred, export, priority, mixed,
+  freq ints, river headline, classify fallthrough.
+- `tests/test_bugfixes.py` — river no-draw; pocket-under-board-pair category.
 - `python -m pokertrainer.content_pack --refresh-lessons <pack.db>`
