@@ -741,12 +741,23 @@ function renderFeedback(q,a,gained){
   if(gained&&gained.length){ut.hidden=false;ut.innerHTML="";
     gained.forEach(t=>{const d=document.createElement("div");d.className="ul-row";d.textContent="🔓 New term learned — "+unlockText(t);ut.appendChild(d);});
   }else{ut.hidden=true;}
-  document.getElementById("mixhead").textContent=(unit==="chips")
-    ?"How the solver plays it — how often each action is right, and its average payoff"
-    :"Solver mix — how often each action is right, and its EV";
+  // The solver's mixed-strategy FREQUENCY (e.g. "Raise 14%") is a game-theory
+  // balancing concept, and it can flatly contradict the grade ("14% · major error")
+  // — which just erodes trust. So show it only in Pro. Everyone else gets a payoff
+  // view: what each choice is worth, sorted best-first, with a plain verdict and no
+  // confusing percentages. The bar length encodes the grade (how good), which is the
+  // question a learner is actually asking.
+  const payoffView=(mode!=="poker");
+  document.getElementById("mixhead").textContent=payoffView
+    ?"What each choice is worth (best first)"
+    :"Solver mix — how often the solver plays each action, and its EV";
   const bars=document.getElementById("bars");bars.innerHTML="";
   const maxf=Math.max(1,...q.actions.map(x=>q.freq[x]));
-  q.actions.slice().sort((x,y)=>q.freq[y]-q.freq[x]).forEach(x=>{
+  const GW={best:100,good:82,acceptable:58,costly:32,major_error:12};   // bar = how good
+  const VW={best:"Best",good:"Fine",acceptable:"Playable",costly:"Loses money",major_error:"Big mistake"};
+  const ordered=payoffView?q.actions.slice().sort((x,y)=>q.ev[y]-q.ev[x])
+                          :q.actions.slice().sort((x,y)=>q.freq[y]-q.freq[x]);
+  ordered.forEach(x=>{
     const ga=q.grades[x],rec=x===q.preferred,you=x===a;
     const row=document.createElement("div");row.className="row g-"+ga;
     if(rec)row.classList.add("best-row");
@@ -757,12 +768,22 @@ function renderFeedback(q,a,gained){
     if(you){const yp=document.createElement("span");yp.className="you";yp.textContent="YOUR PICK";nm.appendChild(yp);}
     const num=document.createElement("span");num.className="num";
     const ev=q.ev[x];
-    num.appendChild(document.createTextNode(q.freq[x]+"% · "+(ev>=0?"+":"")+ev+" "+unit+" "));
-    const tag=document.createElement("span");tag.className="tag";tag.textContent=ga.replace("_"," ");
+    if(payoffView){
+      // Best row shows what it wins; the rest show what they GIVE UP vs best — so the
+      // number agrees with the verdict (a "mistake" reads as a loss, never a + payoff).
+      const txt=(ga==="best")?fmtEv(ev)+" "+unit
+        :"−"+(Math.round((q.ev[pref]-ev)*100)/100)+" "+unit+" vs best";
+      num.appendChild(document.createTextNode(txt+" "));
+    }else{
+      num.appendChild(document.createTextNode(q.freq[x]+"% · "+(ev>=0?"+":"")+ev+" "+unit+" "));
+    }
+    const tag=document.createElement("span");tag.className="tag";
+    tag.textContent=payoffView?(VW[ga]||ga):ga.replace("_"," ");
     num.appendChild(tag);
     rlab.appendChild(nm);rlab.appendChild(num);
     const track=document.createElement("div");track.className="track";
-    const i=document.createElement("i");i.style.width=Math.max(3,Math.round(100*q.freq[x]/maxf))+"%";
+    const i=document.createElement("i");
+    i.style.width=Math.max(3,payoffView?(GW[ga]||50):Math.round(100*q.freq[x]/maxf))+"%";
     track.appendChild(i);row.appendChild(rlab);row.appendChild(track);bars.appendChild(row);
   });
   document.getElementById("fb").className="fb on";
