@@ -68,6 +68,20 @@ Resume / rebuild from partial checkpoints without re-solving:
 python -m pokertrainer.content_yield --aggregate-only --out output/content_yield
 ```
 
+**Full-range RAISE pass (FR-011) — gives every facing-a-bet spot a Raise option.**
+The launch pack solves `*_vs_bet` nodes as Fold/Call only (raising blows up the tree).
+To add raises, re-solve BTN-vs-BB with `--raise-x 3`. The raise tree is bigger, so it
+runs in **3 parts** (~4–6 h each) via `colab/kaggle_content_raise.ipynb`: set `PART`
+to `'A'` (boards 0–5), `'B'` (6–11), `'C'` (12–16), Save & Run All each time, and
+download `records_raise_<PART>.json`. Merge the three board-wise, then build/sign as
+in §4 (records → `v1_fullrange`, this becomes the new full-range pack — a superset:
+same Check/Bet spots + Fold/Call/Raise on the vs-bet nodes). First-to-act and
+checked-to spots stay Check/Bet (no bet to raise). Local one-board check:
+```bash
+python -m pokertrainer.content_yield --solver cpu --n 8 --iters 25 --roots 0 \
+    --raise-x 3 --scenario btn_vs_bb_srp --out /tmp/raise_smoke   # vs_bet -> fold/call/raise
+```
+
 ## 4. Build + sign + verify the pack
 
 ```bash
