@@ -111,6 +111,9 @@ def _to_q(d, oop_pos="BB"):
         "preferred": d["preferred_action"], "grades": json.loads(d["action_grades"]),
         "reason": d["reason"], "reason_label": RLAB.get(d["reason"], d["reason"]),
         "headline": d["headline"], "detail": json.loads(d["detail"]),
+        # Keep mixed so feedback can treat near-indifferent spots as ties rather
+        # than punishing the non-starred of two "best" actions.
+        "mixed": bool(d.get("mixed")),
     }
 
 
@@ -586,10 +589,14 @@ function renderFeedback(q,a,gained){
   const you=shortAct(a),best=shortAct(pref);
   const v=document.getElementById("verdict");v.className="verdict v-"+g;
   v.textContent="";const dot=document.createElement("span");dot.className="dot";v.appendChild(dot);
-  // Verdict names YOUR pick AND the better action — so a wrong answer immediately
-  // shows what you should have done, not just an abstract grade.
+  // Verdict follows the precomputed grade (EV-loss), not "did you match preferred".
+  // Preferred is max-EV (freq tie-break); when two actions both grade "best" (or the
+  // spot is marked mixed), picking the non-starred one is still correct — do not
+  // fall through to the "costly leak" branch.
   let vmsg;
   if(a===pref)vmsg="✓ "+you+" — the best play here.";
+  else if(g==="best")vmsg="✓ "+you+" — also a top play (effectively tied with "+best+").";
+  else if(q.mixed&&(g==="good"||g==="acceptable"))vmsg="✓ "+you+" — close enough; either play is fine here (listed preferred: "+best+").";
   else if(g==="good")vmsg="✓ "+you+" works — "+best+" is only a touch better.";
   else if(g==="acceptable")vmsg="~ "+you+" is OK, but "+best+" is the better play.";
   else vmsg="✗ You picked "+you+" — "+(g==="major_error"?"a big mistake":"a costly leak")+". The play is "+best+".";
@@ -623,7 +630,7 @@ function renderFeedback(q,a,gained){
     if(you)row.classList.add("you-row");
     const rlab=document.createElement("div");rlab.className="rlab";
     const nm=document.createElement("span");nm.className="nm";nm.textContent=actLabel(x)+" ";
-    if(rec){const st=document.createElement("span");st.className="star";st.textContent="★";nm.appendChild(st);nm.appendChild(document.createTextNode(" "));}
+    if(rec){const st=document.createElement("span");st.className="star";st.textContent="★";st.title="Best EV (recommended)";nm.appendChild(st);nm.appendChild(document.createTextNode(" "));}
     if(you){const yp=document.createElement("span");yp.className="you";yp.textContent="YOUR PICK";nm.appendChild(yp);}
     const num=document.createElement("span");num.className="num";
     const ev=q.ev[x];

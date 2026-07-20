@@ -160,7 +160,7 @@ async function answer(action){
     const left=document.createElement("span");
     left.appendChild(document.createTextNode((ALABEL[a]||a)+" "));
     const gtag=document.createElement("span"); gtag.className="tag "+g; gtag.textContent=g; left.appendChild(gtag);
-    if(a===fb.recommended_action){const r=document.createElement("span");r.className="tag rec";r.textContent="GTO pick";left.appendChild(r);}
+    if(a===fb.recommended_action){const r=document.createElement("span");r.className="tag rec";r.textContent="recommended";left.appendChild(r);}
     if(chosen){const b=document.createElement("b");b.textContent=chosen;left.appendChild(b);}
     const right=document.createElement("span"); right.className="muted";
     right.textContent=freq.toFixed(0)+"% · EV "+ev.toFixed(2)+"bb";

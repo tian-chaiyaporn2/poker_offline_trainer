@@ -329,13 +329,14 @@ class BatchedGPUCFR:
         opp = np.where((o := self.to_host(self.B @ self.w_i)) > 1e-12, o, 1.0)
         from ..cards import hand_str
         out = {}
+        from .batched import preferred_action
         for i in range(self.no):
-            ev_ch = float(u_root[0, i, CHECK] / opp[i])
-            ev_bt = float(u_root[0, i, BET] / opp[i])
+            ev = {"check": float(u_root[0, i, CHECK] / opp[i]),
+                  "bet": float(u_root[0, i, BET] / opp[i])}
+            freq = {"check": float(s_root[0, i, CHECK]),
+                    "bet": float(s_root[0, i, BET])}
             out[hand_str((int(self.oc[i, 0]), int(self.oc[i, 1])))] = {
-                "ev": {"check": ev_ch, "bet": ev_bt},
-                "freq": {"check": float(s_root[0, i, CHECK]), "bet": float(s_root[0, i, BET])},
-                "preferred": "check" if ev_ch >= ev_bt else "bet",
+                "ev": ev, "freq": freq, "preferred": preferred_action(ev, freq),
             }
         return out
 

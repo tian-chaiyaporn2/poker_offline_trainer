@@ -173,22 +173,36 @@ def public_question(q):
 
 def grade_answer(q, action):
     grade = q["action_grades"].get(action, "major_error")
-    verdicts = {
-        "best": "Best — top action (or effectively tied).",
-        "good": "Good — a small concession.",
-        "acceptable": "Acceptable — playable, not preferred.",
-        "costly": "Costly — a meaningful recurring leak.",
-        "major_error": "Major error — clearly dominated here.",
-    }
+    pref = q["preferred_action"]
+    # Grade is EV-loss based; preferred is max-EV (freq on ties). When the pick
+    # grades "best" but isn't the starred action, it is still a top play.
+    if action == pref:
+        verdict = "Best — top action (or effectively tied)."
+    elif grade == "best":
+        verdict = f"Best — effectively tied with {_label(pref)}."
+    elif q.get("mixed") and grade in ("good", "acceptable"):
+        verdict = f"Close — either play is fine here (listed preferred: {_label(pref)})."
+    else:
+        verdicts = {
+            "good": "Good — a small concession.",
+            "acceptable": "Acceptable — playable, not preferred.",
+            "costly": "Costly — a meaningful recurring leak.",
+            "major_error": "Major error — clearly dominated here.",
+        }
+        verdict = verdicts.get(grade, grade)
     return {
-        "grade": grade, "verdict": verdicts.get(grade, grade),
-        "recommended_action": q["preferred_action"], "mixed": q["mixed"],
+        "grade": grade, "verdict": verdict,
+        "recommended_action": pref, "mixed": q["mixed"],
         "headline": q["headline"], "detail": q["detail"], "reason": q["reason"],
         "action_grades": q["action_grades"],
         "ev_bb": {a: round(q["ev"][a], 2) for a in q["actions"]},
         "freq_pct": {a: round(100 * q["freq"][a]) for a in q["actions"]},
         "labels": {a: ACTION_LABEL.get(a, a) for a in q["actions"]},
     }
+
+
+def _label(action: str) -> str:
+    return ACTION_LABEL.get(action, action)
 
 
 def init_results():
