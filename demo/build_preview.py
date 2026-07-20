@@ -9,15 +9,31 @@ import json
 import os
 import sqlite3
 import subprocess
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+from pokertrainer.content_pack import verify_pack
 
 DB = "output/packs/flop_pack_v1_fullrange.db"
 DISPLAY_ORDER = ["value", "protection", "bluff", "trap", "pot_control", "realization",
                  "value_call", "bluff_catch", "fold", "mixed", "raise_value", "raise_bluff"]
 
 
+def _require_verified(path: str) -> dict:
+    if not os.path.exists(path):
+        raise SystemExit(f"pack not found: {path}")
+    verdict = verify_pack(path)
+    if not (verdict.get("hash_ok") and verdict.get("signature_ok")):
+        raise SystemExit(f"pack failed integrity check: {path} verify={verdict}")
+    return verdict
+
+
 def load_samples():
+    verdict = _require_verified(DB)
     c = sqlite3.connect(DB)
     meta = dict(c.execute("SELECT key, value FROM pack_meta").fetchall())
+    # Prefer verified row count over unsigned pack_meta.record_count
+    meta["record_count"] = str(verdict["records"])
     cols = ("board node acting_player hand hand_category actions ev freq "
             "preferred_action action_grades ev_sep_pct mixed reason headline detail").split()
     rows = c.execute(f"SELECT {','.join(cols)} FROM flop_decision").fetchall()
@@ -73,15 +89,19 @@ def render(meta, samples):
             rec = " rec" if a == s["preferred_action"] else ""
             fr = round(100 * s["freq"][a])
             ev = s["ev"][a]
-            acts.append(f'<div class="act g-{g}{rec}"><span class="al">{ALAB.get(a, a)}</span>'
+            acts.append(f'<div class="act g-{html.escape(g)}{rec}"><span class="al">{html.escape(ALAB.get(a, a))}</span>'
                         f'<span class="ameta"><span class="af">{fr}%</span><span class="ae">{ev:+.2f} bb</span></span>'
-                        f'<span class="ag">{GLAB[g]}</span></div>')
+                        f'<span class="ag">{html.escape(GLAB.get(g, g))}</span></div>')
         det = "".join(f"<li>{html.escape(x)}</li>" for x in s["detail"])
-        reason = RLAB.get(s["reason"], s["reason"])
+        reason = html.escape(RLAB.get(s["reason"], s["reason"]))
+        actor = html.escape(s["acting_player"])
+        node = s["node"]
+        sit = html.escape(SIT.get(node, node))
+        hc = html.escape(s["hand_category"].replace("_", " "))
         cards_html.append(f'''<article class="q">
   <header class="qh">
-    <div class="sit"><span class="pos {s['acting_player']}">{s['acting_player']}</span> {SIT[s['node']]}</div>
-    <span class="hc">{s['hand_category'].replace('_', ' ')}</span>
+    <div class="sit"><span class="pos {actor}">{actor}</span> {sit}</div>
+    <span class="hc">{hc}</span>
   </header>
   <div class="felt">
     <div class="crow"><span class="cap">Flop</span><span class="pcs">{cards(board)}</span></div>
@@ -108,11 +128,11 @@ def render(meta, samples):
   flop-to-turn-to-river solve, graded by EV, and explained in one sentence a casual player understands.</p>
   <hr class="rule">
   <div class="meta">
-    <span>Pack <b>{meta.get('version')}</b></span>
-    <span><b>{meta.get('record_count')}</b> decision records</span>
+    <span>Pack <b>{html.escape(str(meta.get('version')))}</b></span>
+    <span><b>{html.escape(str(meta.get('record_count')))}</b> decision records</span>
     <span>🔏 <b>Signed</b> &amp; integrity-verified</span>
     <span>Solver <b>full-street CFR+</b></span>
-    <span>Build <b>{commit}</b></span>
+    <span>Build <b>{html.escape(commit)}</b></span>
   </div>
 
   <div class="key">
@@ -133,7 +153,7 @@ def render(meta, samples):
     deterministically from the solve; nothing here is hand-written strategy.
     <br><br>
     <b>This is the real launch pack:</b> a full-range flop solve across 12 boards
-    (BTN vs BB, single-raised pot, 100&nbsp;bb, 66% c-bet) — the same {meta.get('record_count')} decisions
+    (BTN vs BB, single-raised pot, 100&nbsp;bb, 66% c-bet) — the same {html.escape(str(meta.get('record_count')))} decisions
     the trainer ships, on a GPU-solved flop→turn→river tree. EVs and frequencies are the actual solver
     output. Raise decisions (FR-011) are a separate run and aren't shown here. Reason labels come from
     <code>explanations.py</code>; grades from EV-regret thresholds stored in the pack.

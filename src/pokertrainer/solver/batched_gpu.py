@@ -162,7 +162,8 @@ class BatchedGPUCFR:
                     pk.append(k); pc.append(c); child_boards.append(boards[k] + [c])
             pk_h = np.array(pk); pc_h = np.array(pc)
             # Uniform over cards that collide with neither private hand.
-            denom = (52 - (street + 2)) - 4
+            # Use board length so turn/river starts are correct (not street+2).
+            denom = 52 - len(boards[0]) - 4
             cm = (xp.asarray(pk_h), xp.asarray(pc_h), pk_h, pc_h, child_boards, denom)
             self._child[path] = cm
         pk_d, pc_d, pk_h, pc_h, child_boards, denom = cm

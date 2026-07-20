@@ -257,3 +257,79 @@ def test_validate_flop_write_empty_rows(tmp_path):
     import json
     summary = json.load(open(tmp_path / "summary.json"))
     assert summary["totals"]["hand_decisions"] == 0
+
+
+def test_scenario_rejects_partial_allowed():
+    from pokertrainer.presets import BOARDS, build_scenario
+    from pokertrainer.scenario import load_scenario, ValidationError
+    raw = build_scenario(BOARDS[0])
+    raw["actions"]["allowed"] = ["check"]
+    with pytest.raises(ValidationError, match="full FlopSolver set"):
+        load_scenario(raw)
+
+
+def test_export_acceptable_includes_acceptable_grade():
+    from pokertrainer.export import build_questions
+    # Synthetic solve payload: second action is within 2% pot of best → acceptable
+    solve = {
+        "scenario_id": "t", "board": ["As", "7h", "2d"], "pot_bb": 5.5,
+        "actions": ["check", "bet_small"],
+        "solver": "test",
+        "per_hand": [{
+            "hand": "AcJc",  # first free AJs combo vs As7h2d board
+            "strategy": {"check": 0.8, "bet_small": 0.2},
+            "action_ev_bb": {"check": 1.0, "bet_small": 0.95},  # ~0.9% pot loss
+        }],
+    }
+    qs = build_questions(solve, max_per_board=1)
+    assert qs
+    assert "bet_small" in qs[0]["acceptable_actions"]
+    assert qs[0]["action_grade"]["bet_small"] == "acceptable"
+
+
+def test_turn_board_uses_correct_street_count():
+    """Turn/river demos must not hard-code a 3-street flop tree (6-card boards)."""
+    from pokertrainer.validate_flop import _make_solver
+    flop = parse_cards("Th9h8d2c")
+    oop = [parse_hand(h) for h in ["AhAc", "KsKc"]]
+    ip = [parse_hand(h) for h in ["AhQh", "JsJh"]]
+    make = _make_solver("cpu", "float64")
+    s = make(flop, oop, ip, np.ones(2), np.ones(2), 5.5, 0.66, 2)
+    assert s.n_streets == 2 and s.bet_streets == 2
+    s.run(4)
+    sizes = {len(k) for k in s._Ecache}
+    assert sizes == {5}, f"expected 5-card showdowns, got {sizes}"
+
+
+def test_aggregate_only_checks_checkpoint_config(tmp_path):
+    from pokertrainer.content_yield import (
+        _atomic_write_json, run as cy_run, _solve_config,
+    )
+    out = tmp_path / "cy"
+    boards = out / "boards"
+    boards.mkdir(parents=True)
+    cfg = _solve_config(40, 100, "cpu", "float64", 5.5, 0.66, None, [0])
+    cfg["scenario"] = "btn_vs_bb_srp"
+    _atomic_write_json(str(out / "solve_config.json"), cfg)
+    _atomic_write_json(str(boards / "board_00.json"), [{
+        "accepted": True, "node": "bb_first", "board_texture": [],
+        "hand_category": "air", "preferred": "check",
+    }])
+    try:
+        cy_run(n=40, iters=100, roots=[0], out=str(out), aggregate_only=True,
+               scenario="sb_vs_bb_srp")
+        assert False, "expected SystemExit on aggregate-only scenario mismatch"
+    except SystemExit as e:
+        assert "mismatch" in str(e)
+
+
+def test_find_pack_prefers_mtime_not_lexicographic(tmp_path, monkeypatch):
+    import time
+    import trainer.pack_server as ps
+    packs = tmp_path / "output" / "packs"
+    packs.mkdir(parents=True)
+    older = packs / "flop_pack_v10.db"
+    newer = packs / "flop_pack_v9.db"
+    older.write_text("x"); time.sleep(0.02); newer.write_text("y")
+    monkeypatch.setattr(ps, "ROOT", str(tmp_path))
+    assert ps.find_pack() == str(newer)

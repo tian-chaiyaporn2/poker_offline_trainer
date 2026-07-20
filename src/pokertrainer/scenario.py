@@ -64,6 +64,13 @@ def load_scenario(raw: Dict) -> Scenario:
             f"unsupported actions {sorted(allowed - _SUPPORTED_ALLOWED)}; "
             f"FlopSolver supports {sorted(_SUPPORTED_ALLOWED)}"
         )
+    # FlopSolver always solves the full fixed tree — a partial `allowed` list
+    # would silently describe a different game than the one being solved.
+    if allowed != _SUPPORTED_ALLOWED:
+        raise ValidationError(
+            f"actions.allowed must be the full FlopSolver set "
+            f"{sorted(_SUPPORTED_ALLOWED)}; got {sorted(allowed)}"
+        )
     raise_rule = actions.get("raise_rule", "no_raise_v1")
     if raise_rule not in _SUPPORTED_RAISE:
         raise ValidationError(

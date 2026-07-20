@@ -362,8 +362,9 @@ def run(n=40, iters=300, roots=None, solver="cpu", dtype="float64",
 
     cfg = _solve_config(n, iters, solver, dtype, pot, bet_frac, raise_x, board_idx)
     cfg["scenario"] = scenario
-    if not aggregate_only:
-        _ensure_checkpoint_config(out, cfg, fresh=fresh)
+    # Always fingerprint-check, including --aggregate-only: rebuilding reports
+    # from checkpoints under mismatched CLI settings would silently mix runs.
+    _ensure_checkpoint_config(out, cfg, fresh=False if aggregate_only else fresh)
 
     if not aggregate_only:
         make = _make_solver(solver, dtype, raise_x=raise_x)

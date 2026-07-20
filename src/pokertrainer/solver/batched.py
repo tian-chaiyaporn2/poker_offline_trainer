@@ -134,9 +134,9 @@ class BatchedCFR:
         np.add.at(UO, parent_idx, uo_c)
         np.add.at(UI, parent_idx, ui_c)
         # Uniform average over cards that collide with neither private hand:
-        # 52 - board - 4. (Using board-2 under-weights showdown EV by ~45/47 per
-        # street and biases betting lines that realize fold equity.)
-        denom = (52 - (street + 2)) - 4
+        # 52 - board_len - 4. Board length (not street+2) so turn/river starts
+        # that begin with 4-/5-card boards use the correct denominator.
+        denom = 52 - len(boards[0]) - 4
         return UO / denom, UI / denom
 
     def _get_strat(self, path, node, C, na):

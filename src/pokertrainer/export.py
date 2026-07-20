@@ -63,7 +63,7 @@ def build_questions(solve: Dict, max_per_board: int = 10) -> List[Dict]:
         grade = {a: _grade(ev_loss_pct[a]) for a in actions}
         # Recommended = highest-EV action (matches EV-loss grading / "best action" UI).
         recommended = max(actions, key=lambda a: evs[a])
-        acceptable = [a for a in actions if grade[a] in ("good",)]
+        acceptable = [a for a in actions if grade[a] in ("good", "acceptable")]
 
         hole = parse_hand(hero)
         descriptor = describe_hand(hole, [_pc(c) for c in board])

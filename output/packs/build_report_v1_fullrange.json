@@ -23,11 +23,11 @@
     "costly": 10.0
   },
   "record_count": "8253",
-  "content_hash": "1a232a29b42e091c0a111f4aaf33003c72e4b5db16818520654d24c8a18e8506",
-  "signature": "55c3703bfa37f2a27c6a5d4f78168d31e8cbd1257470b6b5a2ec0de3ebe44b2e",
+  "content_hash": "57d661b3e04060f89bc4f7363ff8efca8b8108b07d7bac362ac08df7c3a7eb16",
+  "signature": "ad466ef8a9c35beca2e78fd55cb8bc174f94841f55ed81cca8bdc0775581c8a2",
   "signing_scheme": "hmac-sha256-dev",
   "db_bytes": 5992448,
-  "gz_bytes": 1082454,
+  "gz_bytes": 1082440,
   "records_accepted": 10412,
   "records_after_dedup": 8253
 }

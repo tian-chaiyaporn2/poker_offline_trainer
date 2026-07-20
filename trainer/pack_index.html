@@ -88,8 +88,19 @@ async function loadNext(){
 }
 async function answer(action){
   document.querySelectorAll("#acts button").forEach(b=>b.disabled=true);
-  const fb=await(await fetch("/api/answer",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({question_id:cur.id,action})})).json();
+  let fb;
+  try{
+    const resp=await fetch("/api/answer",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({question_id:cur.id,action})});
+    if(!resp.ok)throw new Error("HTTP "+resp.status);
+    fb=await resp.json();
+  }catch(e){
+    document.getElementById("verdict").className="verdict g-costly";
+    document.getElementById("verdict").textContent="Couldn't grade that answer — check the server and try Next.";
+    document.getElementById("fb").style.display="block";
+    document.querySelectorAll("#acts button").forEach(b=>b.disabled=false);
+    return;
+  }
   const v=document.getElementById("verdict");v.className="verdict g-"+fb.grade;v.textContent=fb.verdict;
   document.getElementById("why").textContent="";
   document.getElementById("why").appendChild(document.createTextNode(fb.headline));
@@ -116,11 +127,17 @@ async function answer(action){
   document.getElementById("fb").style.display="block";loadStats();
 }
 async function loadStats(){const s=await(await fetch("/api/stats")).json();
-  document.getElementById("stats").innerHTML=
-   `<span>${s.pack.file} · ${s.pack.records} recs ${s.pack.signed?"· 🔏 signed":""}</span>
-    <span>Answered <b>${s.total}</b></span><span style="color:#7ee787">Good <b>${s.good}</b></span>
-    <span style="color:#e3b341">OK <b>${s.acceptable||0}</b></span>
-    <span style="color:#ff7b72">Costly <b>${s.costly}</b></span>`;}
+  const el=document.getElementById("stats");el.textContent="";
+  function chip(text, color){const span=document.createElement("span");if(color)span.style.color=color;
+    span.appendChild(document.createTextNode(text));return span;}
+  const pack=s.pack||{};
+  el.appendChild(chip(`${pack.file||"?"} · ${pack.records||0} recs${pack.signed?" · 🔏 signed":""}`));
+  el.appendChild(chip("Answered "));
+  const bTotal=document.createElement("b");bTotal.textContent=String(s.total);el.lastChild.appendChild(bTotal);
+  const good=chip("Good ");good.style.color="#7ee787";const bG=document.createElement("b");bG.textContent=String(s.good);good.appendChild(bG);el.appendChild(good);
+  const ok=chip("OK ");ok.style.color="#e3b341";const bO=document.createElement("b");bO.textContent=String(s.acceptable||0);ok.appendChild(bO);el.appendChild(ok);
+  const bad=chip("Costly ");bad.style.color="#ff7b72";const bC=document.createElement("b");bC.textContent=String(s.costly);bad.appendChild(bC);el.appendChild(bad);
+}
 document.getElementById("next").onclick=loadNext;
 document.addEventListener("keydown",e=>{if(e.key==="Enter"&&document.getElementById("fb").style.display==="block")loadNext();});
 loadNext();loadStats();

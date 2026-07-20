@@ -30,10 +30,16 @@ MAX_BODY = 64 * 1024
 _results_lock = __import__("threading").Lock()
 
 
-def _connect(path: str) -> sqlite3.Connection:
+def _connect_rw(path: str) -> sqlite3.Connection:
     conn = sqlite3.connect(path, timeout=30, check_same_thread=False)
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
+
+
+def _connect_ro(path: str) -> sqlite3.Connection:
+    """Read-only open — works when the questions DB lives on a read-only volume."""
+    uri = f"file:{path}?mode=ro"
+    return sqlite3.connect(uri, uri=True, timeout=30, check_same_thread=False)
 
 
 def load_questions() -> dict:
@@ -42,14 +48,14 @@ def load_questions() -> dict:
             f"Question DB not found at {QUESTIONS_DB}.\n"
             "Generate it first:  PYTHONPATH=src python -m pokertrainer.generate"
         )
-    conn = _connect(QUESTIONS_DB)
+    conn = _connect_ro(QUESTIONS_DB)
     rows = conn.execute("SELECT id, payload FROM questions").fetchall()
     conn.close()
     return {qid: json.loads(payload) for qid, payload in rows}
 
 
 def init_results_db() -> None:
-    conn = _connect(RESULTS_DB)
+    conn = _connect_rw(RESULTS_DB)
     conn.execute(
         """CREATE TABLE IF NOT EXISTS results (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -110,7 +116,7 @@ def _label(a: str) -> str:
 
 def record_result(question_id: str, action: str, grade: str, ev_loss: float) -> None:
     with _results_lock:
-        conn = _connect(RESULTS_DB)
+        conn = _connect_rw(RESULTS_DB)
         conn.execute(
             "INSERT INTO results (question_id, chosen_action, grade, ev_loss_pct_pot, ts)"
             " VALUES (?,?,?,?,?)",
@@ -121,7 +127,7 @@ def record_result(question_id: str, action: str, grade: str, ev_loss: float) -> 
 
 
 def stats() -> dict:
-    conn = _connect(RESULTS_DB)
+    conn = _connect_rw(RESULTS_DB)
     rows = conn.execute("SELECT grade, COUNT(*) FROM results GROUP BY grade").fetchall()
     total = conn.execute("SELECT COUNT(*), AVG(ev_loss_pct_pot) FROM results").fetchone()
     conn.close()
@@ -159,6 +165,9 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
         elif path == "/api/next":
+            if not QUESTIONS:
+                self._send_json({"error": "no questions available"}, 503)
+                return
             q = random.choice(list(QUESTIONS.values()))
             self._send_json(public_question(q))
         elif path == "/api/stats":
@@ -197,6 +206,8 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     global QUESTIONS
     QUESTIONS = load_questions()
+    if not QUESTIONS:
+        raise SystemExit(f"No questions loaded from {QUESTIONS_DB}.")
     init_results_db()
     port = int(os.environ.get("PORT", "8000"))
     server = ThreadingHTTPServer(("127.0.0.1", port), Handler)

@@ -67,6 +67,50 @@ def test_tamper_breaks_signature(tmp_path):
     assert not v["hash_ok"] and not v["signature_ok"]      # tamper detected
 
 
+def test_meta_tamper_breaks_signature(tmp_path):
+    _pack(tmp_path)
+    db = os.path.join(str(tmp_path), "flop_pack_vtest.db")
+    conn = sqlite3.connect(db)
+    conn.execute("UPDATE pack_meta SET value=? WHERE key='record_count'",
+                 ("<img src=x onerror=alert(1)>",))
+    conn.commit(); conn.close()
+    v = verify_pack(db)
+    assert not v["hash_ok"] and not v["signature_ok"]
+
+
+def test_foundation_tamper_breaks_signature(tmp_path):
+    _pack(tmp_path)
+    db = os.path.join(str(tmp_path), "flop_pack_vtest.db")
+    conn = sqlite3.connect(db)
+    conn.execute("UPDATE foundation_template SET spec=? WHERE id='found_pot_odds'",
+                 ("evil",))
+    conn.commit(); conn.close()
+    v = verify_pack(db)
+    assert not v["hash_ok"] and not v["signature_ok"]
+
+
+def test_scenario_disambiguates_record_ids(tmp_path):
+    from pokertrainer.content_pack import build_pack
+    r1 = _rec("AhKh", "bb_first", "air", "check", 0.2, 0.0, ("check", "bet"))
+    r2 = dict(r1)
+    r1["scenario"] = "btn_vs_bb_srp"
+    r2["scenario"] = "sb_vs_bb_srp"
+    r2["acting_player"] = "BB"
+    rep = build_pack([r1, r2], CONFIG, out_dir=str(tmp_path), version="vscen", pot=5.5)
+    assert rep["records_after_dedup"] == 2
+
+
+def test_nan_record_rejected(tmp_path):
+    from pokertrainer.content_pack import build_pack
+    bad = _rec("AhKh", "bb_first", "air", "check", 0.2, 0.0, ("check", "bet"))
+    bad["ev_sep_pct"] = float("nan")
+    try:
+        build_pack([bad], CONFIG, out_dir=str(tmp_path), version="vnan", pot=5.5)
+        assert False, "expected ValueError"
+    except ValueError as e:
+        assert "non-finite" in str(e)
+
+
 def test_gzip_and_report(tmp_path):
     rep = _pack(tmp_path)
     assert rep["gz_bytes"] < rep["db_bytes"]

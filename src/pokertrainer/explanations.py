@@ -46,10 +46,24 @@ def _wet(texture: List[str]) -> bool:
     return any(t in texture for t in ("two_tone", "monotone", "connected"))
 
 
+def _is_first_action(rec: Dict) -> bool:
+    """True for bet/check nodes (not fold/call/raise responses).
+
+    Prefer decision_type when present so relabeled scenario nodes
+    (sb_first, bb_vs_check, ...) are classified correctly.
+    """
+    dt = rec.get("decision_type")
+    if dt:
+        return dt == "first_action"
+    node = rec.get("node", "")
+    return node in ("bb_first", "btn_vs_check") or node.endswith("_first") \
+        or node.endswith("_vs_check")
+
+
 def classify_reason(rec: Dict) -> str:
     hc = rec["hand_category"]
     act = rec["preferred"]
-    first_action = rec["node"] in ("bb_first", "btn_vs_check")
+    first_action = _is_first_action(rec)
     wet = _wet(rec.get("board_texture", []))
     if rec.get("mixed"):
         return "mixed"
@@ -111,7 +125,7 @@ def explain(rec: Dict, board_favored: Optional[str] = None) -> Dict:
         fp = {a: round(100 * freq[a]) for a in freq}
         detail.append("Solver frequency: " + ", ".join(f"{_action_word(a)} {fp[a]}%" for a in ranked))
     # board-level range-advantage note where relevant
-    if board_favored and rec["node"] in ("bb_first", "btn_vs_check") and pref == "bet":
+    if board_favored and _is_first_action(rec) and pref == "bet":
         if board_favored == rec["acting_player"]:
             detail.append(f"{rec['acting_player']}'s range is stronger on this board, "
                           f"which supports betting.")

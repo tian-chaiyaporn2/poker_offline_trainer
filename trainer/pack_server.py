@@ -30,12 +30,6 @@ if os.path.join(ROOT, "src") not in sys.path:
     sys.path.insert(0, os.path.join(ROOT, "src"))
 from pokertrainer.content_pack import verify_pack
 
-SITUATION = {
-    "bb_first": "You are the BB (out of position), first to act on the flop.",
-    "btn_vs_check": "You are the BTN. The BB checked to you.",
-    "bb_vs_bet": "You are the BB. You checked; the BTN bet 66% of the pot.",
-    "btn_vs_bet": "You are the BTN. The BB bet 66% of the pot into you.",
-}
 ACTION_LABEL = {"check": "Check", "bet": "Bet 66%", "fold": "Fold",
                 "call": "Call", "raise": "Raise 3x"}
 QUESTIONS = {}
@@ -48,13 +42,36 @@ def _connect(path: str) -> sqlite3.Connection:
     return conn
 
 
+def _situation(node: str, actor: str, bet_pct: int = 66) -> str:
+    """Build situation text from structured fields — works across scenarios."""
+    if node.endswith("_first"):
+        return f"You are the {actor}, first to act on the flop."
+    if node.endswith("_vs_check"):
+        return f"You are the {actor}. The opponent checked to you."
+    if node.endswith("_vs_bet"):
+        return (f"You are the {actor}. You face a {bet_pct}% pot bet "
+                f"after checking.")
+    return f"You are the {actor} ({node})."
+
+
 def find_pack() -> str:
-    packs = sorted(glob.glob(os.path.join(ROOT, "output", "packs", "flop_pack_*.db")))
+    env = os.environ.get("POKERTRAINER_PACK")
+    if env:
+        if not os.path.exists(env):
+            raise SystemExit(f"POKERTRAINER_PACK not found: {env}")
+        return env
+    packs = glob.glob(os.path.join(ROOT, "output", "packs", "flop_pack_*.db"))
     if not packs:
         raise SystemExit("No content pack found. Build one:\n"
                          "  PYTHONPATH=src python -m pokertrainer.content_pack "
                          "--records output/content_yield_preview/records.json --version v0_preview")
-    return packs[-1]
+    # Prefer non-demo/non-preview packs; pick newest by mtime (not lexicographic —
+    # v9 sorts after v10).
+    primary = [p for p in packs
+               if "demo" not in os.path.basename(p)
+               and "preview" not in os.path.basename(p)]
+    candidates = primary or packs
+    return max(candidates, key=os.path.getmtime)
 
 
 def load_pack():
@@ -82,6 +99,11 @@ def load_pack():
         "preferred_action, action_grades, reason, headline, detail, mixed "
         "FROM flop_decision").fetchall()
     conn.close()
+    try:
+        cfg = json.loads(meta.get("config") or "{}")
+        bet_pct = int(cfg.get("bet_pct_pot", 66))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        bet_pct = 66
     q = {}
     for (rid, board, node, actor, hand, actions, ev, freq, pref, grades,
          reason, headline, detail, mixed) in rows:
@@ -89,7 +111,7 @@ def load_pack():
         q[rid] = {
             "id": rid, "board": cards, "node": node, "acting_player": actor,
             "hero_cards": [hand[0:2], hand[2:4]],
-            "situation": SITUATION.get(node, node),
+            "situation": _situation(node, actor, bet_pct),
             "actions": json.loads(actions), "ev": json.loads(ev), "freq": json.loads(freq),
             "preferred_action": pref, "action_grades": json.loads(grades),
             "reason": reason, "headline": headline, "detail": json.loads(detail),
@@ -172,6 +194,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(body)))
             self.end_headers(); self.wfile.write(body)
         elif p == "/api/next":
+            if not QUESTIONS:
+                self._json({"error": "no questions available"}, 503); return
             self._json(public_question(random.choice(list(QUESTIONS.values()))))
         elif p == "/api/stats":
             self._json({**stats(), "pack": PACK_META})
@@ -204,8 +228,11 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     global QUESTIONS, PACK_META
     name, meta, QUESTIONS, verdict = load_pack()
+    if not QUESTIONS:
+        raise SystemExit(f"Content pack {name} has zero decision records.")
+    # records count comes from verified row count, never unsigned pack_meta
     PACK_META = {"file": name, "version": meta.get("version"),
-                 "records": meta.get("record_count"),
+                 "records": verdict.get("records"),
                  "signed": bool(verdict.get("hash_ok") and verdict.get("signature_ok"))}
     init_results()
     port = int(os.environ.get("PORT", "8000"))
