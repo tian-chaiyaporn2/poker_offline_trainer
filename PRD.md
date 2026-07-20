@@ -383,6 +383,11 @@ The scorer emits two backlogs that drive planning:
 
 ### 13.3 Phased roadmap
 
+> Two new domains beyond postflop GTO — **pre-flop training** and **exploit mode**
+> (play vs irrational opponents) — are specced with work breakdowns in
+> [`docs/preflop_and_exploit_plan.md`](preflop_and_exploit_plan.md).
+
+
 1. **MVP (current)** — flop decisions for one scenario (BTN opens, BB calls,
    single-raised pot, 100 bb, 66% c-bet), on a prioritized board set. Launch gate:
    ≥1,200 accepted records with coverage across nodes, textures, hand categories,
