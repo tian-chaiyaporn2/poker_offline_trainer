@@ -464,7 +464,7 @@ const TERMS = {
     herocap:"Your hand (2 hole cards)"}
 };
 let order=[], pos=0, answered=false, cur=null, chosen=null, stats={n:0,solid:0,ok:0,leak:0};
-let mode=(function(){try{const m=localStorage.getItem("lang");return (m==="poker"||m==="learning"||m==="progressive")?m:"progressive";}catch(e){return "progressive";}})();
+let mode=(function(){try{const m=localStorage.getItem("lang");return (m==="poker"||m==="learning"||m==="plain"||m==="progressive")?m:"progressive";}catch(e){return "progressive";}})();
 // Adaptive mode: each concept shows in plain words until you've EARNED it (played a
 // spot that uses it well); then it graduates to the poker term + its meaning.
 let learned=(function(){try{return new Set(JSON.parse(localStorage.getItem("learned")||"[]"));}catch(e){return new Set();}})();
@@ -472,7 +472,9 @@ const VOCAB_TOTAL=2+Object.keys(TERMS.poker.reason).length;
 function eff(term){return mode!=="progressive"?mode:(learned.has(term)?"learning":"plain");}
 function T(){return TERMS[eff("streets")];}
 function posLabel(p){return (TERMS[eff("positions")].pos[p]||p);}
-function actLabel(a){return (TERMS[eff("positions")].act[a]||a);}
+function actLabel(a){const m=eff("positions");
+  if(m!=="plain"&&cur&&cur.labels&&cur.labels[a])return cur.labels[a];  // per-pack bet/raise sizing
+  return (TERMS[m].act[a]||a);}
 function reasonLabel(r){return (TERMS[eff("reason:"+r)].reason[r]||r);}
 function situation(q){
   const first=q.node.endsWith("_first"), vscheck=q.node.endsWith("_vs_check");
@@ -573,6 +575,7 @@ function answer(a){
   document.getElementById("ok").textContent=stats.ok;document.getElementById("leak").textContent=stats.leak;
   document.getElementById("acc").textContent=Math.round(100*(stats.solid+stats.ok)/stats.n)+"%";
   const gained=tryUnlock(cur,g);
+  if(gained.length)renderQuestion(cur);  // this hand's buttons/situation graduate too, in sync with the unlock
   renderFeedback(cur,a,gained);
   document.getElementById("next").focus();
 }
