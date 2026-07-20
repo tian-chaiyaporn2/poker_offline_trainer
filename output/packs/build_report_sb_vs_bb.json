@@ -1,0 +1,35 @@
+{
+  "pack_id": "flop_srp_btn_bb_sb_vs_bb",
+  "version": "sb_vs_bb",
+  "config": {
+    "positions": {
+      "oop": "SB",
+      "ip": "BB"
+    },
+    "stack_bb": 100,
+    "pot_bb": 6.0,
+    "bet_pct_pot": 66,
+    "scenario": "sb_vs_bb_srp",
+    "note": "SB vs BB single-raised pot, 17 boards",
+    "solver_model": "full_street_cfr_plus"
+  },
+  "provenance": {
+    "git_commit": "8b0cd93950912618026b3702575b4a88ec31eadd",
+    "solver_model": "full_street_cfr_plus"
+  },
+  "grade_thresholds_pct_pot": {
+    "best": 0.25,
+    "good": 1.0,
+    "acceptable": 3.0,
+    "costly": 10.0
+  },
+  "record_count": "9730",
+  "signing_scheme": "hmac-sha256-dev",
+  "default_pot_bb": "6.0",
+  "content_hash": "852b50cbdb93c6c311534238e4fff1d10a6da802ef1a9de34224567372bc3af7",
+  "signature": "adafbc3ec118512d9d0448c5249e2b235581b9dba357d5b56d85da60ec2afc2d",
+  "db_bytes": 7229440,
+  "gz_bytes": 1328371,
+  "records_accepted": 21204,
+  "records_after_dedup": 9730
+}

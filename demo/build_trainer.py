@@ -20,10 +20,12 @@ from pokertrainer.content_pack import verify_pack
 DB = "output/packs/flop_pack_v1_fullrange.db"
 RAISE_DB = "output/packs/flop_pack_v1_raise_demo.db"   # reduced-range, but HAS fold/call/raise
 TR_DB = "output/packs/flop_pack_turnriver_demo.db"     # turn/river decisions (later-street demo)
+SB_DB = "output/packs/flop_pack_sb_vs_bb.db"           # 2nd scenario: SB vs BB (full range)
 PER_REASON = 6          # cap questions per reason for variety
 MAX_Q = 60
 RAISE_Q = 12            # extra 3-action spots blended in to show the raise UX
 TR_Q = 16               # turn/river spots blended in
+SB_Q = 20               # SB-vs-BB spots blended in (2nd position)
 
 STREET = {6: "flop", 8: "turn", 10: "river"}       # by board-string length
 
@@ -83,14 +85,26 @@ COLS = ("id board node acting_player hand actions ev freq preferred_action "
         "action_grades reason headline detail mixed").split()
 
 
-def _to_q(d):
+def _oop_pos(rows):
+    """OOP position = the actor in the '_first' node (works for any scenario)."""
+    for d in rows:
+        if d["node"].endswith("_first"):
+            return d["acting_player"]
+    return "BB"
+
+
+def _to_q(d, oop_pos="BB"):
     acts = json.loads(d["actions"])
     board = [d["board"][i:i+2] for i in range(0, len(d["board"]), 2)]
     street = STREET.get(len(d["board"]), "flop")
+    node = d["node"]
+    # Act order is a ROLE (OOP acts first, IP acts last), not tied to the position
+    # code — in SB-vs-BB the BB is IP (acts last), the opposite of BTN-vs-BB.
+    acts_first = node.endswith("_first") or (
+        not node.endswith("_vs_check") and d["acting_player"] == oop_pos)
     return {
         "board": board, "hero": [d["hand"][0:2], d["hand"][2:4]], "street": street,
-        "node": d["node"], "acting_player": d["acting_player"],
-        "situation": _situation(d["node"], d["acting_player"], street),
+        "node": node, "acting_player": d["acting_player"], "acts_first": acts_first,
         "actions": acts, "labels": {a: ALAB.get(a, a) for a in acts},
         "ev": {k: round(v, 2) for k, v in json.loads(d["ev"]).items()},
         "freq": {k: round(100 * v) for k, v in json.loads(d["freq"]).items()},
@@ -116,7 +130,8 @@ def load_questions():
     from itertools import zip_longest
     groups = [g[:PER_REASON] for g in buckets.values()]
     picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:MAX_Q]
-    return meta, [_to_q(d) for d in picked]
+    oop = _oop_pos(picked)
+    return meta, [_to_q(d, oop) for d in picked]
 
 
 def load_raise(n=RAISE_Q, required=True):
@@ -141,8 +156,9 @@ def load_raise(n=RAISE_Q, required=True):
     from itertools import zip_longest
     groups = [g[:3] for g in by_reason.values()]
     picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
+    oop = _oop_pos(picked)
     out = []
-    for q in (_to_q(d) for d in picked):
+    for q in (_to_q(d, oop) for d in picked):
         q["labels"] = {**q["labels"], "raise": raise_lab}
         q["badge"] = "raise demo"     # flag so the UI can note the reduced-range source
         out.append(q)
@@ -171,8 +187,9 @@ def load_turnriver(n=TR_Q, required=True):
     from itertools import zip_longest
     groups = [g[:2] for g in by_key.values()]
     picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
+    oop = _oop_pos(picked)
     out = []
-    for q in (_to_q(d) for d in picked):
+    for q in (_to_q(d, oop) for d in picked):
         q["badge"] = q["street"] + " · demo"
         out.append(q)
     streets = {q["street"] for q in out}
@@ -181,14 +198,42 @@ def load_turnriver(n=TR_Q, required=True):
     return out
 
 
+def load_sb(n=SB_Q, required=False):
+    """SB-vs-BB spots (2nd position, full range). Here the SB is out of position
+    (acts first) and the BB is in position (acts last) — inverse of BTN-vs-BB."""
+    if not os.path.exists(SB_DB):
+        if required:
+            raise SystemExit(f"SB pack missing ({SB_DB})")
+        print(f"  note: SB pack not present ({SB_DB}) — skipping SB spots")
+        return []
+    _require_verified(SB_DB)
+    c = sqlite3.connect(SB_DB)
+    rows = c.execute(f"SELECT {','.join(COLS)} FROM flop_decision").fetchall()
+    c.close()
+    dicts = [dict(zip(COLS, r)) for r in rows]
+    oop = _oop_pos(dicts)
+    buckets = defaultdict(list)
+    for d in dicts:
+        buckets[(d["node"], d["reason"])].append(d)
+    from itertools import zip_longest
+    groups = [g[:2] for g in buckets.values()]
+    picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
+    out = []
+    for q in (_to_q(d, oop) for d in picked):
+        q["badge"] = "SB vs BB"
+        out.append(q)
+    return out
+
+
 def build(allow_missing_demo_packs=False):
     meta, qs = load_questions()
     raise_qs = load_raise(required=not allow_missing_demo_packs)
     tr_qs = load_turnriver(required=not allow_missing_demo_packs)
-    qs = qs + raise_qs + tr_qs
+    sb_qs = load_sb()
+    qs = qs + raise_qs + tr_qs + sb_qs
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
                             capture_output=True, text=True).stdout.strip() or "local"
-    print(f"  ({len(raise_qs)} raise + {len(tr_qs)} turn/river spots blended from reduced-range demo packs)")
+    print(f"  ({len(raise_qs)} raise + {len(tr_qs)} turn/river + {len(sb_qs)} SB-vs-BB spots blended in)")
     # Escape </script> so pack strings cannot break out of the inline script.
     data = json.dumps(qs, separators=(",", ":")).replace("<", "\\u003c")
     body = TEMPLATE.replace("__DATA__", data).replace("__VERSION__", html.escape(meta.get("version", ""))) \
@@ -471,7 +516,9 @@ let learned=(function(){try{return new Set(JSON.parse(localStorage.getItem("lear
 const VOCAB_TOTAL=2+Object.keys(TERMS.poker.reason).length;
 function eff(term){return mode!=="progressive"?mode:(learned.has(term)?"learning":"plain");}
 function T(){return TERMS[eff("streets")];}
-function posLabel(p){return (TERMS[eff("positions")].pos[p]||p);}
+function posLabel(q){const m=eff("positions");
+  if(m==="plain")return q.acts_first?"You act first":"You act last";
+  return (TERMS[m].pos[q.acting_player]||q.acting_player);}
 function actLabel(a){const m=eff("positions");
   if(m!=="plain"&&cur&&cur.labels&&cur.labels[a])return cur.labels[a];  // per-pack bet/raise sizing
   return (TERMS[m].act[a]||a);}
@@ -486,7 +533,7 @@ function situation(q){
   }
   const pre=q.street==="turn"?"On the turn, ":q.street==="river"?"On the river, ":"On the flop, ";
   if(sm==="learning"){
-    const who="you're the "+q.acting_player+" (you act "+(q.acting_player==="BTN"?"last":"first")+")";
+    const who="you're the "+q.acting_player+" (you act "+(q.acts_first?"first":"last")+")";
     const role=first?", first to act.":vscheck?" — it's checked to you.":" facing a bet (their c-bet).";
     return pre+who+role;
   }
@@ -503,7 +550,7 @@ function card(t){const r=t[0],s=(t[1]||"").toLowerCase(),su=SUIT[s]||[s,0];
 function render(cs,el){el.innerHTML="";cs.forEach(c=>el.appendChild(card(c)));}
 
 function renderQuestion(q){
-  const posEl=document.getElementById("pos");posEl.textContent=posLabel(q.acting_player);posEl.className="pos "+q.acting_player;
+  const posEl=document.getElementById("pos");posEl.textContent=posLabel(q);posEl.className="pos "+q.acting_player;
   document.getElementById("sit").textContent=situation(q);
   const bd=document.getElementById("demotag");bd.hidden=!q.badge;bd.textContent=q.badge||"";
   document.getElementById("boardcap").textContent=(T().boardcap&&T().boardcap[q.street])||"Flop";
