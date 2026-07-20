@@ -290,16 +290,34 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .foot code{font-family:var(--mono)}.foot a{color:var(--brass)}
 .hint{font-size:11px;color:var(--muted);text-align:center;margin-top:10px}
 kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--ink) 8%,transparent);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+.hright{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.lang{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;font-size:12px;flex:none}
+.lang button{appearance:none;border:none;background:transparent;color:var(--muted);padding:5px 13px;cursor:pointer;font-family:var(--sans);font-weight:600}
+.lang button.on{background:var(--brass);color:#fff}
+.lang button:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.glossary{margin-top:16px;border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:0 16px}
+.glossary summary{cursor:pointer;font-weight:600;padding:13px 0;font-size:13px;color:var(--brass);list-style:none}
+.glossary summary::-webkit-details-marker{display:none}
+.glossary summary::before{content:"＋ ";font-family:var(--mono)}
+.glossary[open] summary::before{content:"－ "}
+.glossary dl{margin:0 0 14px;font-size:12.5px;line-height:1.5}
+.glossary dt{font-weight:700;margin-top:9px}
+.glossary dd{margin:1px 0 0;color:var(--muted)}
 </style>
 <div class="wrap">
   <header>
     <div class="brand"><span class="sp">&spades;</span> Full-Street Flop Trainer</div>
-    <div class="score" id="score" hidden>
-      <span class="acc" id="acc">—</span>
-      <span>played <b id="n">0</b></span>
-      <span style="color:var(--best)">solid <b id="solid">0</b></span>
-      <span style="color:var(--accept)">ok <b id="ok">0</b></span>
-      <span style="color:var(--costly)">leak <b id="leak">0</b></span>
+    <div class="hright">
+      <div class="lang" id="lang" role="group" aria-label="Language level">
+        <button data-m="plain" type="button">Plain</button><button data-m="poker" type="button">Poker</button>
+      </div>
+      <div class="score" id="score" hidden>
+        <span class="acc" id="acc">—</span>
+        <span>played <b id="n">0</b></span>
+        <span style="color:var(--best)">solid <b id="solid">0</b></span>
+        <span style="color:var(--accept)">ok <b id="ok">0</b></span>
+        <span style="color:var(--costly)">leak <b id="leak">0</b></span>
+      </div>
     </div>
   </header>
   <div class="bar-top"><i id="prog" style="width:0"></i></div>
@@ -334,13 +352,76 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
     raise + turn/river passes are the next depth work.<br>
     Prefer to review the answers at a glance? See the <a href="preview.html">content gallery</a>.
   </div>
+  <details class="glossary">
+    <summary>Poker terms — tap to learn the lingo</summary>
+    <dl>
+      <dt>Position — Button (BTN), Big Blind (BB), Small Blind (SB)</dt>
+      <dd>Where you sit. The Button acts last after the flop (an advantage); the blinds act first.</dd>
+      <dt>In / out of position</dt>
+      <dd>Whether you act last (in position) or first (out of position) on each street.</dd>
+      <dt>C-bet (continuation bet)</dt>
+      <dd>Betting the flop after you were the one who raised before it.</dd>
+      <dt>Value bet</dt>
+      <dd>Betting a strong hand to get called by weaker ones.</dd>
+      <dt>Bluff / semi-bluff</dt>
+      <dd>Betting a weak hand to make better hands fold. A semi-bluff is a draw that can still improve.</dd>
+      <dt>Bluff-catch</dt>
+      <dd>Calling with a medium hand mainly to beat the times they're bluffing.</dd>
+      <dt>Pot control</dt>
+      <dd>Checking a decent-but-not-great hand to keep the pot small.</dd>
+      <dt>Trap</dt>
+      <dd>Checking a very strong hand to let opponents catch up or bluff into you.</dd>
+      <dt>EV (expected value)</dt>
+      <dd>Your average profit from a play, measured in big blinds (bb).</dd>
+      <dt>Range</dt>
+      <dd>All the different hands a player could have in this exact spot.</dd>
+      <dt>Pot odds</dt>
+      <dd>The price you're getting to call, compared with the size of the pot.</dd>
+    </dl>
+  </details>
 </div>
 <script>
 const Q = __DATA__;
 const SUIT = {s:["♠",0],h:["♥",1],d:["♦",1],c:["♣",0]};
 const VERD = {best:"Best — the top play.",good:"Good — barely gives anything up.",
   acceptable:"OK — playable, not ideal.",costly:"Costly — a recurring leak.",major_error:"Major error — clearly dominated."};
-let order=[], pos=0, answered=false, stats={n:0,solid:0,ok:0,leak:0};
+// Plain (no jargon) vs Poker (real terminology) — the same data, two vocabularies.
+const TERMS = {
+  poker:{
+    pos:{BTN:"BTN",BB:"BB",SB:"SB"},
+    act:{check:"Check",bet:"Bet 66%",fold:"Fold",call:"Call",raise:"Raise 3×"},
+    reason:{value:"Value bet",protection:"Protection",bluff:"Bluff",semi_bluff:"Semi-bluff",
+      pot_control:"Pot control",trap:"Trap",realization:"Give up / realize equity",value_call:"Value call",
+      bluff_catch:"Bluff-catch",call_odds:"Call on odds",raise_value:"Value raise",raise_bluff:"Bluff raise",
+      raise_semibluff:"Semi-bluff raise",fold:"Fold",mixed:"Mixed / close"},
+    ev:"EV"},
+  plain:{
+    pos:{BTN:"In position",BB:"Out of position",SB:"Out of position"},
+    act:{check:"Check (pass)",bet:"Bet ⅔ pot",fold:"Fold",call:"Call (match)",raise:"Raise"},
+    reason:{value:"Bet a strong hand for profit",protection:"Bet so draws pay to chase",
+      bluff:"Bet a weak hand to fold them out",semi_bluff:"Bet a draw that can improve",
+      pot_control:"Check to keep the pot small",trap:"Check a monster to trap",
+      realization:"Check a weak hand for a free card",value_call:"Call — you're likely ahead",
+      bluff_catch:"Call to catch a bluff",call_odds:"Call — the price is right",
+      raise_value:"Raise a strong hand to build the pot",raise_bluff:"Raise as a bluff",
+      raise_semibluff:"Raise a draw",fold:"Fold a weak hand",mixed:"Close — either works"},
+    ev:"profit"}
+};
+let order=[], pos=0, answered=false, cur=null, chosen=null, stats={n:0,solid:0,ok:0,leak:0};
+let mode=(function(){try{return localStorage.getItem("lang")==="poker"?"poker":"plain";}catch(e){return "plain";}})();
+function T(){return TERMS[mode];}
+function posLabel(p){return (T().pos[p]||p);}
+function actLabel(a){return (T().act[a]||a);}
+function reasonLabel(r){return (T().reason[r]||r);}
+function situation(q){
+  const pre=q.street==="turn"?"On the turn, ":q.street==="river"?"On the river, ":"On the flop, ";
+  const who=mode==="poker"?("you're the "+q.acting_player):("you're "+posLabel(q.acting_player).toLowerCase());
+  let role;
+  if(q.node.endsWith("_first")) role=", first to act.";
+  else if(q.node.endsWith("_vs_check")) role=" and it's checked to you.";
+  else role=mode==="poker"?" facing a 66% c-bet.":" facing a two-thirds-pot bet.";
+  return pre+who+role;
+}
 
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 function card(t){const r=t[0],s=(t[1]||"").toLowerCase(),su=SUIT[s]||[s,0];
@@ -350,12 +431,9 @@ function card(t){const r=t[0],s=(t[1]||"").toLowerCase(),su=SUIT[s]||[s,0];
   e.appendChild(b);e.appendChild(i);return e;}
 function render(cs,el){el.innerHTML="";cs.forEach(c=>el.appendChild(card(c)));}
 
-function deal(){
-  answered=false;
-  const q=Q[order[pos]];
-  document.getElementById("fb").className="fb";
-  const posEl=document.getElementById("pos");posEl.textContent=q.acting_player;posEl.className="pos "+q.acting_player;
-  document.getElementById("sit").textContent=q.situation;
+function renderQuestion(q){
+  const posEl=document.getElementById("pos");posEl.textContent=posLabel(q.acting_player);posEl.className="pos "+q.acting_player;
+  document.getElementById("sit").textContent=situation(q);
   const bd=document.getElementById("demotag");bd.hidden=!q.badge;bd.textContent=q.badge||"";
   document.getElementById("boardcap").textContent=q.street?q.street[0].toUpperCase()+q.street.slice(1):"Flop";
   render(q.board,document.getElementById("board"));
@@ -363,42 +441,35 @@ function deal(){
   const box=document.getElementById("acts");box.innerHTML="";
   q.actions.forEach((a,i)=>{
     const b=document.createElement("button");b.className="act";b.dataset.a=a;
-    const lab=document.createElement("span");lab.textContent=q.labels[a];
+    const lab=document.createElement("span");lab.textContent=actLabel(a);
     const k=document.createElement("span");k.className="k";k.textContent=String(i+1);
     b.appendChild(lab);b.appendChild(k);
     b.onclick=()=>answer(a);box.appendChild(b);
   });
   document.getElementById("prog").style.width=(100*pos/Q.length)+"%";
 }
-function answer(a){
-  if(answered)return;answered=true;
-  const q=Q[order[pos]], g=q.grades[a];
+function deal(){answered=false;chosen=null;cur=Q[order[pos]];document.getElementById("fb").className="fb";renderQuestion(cur);}
+
+function renderFeedback(q,a){
   document.querySelectorAll("#acts .act").forEach(b=>{
-    b.disabled=true;const ga=q.grades[b.dataset.a];b.classList.add("g-"+ga);
+    b.disabled=true;const ga=q.grades[b.dataset.a];b.className="act g-"+ga;
     if(b.dataset.a===a)b.classList.add("chosen");
   });
-  // score
-  stats.n++;
-  if(g==="best"||g==="good")stats.solid++;else if(g==="acceptable")stats.ok++;else stats.leak++;
-  const sc=document.getElementById("score");sc.hidden=false;
-  n.textContent=stats.n;solid.textContent=stats.solid;ok.textContent=stats.ok;leak.textContent=stats.leak;
-  document.getElementById("acc").textContent=Math.round(100*(stats.solid+stats.ok)/stats.n)+"%";
-  // verdict + why
+  const g=q.grades[a];
   const v=document.getElementById("verdict");v.className="verdict v-"+g;
   v.textContent="";const dot=document.createElement("span");dot.className="dot";v.appendChild(dot);
   v.appendChild(document.createTextNode(VERD[g]||g));
-  document.getElementById("reason").textContent=q.reason_label;
+  document.getElementById("reason").textContent=reasonLabel(q.reason);
   document.getElementById("head").textContent=q.headline;
   const dl=document.getElementById("det");dl.innerHTML="";q.detail.forEach(d=>{const li=document.createElement("li");li.textContent=d;dl.appendChild(li);});
-  // solver mix bars
   const bars=document.getElementById("bars");bars.innerHTML="";
   const maxf=Math.max(1,...q.actions.map(x=>q.freq[x]));
   q.actions.slice().sort((x,y)=>q.freq[y]-q.freq[x]).forEach(x=>{
     const ga=q.grades[x],rec=x===q.preferred,you=x===a;
     const row=document.createElement("div");row.className="row g-"+ga;
     const rlab=document.createElement("div");rlab.className="rlab";
-    const nm=document.createElement("span");nm.className="nm";nm.textContent=q.labels[x]+" ";
-    if(rec){const st=document.createElement("span");st.className="star";st.innerHTML="&#9733;";nm.appendChild(st);nm.appendChild(document.createTextNode(" "));}
+    const nm=document.createElement("span");nm.className="nm";nm.textContent=actLabel(x)+" ";
+    if(rec){const st=document.createElement("span");st.className="star";st.textContent="★";nm.appendChild(st);nm.appendChild(document.createTextNode(" "));}
     if(you){const yp=document.createElement("span");yp.className="you";yp.textContent="YOUR PICK";nm.appendChild(yp);}
     const num=document.createElement("span");num.className="num";
     const ev=q.ev[x];
@@ -411,15 +482,33 @@ function answer(a){
     track.appendChild(i);row.appendChild(rlab);row.appendChild(track);bars.appendChild(row);
   });
   document.getElementById("fb").className="fb on";
+}
+function answer(a){
+  if(answered)return;answered=true;chosen=a;
+  const g=cur.grades[a];
+  stats.n++;
+  if(g==="best"||g==="good")stats.solid++;else if(g==="acceptable")stats.ok++;else stats.leak++;
+  document.getElementById("score").hidden=false;
+  document.getElementById("n").textContent=stats.n;document.getElementById("solid").textContent=stats.solid;
+  document.getElementById("ok").textContent=stats.ok;document.getElementById("leak").textContent=stats.leak;
+  document.getElementById("acc").textContent=Math.round(100*(stats.solid+stats.ok)/stats.n)+"%";
+  renderFeedback(cur,a);
   document.getElementById("next").focus();
 }
 function next(){pos=(pos+1)%Q.length;if(pos===0)order=shuffle(order.slice());deal();}
+
+function applyModeUI(){document.querySelectorAll("#lang button").forEach(b=>b.classList.toggle("on",b.dataset.m===mode));}
+function setMode(m){mode=m;try{localStorage.setItem("lang",m);}catch(e){}applyModeUI();
+  if(cur){renderQuestion(cur);if(answered)renderFeedback(cur,chosen);}}
+document.querySelectorAll("#lang button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+
 document.getElementById("next").onclick=next;
 document.addEventListener("keydown",e=>{
-  if(!answered){const i=parseInt(e.key);const q=Q[order[pos]];if(i>=1&&i<=q.actions.length)answer(q.actions[i-1]);}
+  if(e.target.tagName==="SUMMARY")return;
+  if(!answered){const i=parseInt(e.key);if(cur&&i>=1&&i<=cur.actions.length)answer(cur.actions[i-1]);}
   else if(e.key==="Enter"||e.key===" "){e.preventDefault();next();}
 });
-order=shuffle([...Q.keys()]);deal();
+applyModeUI();order=shuffle([...Q.keys()]);deal();
 </script>'''
 
 if __name__ == "__main__":
