@@ -309,6 +309,99 @@ def resign_pack(db_path: str, signing_key: Optional[bytes] = None) -> Dict:
     return verify_pack(db_path, signing_key=signing_key)
 
 
+# Indifference threshold mirrored from content_yield (keep in sync).
+_CLEAR_SEP_PCT = 0.5
+
+
+def refresh_pack_lessons(db_path: str, signing_key: Optional[bytes] = None,
+                         pot_default: float = 5.5) -> Dict:
+    """Recompute mixed / hand_category / explanations from stored cards+EVs.
+
+    Does not re-solve. Repairs indifference labeling, river draw categories,
+    pocket-under-board-pair teaching labels, and backfills pot_bb / oop_pos /
+    ip_pos when missing.
+    """
+    from .cards import parse_cards, parse_hand
+    from .handinfo import describe_hand
+    from .validate_flop import hand_category
+
+    signing_key = _resolve_signing_key(signing_key)
+    conn = sqlite3.connect(db_path)
+    cols = {d[1] for d in conn.execute("PRAGMA table_info(flop_decision)")}
+    meta = dict(conn.execute("SELECT key, value FROM pack_meta").fetchall())
+    try:
+        cfg = json.loads(meta.get("config") or "{}")
+    except json.JSONDecodeError:
+        cfg = {}
+    pot_fallback = float(cfg.get("pot_bb") or meta.get("default_pot_bb") or pot_default)
+    positions = cfg.get("positions") or {}
+    oop_fallback = positions.get("oop")
+    ip_fallback = positions.get("ip")
+
+    for col, typ in (("pot_bb", "REAL"), ("oop_pos", "TEXT"), ("ip_pos", "TEXT"),
+                     ("scenario", "TEXT")):
+        if col not in cols:
+            conn.execute(f"ALTER TABLE flop_decision ADD COLUMN {col} {typ}")
+            cols.add(col)
+
+    select_cols = [
+        "id", "board", "board_texture", "board_favored", "node", "acting_player",
+        "decision_type", "hand", "hand_category", "actions", "ev", "freq",
+        "preferred_action", "ev_sep_pct", "mixed", "reason", "headline", "detail",
+        "pot_bb", "oop_pos", "ip_pos", "scenario",
+    ]
+    rows = conn.execute(f"SELECT {','.join(select_cols)} FROM flop_decision").fetchall()
+    updated = 0
+    for row in rows:
+        (rid, board, btex, bfav, node, actor, dtype, hand, hcat, actions_s, ev_s,
+         freq_s, pref, sep, mixed, reason, headline, detail_s, pot_bb, oop_pos,
+         ip_pos, scenario) = row
+        ev = json.loads(ev_s)
+        freq = json.loads(freq_s)
+        actions = json.loads(actions_s)
+        texture = json.loads(btex) if btex else []
+        rec_pot = float(pot_bb) if pot_bb is not None else pot_fallback
+        best = max(ev.values())
+        regrets = [100.0 * (best - v) / rec_pot for v in ev.values()]
+        new_sep = round(sorted(regrets)[1], 3) if len(regrets) > 1 else 0.0
+        new_mixed = all(g < _CLEAR_SEP_PCT for g in regrets)
+        try:
+            new_hcat = hand_category(describe_hand(parse_hand(hand), parse_cards(board)))
+        except Exception:
+            new_hcat = hcat
+        rec = {
+            "node": node, "acting_player": actor, "hand": hand, "board": board,
+            "hand_category": new_hcat, "preferred": pref, "actions": actions,
+            "ev": ev, "freq": freq, "ev_sep_pct": new_sep, "mixed": new_mixed,
+            "board_texture": texture,
+            "decision_type": dtype or (
+                "first_action" if str(node).endswith(("_first", "_vs_check"))
+                else "vs_bet"),
+        }
+        expl = explain(rec, bfav)
+        new_oop = oop_pos or oop_fallback
+        new_ip = ip_pos or ip_fallback
+        changed = (
+            bool(mixed) != new_mixed or sep != new_sep or hcat != new_hcat
+            or reason != expl["reason"] or headline != expl["headline"]
+            or detail_s != json.dumps(expl["detail"])
+            or pot_bb is None or oop_pos != new_oop or ip_pos != new_ip
+        )
+        if not changed:
+            continue
+        conn.execute(
+            "UPDATE flop_decision SET hand_category=?, ev_sep_pct=?, mixed=?, reason=?, "
+            "headline=?, detail=?, pot_bb=?, oop_pos=?, ip_pos=? WHERE id=?",
+            (new_hcat, new_sep, int(new_mixed), expl["reason"], expl["headline"],
+             json.dumps(expl["detail"]), rec_pot, new_oop, new_ip, rid),
+        )
+        updated += 1
+    conn.commit()
+    conn.close()
+    verdict = resign_pack(db_path, signing_key=signing_key)
+    return {"updated": updated, **verdict}
+
+
 DEFAULT_CONFIG = {
     "positions": {"ip": "BTN", "oop": "BB"}, "stack_bb": 100, "pot_bb": 5.5,
     "bet_pct_pot": 66, "rake": 0, "solver_model": "full_street_cfr_plus",
@@ -322,12 +415,16 @@ if __name__ == "__main__":
     ap.add_argument("--out", default="output/packs")
     ap.add_argument("--pot", type=float, default=5.5)
     ap.add_argument("--resign", help="re-sign an existing pack DB in place")
+    ap.add_argument("--refresh-lessons",
+                    help="recompute mixed/explanations (+ backfill pot/roles) in place")
     a = ap.parse_args()
-    if a.resign:
+    if a.refresh_lessons:
+        print("refresh:", refresh_pack_lessons(a.refresh_lessons))
+    elif a.resign:
         print("resign:", resign_pack(a.resign))
     else:
         if not a.records:
-            ap.error("--records is required unless --resign is set")
+            ap.error("--records is required unless --resign/--refresh-lessons is set")
         recs = json.load(open(a.records))
         rep = build_pack(recs, DEFAULT_CONFIG, out_dir=a.out, version=a.version, pot=a.pot)
         print(json.dumps(rep, indent=2))

@@ -40,6 +40,19 @@ def test_board_pair_only_is_air_not_weak_pair():
     assert hand_category(desc) != "weak_pair"
 
 
+def test_pocket_under_board_pair_is_weak_pair_not_strong_made():
+    desc = describe_hand(parse_hand("4h4c"), parse_cards("KsKd6h"))
+    assert "pocket pair" in desc
+    assert "two pair" not in desc
+    assert hand_category(desc) == "weak_pair"
+
+
+def test_river_has_no_draw_labels():
+    desc = describe_hand(parse_hand("Ah5h"), parse_cards("Th9h8d2c7c"))
+    assert "draw" not in desc
+    assert hand_category(desc) == "air"
+
+
 def test_equity_matrix_rejects_board_collision():
     board = parse_cards("AsKd2c")
     with pytest.raises(ValueError, match="collides"):

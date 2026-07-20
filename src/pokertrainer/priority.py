@@ -97,8 +97,11 @@ def score_records(records: List[Dict], pot: float = 5.5, weights=None) -> List[D
     for r in recs:
         tex = tuple(r.get("board_texture", []))
         evs = list(r["ev"].values())
+        # Prefer the record's own pot (SB-vs-BB is 6.0; BTN-vs-BB is 5.5) so
+        # impact % is comparable across multi-scenario libraries.
+        rec_pot = float(r["pot_bb"]) if r.get("pot_bb") is not None else float(pot)
         raw_freq.append(freqs.get(tex, 0.0) * float(r.get("reach_mass", 0.0)))
-        raw_impact.append((max(evs) - min(evs)) / pot if evs else 0.0)
+        raw_impact.append((max(evs) - min(evs)) / rec_pot if evs and rec_pot else 0.0)
         raw_intu.append(INTUITION.get(_reason(r), 0.5))
     fr, im, it = _pctrank(raw_freq), _pctrank(raw_impact), _pctrank(raw_intu)
     for i, r in enumerate(recs):

@@ -91,9 +91,14 @@ def extract_records(flop_str, oop, ip, iters, make, pot, bet_frac,
         r["acting_player"] = oop_pos if role == "oop" else ip_pos
         r["hand_category"] = hand_category(describe_hand(parse_hand(r["hand"]), flop))
         r["decision_type"] = "first_action" if r["node"] in ("bb_first", "btn_vs_check") else "vs_bet"
-        top2 = sorted(r["ev"].values(), reverse=True)[:2]     # best vs 2nd-best action
-        r["ev_sep_pct"] = round(100 * (top2[0] - top2[1]) / pot, 3)
-        r["mixed"] = r["ev_sep_pct"] < CLEAR_SEP_PCT
+        best = max(r["ev"].values())
+        regrets = [100.0 * (best - v) / pot for v in r["ev"].values()]
+        # Gap to 2nd-best (teaching detail / indifference readout).
+        r["ev_sep_pct"] = round(sorted(regrets)[1], 3) if len(regrets) > 1 else 0.0
+        # "Mixed" means EVERY legal action is near-indifferent — not merely top-2.
+        # Otherwise a 3-action spot with raise≈call but fold dominated gets the
+        # "either is acceptable" headline while fold is a major error.
+        r["mixed"] = all(g < CLEAR_SEP_PCT for g in regrets)
         # Accepted: practically reached (unstable/reduced-range handled elsewhere).
         r["accepted"] = r["reach_mass"] >= MIN_REACH
         # explain() reads the ROLE node (first-action check) + the scenario

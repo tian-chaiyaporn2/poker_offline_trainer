@@ -48,7 +48,7 @@ def _situation(node, actor, street):
         return pre + f"you're the {actor}, first to act."
     if node.endswith("_vs_check"):
         return pre + f"it's checked to you ({actor})."
-    return pre + f"you face a 66% bet ({actor})."
+    return pre + f"you face a bet ({actor})."
 
 SITUATION = {
     "bb_first": "You're the BB, first to act on the flop.",
@@ -94,23 +94,30 @@ def _oop_pos(rows):
 
 
 def _to_q(d, oop_pos="BB"):
+    from pokertrainer.explanations import freq_pct_ints
     acts = json.loads(d["actions"])
     board = [d["board"][i:i+2] for i in range(0, len(d["board"]), 2)]
     street = STREET.get(len(d["board"]), "flop")
     node = d["node"]
     # Act order is a ROLE (OOP acts first, IP acts last), not tied to the position
-    # code — in SB-vs-BB the BB is IP (acts last), the opposite of BTN-vs-BB.
+    # code — in SB-vs-BB the BB is IP (acts last), the opposite of BTN-vs-BB. (This
+    # stays role-based: the situation copy below clarifies "checked, now facing a bet".)
     acts_first = node.endswith("_first") or (
         not node.endswith("_vs_check") and d["acting_player"] == oop_pos)
+    freq_raw = {k: float(v) for k, v in json.loads(d["freq"]).items()}
     return {
         "board": board, "hero": [d["hand"][0:2], d["hand"][2:4]], "street": street,
         "node": node, "acting_player": d["acting_player"], "acts_first": acts_first,
+        "is_oop": d["acting_player"] == oop_pos,
         "actions": acts, "labels": {a: ALAB.get(a, a) for a in acts},
         "ev": {k: round(v, 2) for k, v in json.loads(d["ev"]).items()},
-        "freq": {k: round(100 * v) for k, v in json.loads(d["freq"]).items()},
+        # Largest-remainder ints so the Pro frequency mix always sums to 100.
+        "freq": freq_pct_ints(freq_raw, order=acts),
         "preferred": d["preferred_action"], "grades": json.loads(d["action_grades"]),
         "reason": d["reason"], "reason_label": RLAB.get(d["reason"], d["reason"]),
         "headline": d["headline"], "detail": json.loads(d["detail"]),
+        # Near-indifferent spots: let feedback treat them as ties, not a punished pick.
+        "mixed": bool(d.get("mixed")),
     }
 
 
@@ -470,7 +477,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
       <dt>Check · Bet · Call · Raise · Fold</dt>
       <dd>Pass (no bet) · put chips in · match a bet · bet even more · give up the hand.</dd>
       <dt>Position — Button (BTN), Big Blind (BB), Small Blind (SB)</dt>
-      <dd>Where you sit. The Button acts last after the flop (an advantage); the blinds act first.</dd>
+      <dd>Where you sit. After the flop, the player in position (usually the Button) acts last — an advantage; out of position acts first. In blind-vs-blind, the BB is in position.</dd>
       <dt>In / out of position</dt>
       <dd>Whether you act last (in position) or first (out of position) on each street.</dd>
       <dt>C-bet (continuation bet)</dt>
@@ -519,23 +526,39 @@ function handRead(hero,board){
   const suitCnt={};allS.forEach(s=>suitCnt[s]=(suitCnt[s]||0)+1);
   const flush=Object.keys(suitCnt).some(s=>suitCnt[s]>=5);
   const straight=hasStraight(allV),maxB=Math.max(...bv),sortB=[...new Set(bv)].sort((a,b)=>b-a),pocket=hv[0]===hv[1];
+  const bCnt={};bv.forEach(v=>bCnt[v]=(bCnt[v]||0)+1);
+  const boardPaired=Object.keys(bCnt).some(v=>bCnt[v]>=2);
   const top=cnt[groups[0]],second=cnt[groups[1]]||0;
   let made,strength=null,cat="high",pairKind=null,overs=[];
-  if(flush&&straight){made="a straight flush";cat="sflush";}
-  else if(top===4){made="four of a kind ("+MANY[groups[0]]+")";cat="quads";}
-  else if(top===3&&second>=2){made="a full house";cat="full";}
-  else if(flush){made="a flush";cat="flush";}
-  else if(straight){made="a straight";cat="straight";}
-  else if(top===3){made=(pocket&&hv[0]===groups[0])?"a set of "+MANY[groups[0]]+" (three of a kind)":"three "+MANY[groups[0]]+" (three of a kind)";cat="trips";}
-  else if(top===2&&second===2){made="two pair";cat="twopair";}
-  else if(top===2){const pr=groups[0];made="a pair of "+MANY[pr];cat="pair";
+  // A pair/trips the hero doesn't contribute to is the shared board, not their hand —
+  // teach it by what the hero actually holds, not the board's rank.
+  const air=()=>{made=ONE[Math.max(...hv)]+" high (no pair)";cat="high";};
+  function pairOf(pr){
+    made="a pair of "+MANY[pr];cat="pair";
     overs=[...new Set(bv.filter(v=>v>pr))].sort((a,b)=>b-a);
     if(pocket&&hv[0]===pr){if(pr>maxB){pairKind="over";strength="an overpair (higher than every shared card)";}
       else{pairKind="under";strength="the "+ONE[maxB]+" among the shared cards outranks it";}}
     else if(pr===sortB[0]){pairKind="top";strength="top pair (you matched the highest shared card)";}
     else if(pr===sortB[1]){pairKind="mid";strength="middle pair";}
-    else{pairKind="low";strength="a low pair";}}
-  else made=ONE[Math.max(...hv)]+" high (no pair)";
+    else{pairKind="low";strength="a low pair";}
+  }
+  if(flush&&straight){made="a straight flush";cat="sflush";}
+  else if(top===4){made="four of a kind ("+MANY[groups[0]]+")";cat="quads";}
+  else if(top===3&&second>=2){made="a full house";cat="full";}
+  else if(flush){made="a flush";cat="flush";}
+  else if(straight){made="a straight";cat="straight";}
+  else if(top===3){const tr=groups[0];const heroInTrips=pocket?hv[0]===tr:hv.includes(tr);
+    if(!heroInTrips)air();   // board shows trips; hero contributes nothing
+    else{made=(pocket&&hv[0]===tr)?"a set of "+MANY[tr]+" (three of a kind)":"three "+MANY[tr]+" (three of a kind)";cat="trips";}}
+  else if(top===2&&second===2){
+    // Pocket pair + a separate board pair is two pair at showdown, but teach it as the pocket pair.
+    if(pocket&&boardPaired&&(bCnt[hv[0]]||0)<2)pairOf(hv[0]);
+    else{made="two pair";cat="twopair";}
+  }
+  else if(top===2){const pr=groups[0];const heroInPair=pocket?hv[0]===pr:hv.includes(pr);
+    if(!heroInPair)air();    // board-pair-only — hero holds none of that rank
+    else pairOf(pr);}
+  else air();
   let draw=null;
   if(!river&&!flush&&!straight){const parts=[];
     if(Object.keys(suitCnt).some(s=>suitCnt[s]===4&&hs.includes(s)))parts.push("a flush draw (four to a flush)");
@@ -589,7 +612,7 @@ const TERMS = {
       bluff_catch:"Call — you beat the hands they'd bluff with",call_odds:"Call — cheap enough to keep going",
       raise_value:"Raise a strong hand to build the pot",raise_bluff:"Raise as a bluff to make them fold",
       raise_semibluff:"Raise a hand that can improve",fold:"Fold — not strong enough to continue",
-      mixed:"It's close — either choice is fine"},
+      mixed:"It's close — any choice is fine"},
     ev:"profit",
     boardcap:{flop:"The 3 shared cards",turn:"The 4th shared card is out",river:"The last (5th) shared card"},
     herocap:"Your 2 cards (only you can see these)"},
@@ -602,7 +625,7 @@ const TERMS = {
       realization:"Realize equity — check and take a free card to improve",value_call:"Value call — you're ahead",
       bluff_catch:"Bluff-catch — you beat the hands they'd bluff with",call_odds:"Call on odds — the price is right to chase",
       raise_value:"Value raise — build the pot",raise_bluff:"Bluff raise — make them fold",
-      raise_semibluff:"Semi-bluff raise — raise a hand that can improve",fold:"Fold — not strong enough",mixed:"Mixed — either is fine"},
+      raise_semibluff:"Semi-bluff raise — raise a hand that can improve",fold:"Fold — not strong enough",mixed:"Mixed — any is fine"},
     ev:"EV",boardcap:{flop:"Flop (first 3 shared cards)",turn:"Turn (4th card)",river:"River (5th card)"},
     herocap:"Your hand (your 2 private cards)"}
 };
@@ -634,7 +657,7 @@ function reasonLabel(r){return (TERMS[eff("reason:"+r)].reason[r]||r);}
 // term-tagged phrase, Pro keeps the solver's baked headline.
 const PLAIN_HEAD={
   value:"You're ahead of the hands that would call — bet so the weaker ones pay you off.",
-  protection:"You're probably best, but cards could come that beat you — bet so the chasing hands have to pay.",
+  protection:"You're often ahead now, but cards could still come that beat you — bet so the chasing hands have to pay.",
   bluff:"Your hand probably can't win if you both check to the end — so bet to make better hands give up.",
   semi_bluff:"Betting can make better hands fold now — and if you're called, your hand can still improve to the best.",
   pot_control:"A decent hand, but not strong enough to build a big pot — check to keep it small and cheap.",
@@ -647,9 +670,20 @@ const PLAIN_HEAD={
   raise_value:"You're strong — raise to build a bigger pot while the worse hands pay.",
   raise_bluff:"Raising tells the story of a big hand — do it to pressure them into folding.",
   raise_semibluff:"Raise: you can fold out better hands now, and still improve if they call.",
-  mixed:"This one's genuinely close — either play is fine here."
+  mixed:"This one's genuinely close — any play is fine here."
 };
-function plainHead(q){return PLAIN_HEAD[q.reason]||TERMS.plain.reason[q.reason]||q.headline;}
+// River-specific "why": no more cards, so nothing about drawing / free cards / improving.
+const RIVER_PLAIN={
+  realization:"Nothing worth betting, and there are no more cards — just check and see who wins.",
+  semi_bluff:"You can't improve anymore — but you can still bet to make better hands fold.",
+  call_odds:"It's the last card — a cheap call to see who wins.",
+  raise_semibluff:"Nothing left to draw to — this raise is a bluff to pressure them into folding.",
+  protection:"The board is complete — bet to get paid by worse hands; nothing can catch up now."
+};
+function plainHead(q){
+  if(q.street==="river"&&RIVER_PLAIN[q.reason])return RIVER_PLAIN[q.reason];
+  return PLAIN_HEAD[q.reason]||TERMS.plain.reason[q.reason]||q.headline;
+}
 // The generalizable lesson — a one-line pattern per spot type, so the takeaway
 // transfers to the next hand instead of staying stuck to this one. Jargon-free.
 const RULES={
@@ -678,12 +712,15 @@ function situation(q){
     return "Your opponent just put chips in (bet). It's on you — match it, put in even more, or give up?";
   }
   const pre=q.street==="turn"?"On the turn, ":q.street==="river"?"On the river, ":"On the flop, ";
+  // vs_bet: an OOP player checked and now faces a bet; an IP player faces an opponent
+  // lead — not their own c-bet. (Same distinction the pack server already makes.)
+  const betRole=q.is_oop?" — you checked and now face a bet.":" — they led into you.";
   if(sm==="learning"){
     const who="you're the "+q.acting_player+" (you act "+(q.acts_first?"first":"last")+")";
-    const role=first?", first to act.":vscheck?" — it's checked to you.":" facing their c-bet (their flop bet).";
+    const role=first?", first to act.":vscheck?" — it's checked to you.":betRole;
     return pre+who+role;
   }
-  const role=first?", first to act.":vscheck?" and it's checked to you.":" facing a 66% c-bet.";
+  const role=first?", first to act.":vscheck?" and it's checked to you.":betRole;
   return pre+"you're the "+q.acting_player+role;
 }
 
@@ -730,6 +767,7 @@ function renderFeedback(q,a,gained){
   // single top-EV one) must still read as correct, not as a leak.
   let vmsg;
   if(g==="best")vmsg=(a===pref)?"✓ "+you+" — the best play here.":"✓ "+you+" — also a top play here.";
+  else if(q.mixed&&(g==="good"||g==="acceptable"))vmsg="✓ "+you+" — close enough; any play is fine here.";
   else if(g==="good")vmsg="✓ "+you+" works — "+best+" is only a touch better.";
   else if(g==="acceptable")vmsg="~ "+you+" is OK, but "+best+" is the better play.";
   else vmsg="✗ You picked "+you+" — "+(g==="major_error"?"a big mistake":"a costly leak")+". The play is "+best+".";
@@ -795,7 +833,7 @@ function renderFeedback(q,a,gained){
   const payoffView=(mode!=="poker");
   document.getElementById("mixhead").textContent=payoffView
     ?"What each choice is worth (best first)"
-    :"Solver mix — how often the solver plays each action, and its EV";
+    :"Solver mix — how often the solver plays each action (★ = best EV), and its EV";
   const bars=document.getElementById("bars");bars.innerHTML="";
   const maxf=Math.max(1,...q.actions.map(x=>q.freq[x]));
   const GW={best:100,good:82,acceptable:58,costly:32,major_error:12};   // bar = how good
@@ -809,7 +847,7 @@ function renderFeedback(q,a,gained){
     if(you)row.classList.add("you-row");
     const rlab=document.createElement("div");rlab.className="rlab";
     const nm=document.createElement("span");nm.className="nm";nm.textContent=actLabel(x)+" ";
-    if(rec){const st=document.createElement("span");st.className="star";st.textContent="★";nm.appendChild(st);nm.appendChild(document.createTextNode(" "));}
+    if(rec){const st=document.createElement("span");st.className="star";st.textContent="★";st.title="Best EV (recommended)";nm.appendChild(st);nm.appendChild(document.createTextNode(" "));}
     if(you){const yp=document.createElement("span");yp.className="you";yp.textContent="YOUR PICK";nm.appendChild(yp);}
     const num=document.createElement("span");num.className="num";
     const ev=q.ev[x];
@@ -864,7 +902,7 @@ function tryUnlock(q,g){
   return gained;
 }
 function unlockText(t){
-  if(t==="positions")return "Positions — the seats. The Button (BTN) acts last; the blinds (BB/SB) act first.";
+  if(t==="positions")return "Positions — who acts when. In position (IP) acts last (usually the Button); out of position (OOP) acts first. In blind-vs-blind, the BB is IP.";
   if(t==="streets")return "Flop, turn, river — the shared cards come in stages (3, then a 4th, then a 5th).";
   return (TERMS.poker.reason[t.slice(7)]||"")+" — "+(TERMS.learning.reason[t.slice(7)]||"").replace(/^[^—]*— /,"");
 }

@@ -304,12 +304,12 @@ class BatchedCFR:
         opp = np.where(opp > 1e-12, opp, 1.0)
         out = {}
         for i in range(self.no):
-            ev_ch = float(u_root[0, i, CHECK] / opp[i])
-            ev_bt = float(u_root[0, i, BET] / opp[i])
+            ev = {"check": float(u_root[0, i, CHECK] / opp[i]),
+                  "bet": float(u_root[0, i, BET] / opp[i])}
+            freq = {"check": float(s_root[0, i, CHECK]),
+                    "bet": float(s_root[0, i, BET])}
             out[hand_str((int(self.oc[i, 0]), int(self.oc[i, 1])))] = {
-                "ev": {"check": ev_ch, "bet": ev_bt},
-                "freq": {"check": float(s_root[0, i, CHECK]), "bet": float(s_root[0, i, BET])},
-                "preferred": "check" if ev_ch >= ev_bt else "bet",
+                "ev": ev, "freq": freq, "preferred": preferred_action(ev, freq),
             }
         return out
 
@@ -362,6 +362,16 @@ class BatchedCFR:
         }
 
 
+def preferred_action(ev: Dict[str, float], freq: Dict[str, float]) -> str:
+    """Recommend the max-EV action; break exact EV ties by higher solver frequency.
+
+    Training grades and explanations hang off this pick. Max-EV matches EV-loss
+    grading; frequency is only a tie-break so a near-indifferent spot does not
+    recommend the rarer mix action just because it appears first in the dict.
+    """
+    return max(ev, key=lambda a: (ev[a], freq.get(a, 0.0)))
+
+
 def _flop_decisions_from_cap(solver) -> List[Dict]:
     """Build per-hand records for all four flop decision nodes from an eval-mode
     capture. Works for both CPU (NumPy) and GPU (CuPy) solvers via to_host, and
@@ -390,6 +400,7 @@ def _flop_decisions_from_cap(solver) -> List[Dict]:
                 "node": key, "acting_player": player,
                 "hand": hand_str((int(combos[i, 0]), int(combos[i, 1]))),
                 "actions": list(actions), "ev": ev, "freq": freq,
-                "preferred": max(ev, key=ev.get), "reach_mass": float(opp_mass[i]),
+                "preferred": preferred_action(ev, freq),
+                "reach_mass": float(opp_mass[i]),
             })
     return recs

@@ -87,8 +87,13 @@ def grade_answer(q: dict, action: str) -> dict:
     grade = q["action_grade"].get(action, "costly")
     ev_loss = q["action_ev_loss_pct_pot"].get(action, 0.0)
     recommended = q["recommended_action"]
-    if grade == "good":
-        verdict = "Good — this is GTO-optimal (or within 0.5% of the pot of it)."
+    # Grade is EV-loss; recommended is max-EV. A non-recommended "good" is close,
+    # not "GTO-optimal" — that wording belongs only to the listed recommendation.
+    if action == recommended and grade == "good":
+        verdict = "Good — top action (or within 0.5% of the pot of it)."
+    elif grade == "good":
+        verdict = (f"Good — close to the best action "
+                   f"({_label(recommended)}); a small concession.")
     elif grade == "acceptable":
         verdict = (f"Acceptable — slightly suboptimal, costing about "
                    f"{ev_loss:.1f}% of the pot vs the best action.")

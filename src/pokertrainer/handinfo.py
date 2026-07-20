@@ -41,11 +41,13 @@ def describe_hand(hole: Combo, board: List[int]) -> str:
     hole_ranks = sorted((card_rank(c) for c in hole), reverse=True)
     board_ranks = sorted((card_rank(c) for c in board), reverse=True)
     top_board = board_ranks[0] if board_ranks else -1
+    board_paired = len(board_ranks) != len(set(board_ranks))
+    pocket = hole_ranks[0] == hole_ranks[1]
 
     if made == "one pair":
         # Distinguish overpair / top pair / lower. Board-pair-only (hero does not
         # pair a hole card and is not a pocket pair) stays high-card / air.
-        if hole_ranks[0] == hole_ranks[1]:  # pocket pair
+        if pocket:  # pocket pair
             labels = ["overpair" if hole_ranks[0] > top_board else "pocket pair"]
         else:
             paired_rank = next((r for r in hole_ranks if r in board_ranks), None)
@@ -55,10 +57,16 @@ def describe_hand(hole: Combo, board: List[int]) -> str:
                 labels = ["middle/bottom pair"]
             else:
                 labels = ["high card"]
+    elif made == "two pair" and pocket and board_paired:
+        # Pocket under a board pair is two pair at showdown, but for teaching it
+        # is still "a pocket pair" (often weak) — not a strong made two-pair hand.
+        labels = ["overpair" if hole_ranks[0] > top_board else "pocket pair"]
 
     draws = []
-    if _has_flush_draw(five) and "flush" not in made:
-        draws.append("flush draw")
-    if _has_open_ended(five) and "straight" not in made:
-        draws.append("straight draw")
+    # Draws only exist before the river — on a 5-card board nothing is left to hit.
+    if len(board) < 5:
+        if _has_flush_draw(five) and "flush" not in made:
+            draws.append("flush draw")
+        if _has_open_ended(five) and "straight" not in made:
+            draws.append("straight draw")
     return " + ".join(labels + draws)
