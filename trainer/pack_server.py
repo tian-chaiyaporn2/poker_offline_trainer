@@ -42,15 +42,23 @@ def _connect(path: str) -> sqlite3.Connection:
     return conn
 
 
-def _situation(node: str, actor: str, bet_pct: int = 66) -> str:
-    """Build situation text from structured fields — works across scenarios."""
+def _situation(node: str, actor: str, bet_pct: int = 66,
+               oop: str | None = None) -> str:
+    """Build situation text from structured fields — works across scenarios.
+
+    Facing-bet copy differs for OOP (checked, then faced a bet) vs IP (opponent
+    led into them). Infer OOP from pack config when provided.
+    """
     if node.endswith("_first"):
         return f"You are the {actor}, first to act on the flop."
     if node.endswith("_vs_check"):
         return f"You are the {actor}. The opponent checked to you."
     if node.endswith("_vs_bet"):
-        return (f"You are the {actor}. You face a {bet_pct}% pot bet "
-                f"after checking.")
+        if oop is not None and actor == oop:
+            return (f"You are the {actor}. You checked and face a "
+                    f"{bet_pct}% pot bet.")
+        return (f"You are the {actor}. The opponent led into you for "
+                f"{bet_pct}% of the pot.")
     return f"You are the {actor} ({node})."
 
 
@@ -102,8 +110,11 @@ def load_pack():
     try:
         cfg = json.loads(meta.get("config") or "{}")
         bet_pct = int(cfg.get("bet_pct_pot", 66))
+        positions = cfg.get("positions") or {}
+        oop = positions.get("oop")
     except (TypeError, ValueError, json.JSONDecodeError):
         bet_pct = 66
+        oop = None
     q = {}
     for (rid, board, node, actor, hand, actions, ev, freq, pref, grades,
          reason, headline, detail, mixed) in rows:
@@ -111,7 +122,7 @@ def load_pack():
         q[rid] = {
             "id": rid, "board": cards, "node": node, "acting_player": actor,
             "hero_cards": [hand[0:2], hand[2:4]],
-            "situation": _situation(node, actor, bet_pct),
+            "situation": _situation(node, actor, bet_pct, oop=oop),
             "actions": json.loads(actions), "ev": json.loads(ev), "freq": json.loads(freq),
             "preferred_action": pref, "action_grades": json.loads(grades),
             "reason": reason, "headline": headline, "detail": json.loads(detail),

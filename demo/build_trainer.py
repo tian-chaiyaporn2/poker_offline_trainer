@@ -105,11 +105,14 @@ def load_questions():
     return meta, [_to_q(d) for d in picked]
 
 
-def load_raise(n=RAISE_Q):
+def load_raise(n=RAISE_Q, required=True):
     """A few real fold/call/raise spots from the raise-enabled (reduced-range) pack,
     so the trainer demonstrates the 3-action UX until the full-range raise run lands."""
     if not os.path.exists(RAISE_DB):
-        print(f"  warn: optional raise pack missing ({RAISE_DB}) — skipping")
+        msg = f"optional raise pack missing ({RAISE_DB})"
+        if required:
+            raise SystemExit(msg + " — pass --allow-missing-demo-packs to skip")
+        print(f"  warn: {msg} — skipping")
         return []
     _require_verified(RAISE_DB)
     c = sqlite3.connect(RAISE_DB)
@@ -127,13 +130,18 @@ def load_raise(n=RAISE_Q):
     for q in (_to_q(d) for d in picked):
         q["badge"] = "raise demo"     # flag so the UI can note the reduced-range source
         out.append(q)
+    if required and len(out) < 3:
+        raise SystemExit(f"raise pack produced only {len(out)} spots (need ≥3)")
     return out
 
 
-def load_turnriver(n=TR_Q):
+def load_turnriver(n=TR_Q, required=True):
     """Turn + river decisions from the reduced-range later-street demo pack."""
     if not os.path.exists(TR_DB):
-        print(f"  warn: optional turn/river pack missing ({TR_DB}) — skipping")
+        msg = f"optional turn/river pack missing ({TR_DB})"
+        if required:
+            raise SystemExit(msg + " — pass --allow-missing-demo-packs to skip")
+        print(f"  warn: {msg} — skipping")
         return []
     _require_verified(TR_DB)
     c = sqlite3.connect(TR_DB)
@@ -151,13 +159,16 @@ def load_turnriver(n=TR_Q):
     for q in (_to_q(d) for d in picked):
         q["badge"] = q["street"] + " · demo"
         out.append(q)
+    streets = {q["street"] for q in out}
+    if required and not ({"turn", "river"} <= streets):
+        raise SystemExit(f"turn/river pack missing street coverage: {streets}")
     return out
 
 
-def build():
+def build(allow_missing_demo_packs=False):
     meta, qs = load_questions()
-    raise_qs = load_raise()
-    tr_qs = load_turnriver()
+    raise_qs = load_raise(required=not allow_missing_demo_packs)
+    tr_qs = load_turnriver(required=not allow_missing_demo_packs)
     qs = qs + raise_qs + tr_qs
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
                             capture_output=True, text=True).stdout.strip() or "local"
@@ -396,4 +407,9 @@ order=shuffle([...Q.keys()]);deal();
 </script>'''
 
 if __name__ == "__main__":
-    build()
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--allow-missing-demo-packs", action="store_true",
+                    help="skip raise/turn-river packs if absent (default: require them)")
+    a = ap.parse_args()
+    build(allow_missing_demo_packs=a.allow_missing_demo_packs)

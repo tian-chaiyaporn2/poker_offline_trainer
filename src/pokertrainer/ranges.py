@@ -14,6 +14,7 @@ known board (card removal).
 
 from __future__ import annotations
 
+import math
 from itertools import combinations
 from typing import Dict, List, Tuple
 
@@ -60,6 +61,12 @@ def expand_range(
     out: List[Tuple[Combo, float]] = []
     seen: set = set()
     for hand_class, weight in class_weights.items():
+        # NaN comparisons are always False — must reject non-finite explicitly.
+        if not isinstance(weight, (int, float)) or not math.isfinite(weight):
+            raise ValueError(
+                f"range weight for {hand_class!r} must be a finite number in [0, 1], "
+                f"got {weight!r}"
+            )
         if weight < 0 or weight > 1:
             raise ValueError(
                 f"range weight for {hand_class!r} must be in [0, 1], got {weight}"

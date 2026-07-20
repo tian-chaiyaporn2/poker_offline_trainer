@@ -151,3 +151,46 @@ All items below were independently reproduced. Status reflects this PR.
   offline POC; Origin checks would be a later hardening step.
 - **Full-range raise / check-check-filtered turn-river packs** — still future
   depth work; demos remain reduced-range and (for turn/river) unconditioned.
+- **Preview gallery missing optional reason chips** — soft skip kept for
+  raise-only reasons when the main pack has no raise spots; raise coverage
+  lives in the raise demo pack.
+
+---
+
+## Pass 2 (2026-07-20)
+
+### H5. NaN range weights bypassed `[0,1]` checks — **FIXED**
+- **Where:** `ranges.expand_range` (NaN comparisons are always false)
+- **Impact:** `load_scenario` → `run_scenario` → export could emit `NaN` into
+  `questions.json` / SQLite while still marking `"validation_status": "passed"`.
+- **Fix:** Explicit `math.isfinite` in `expand_range`; finite pot/bet/iters in
+  `load_scenario`; `allow_nan=False` on export JSON; guard zero/NaN weight sums
+  in `runner._range_frequencies`.
+
+### M10. Malformed frequencies still signed into packs — **FIXED**
+- **Where:** `content_yield._is_finite_record`, `content_pack._require_finite`
+- **Bug:** `validate_records` only soft-warned; checkpoint/pack accepted
+  `freq` summing to 0.8.
+- **Fix:** Packable-record filter and `build_pack` both require freq≈1 and
+  action key alignment.
+
+### M11. Turn/river paired boards tagged `unpaired` — **FIXED**
+- **Where:** `content_yield.board_texture`
+- **Bug:** Pairing used `len(set(ranks)) < 3` (flop-only). A paired turn has
+  three distinct ranks among four cards.
+- **Fix:** `len(set(ranks)) < len(ranks)`. Regenerated turn/river demo pack.
+
+### M12. Scenario positions label ignored — **FIXED**
+- **Where:** `scenario.load_scenario`
+- **Bug:** Accepted `positions={ip:CO,oop:SB}` while still loading BB/BTN ranges.
+- **Fix:** Require `{"ip":"BTN","oop":"BB"}` for the flop-only runner.
+
+### M13. Pack trainer said every facing-bet was “after checking” — **FIXED**
+- **Where:** `trainer/pack_server._situation`
+- **Bug:** IP nodes (`btn_vs_bet`) were described as if the hero had checked.
+- **Fix:** OOP vs IP facing-bet copy from pack config positions.
+
+### M14. Demo rebuild silently omitted raise/turn-river packs — **FIXED**
+- **Where:** `demo/build_trainer.py`
+- **Fix:** Require verified raise + turn/river packs by default; opt out with
+  `--allow-missing-demo-packs`. Assert street/action coverage.

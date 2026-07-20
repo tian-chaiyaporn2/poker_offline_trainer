@@ -333,3 +333,52 @@ def test_find_pack_prefers_mtime_not_lexicographic(tmp_path, monkeypatch):
     older.write_text("x"); time.sleep(0.02); newer.write_text("y")
     monkeypatch.setattr(ps, "ROOT", str(tmp_path))
     assert ps.find_pack() == str(newer)
+
+
+def test_range_rejects_nan_weights():
+    from pokertrainer.ranges import expand_range
+    with pytest.raises(ValueError, match="finite"):
+        expand_range({"AKs": float("nan")}, [])
+
+
+def test_scenario_rejects_mismatched_positions():
+    from pokertrainer.presets import BOARDS, build_scenario
+    from pokertrainer.scenario import load_scenario, ValidationError
+    raw = build_scenario(BOARDS[0])
+    raw["positions"] = {"ip": "CO", "oop": "SB"}
+    with pytest.raises(ValidationError, match="positions"):
+        load_scenario(raw)
+
+
+def test_board_texture_pairs_turn_boards():
+    from pokertrainer.content_yield import board_texture
+    tags = board_texture(parse_cards("As7h2d7c"))
+    assert "paired" in tags
+    assert "unpaired" not in tags
+
+
+def test_bad_freq_rejected_by_pack_and_finite_filter(tmp_path):
+    from pokertrainer.content_pack import build_pack, DEFAULT_CONFIG
+    from pokertrainer.content_yield import _is_finite_record
+    rec = {
+        "board": "As7h2d", "board_texture": ["rainbow"], "board_favored": "BTN",
+        "node": "bb_first", "acting_player": "BB", "decision_type": "first_action",
+        "hand": "AhKh", "hand_category": "air", "actions": ["check", "bet"],
+        "ev": {"check": 0.2, "bet": 0.0}, "freq": {"check": 0.5, "bet": 0.3},
+        "preferred": "check", "ev_sep_pct": 3.6, "mixed": False,
+        "reach_mass": 0.8, "accepted": True, "scenario": "btn_vs_bb_srp",
+    }
+    assert not _is_finite_record(rec)
+    try:
+        build_pack([rec], DEFAULT_CONFIG, out_dir=str(tmp_path), version="vbad")
+        assert False, "expected ValueError"
+    except ValueError as e:
+        assert "freq sums" in str(e)
+
+
+def test_pack_server_situation_distinguishes_ip_oop_vs_bet():
+    import trainer.pack_server as ps
+    oop = ps._situation("bb_vs_bet", "BB", 66, oop="BB")
+    ip = ps._situation("btn_vs_bet", "BTN", 66, oop="BB")
+    assert "checked" in oop and "led" not in oop
+    assert "led" in ip and "checked" not in ip

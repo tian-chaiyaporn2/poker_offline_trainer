@@ -101,7 +101,8 @@ def _pc(card_text: str) -> int:
 
 def write_json(questions: List[Dict], path: str) -> None:
     with open(path, "w") as f:
-        json.dump({"count": len(questions), "questions": questions}, f, indent=2)
+        json.dump({"count": len(questions), "questions": questions}, f, indent=2,
+                  allow_nan=False)
 
 
 def write_sqlite(questions: List[Dict], path: str) -> None:
@@ -145,7 +146,7 @@ def write_sqlite(questions: List[Dict], path: str) -> None:
                 json.dumps(q["action_frequencies"]),
                 json.dumps(q["action_ev_bb"]),
                 json.dumps(q["action_grade"]),
-                q["validation_status"], json.dumps(q),
+                q["validation_status"], json.dumps(q, allow_nan=False),
             ),
         )
     conn.commit()

@@ -71,18 +71,35 @@ def _action_grades(rec: Dict, pot: float) -> Dict[str, str]:
 
 
 def _require_finite(rec: Dict) -> None:
-    """Refuse non-finite numerics — SQLite stores NaN as NULL and would break the hash."""
+    """Refuse non-finite / incoherent numerics before they enter a signed pack."""
     for key in ("ev_sep_pct", "reach_mass"):
         val = rec.get(key)
         if val is not None and isinstance(val, (int, float)) and not math.isfinite(val):
             raise ValueError(f"non-finite {key}={val!r} in record {rec.get('hand')}")
+    actions = rec.get("actions") or []
     for group in ("ev", "freq"):
         mapping = rec.get(group) or {}
+        if set(mapping.keys()) != set(actions):
+            raise ValueError(
+                f"{group} keys {sorted(mapping)} != actions {actions} "
+                f"in record {rec.get('hand')}"
+            )
         for a, val in mapping.items():
             if not isinstance(val, (int, float)) or not math.isfinite(val):
                 raise ValueError(
                     f"non-finite {group}[{a}]={val!r} in record {rec.get('hand')}"
                 )
+    freq = rec.get("freq") or {}
+    if abs(sum(freq.values()) - 1.0) > 0.02:
+        raise ValueError(
+            f"freq sums to {sum(freq.values()):.4f} (expected ~1) "
+            f"in record {rec.get('hand')}"
+        )
+    if rec.get("preferred") not in (rec.get("ev") or {}):
+        raise ValueError(
+            f"preferred={rec.get('preferred')!r} missing from ev "
+            f"in record {rec.get('hand')}"
+        )
 
 
 def _canonical(decision_rows: Sequence[tuple], foundation_rows: Sequence[tuple],

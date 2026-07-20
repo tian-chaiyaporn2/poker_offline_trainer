@@ -6,6 +6,7 @@ for the solver, and enforces the technical validation rules from PRD §6.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
@@ -19,6 +20,12 @@ Combo = Tuple[int, int]
 
 class ValidationError(Exception):
     pass
+
+
+def _require_finite(name: str, value) -> float:
+    if not isinstance(value, (int, float)) or not math.isfinite(value):
+        raise ValidationError(f"{name} must be finite, got {value!r}")
+    return float(value)
 
 
 @dataclass
@@ -52,10 +59,18 @@ def load_scenario(raw: Dict) -> Scenario:
     # silently describe a different game than the one being solved.
     _SUPPORTED_ALLOWED = {"check", "bet_small", "bet_large", "call", "fold"}
     _SUPPORTED_RAISE = {"no_raise_v1"}
+    _SUPPORTED_POSITIONS = {"ip": "BTN", "oop": "BB"}
     acting = raw.get("acting_player", "BB")
     if acting != "BB":
         raise ValidationError(
             f"acting_player={acting!r} unsupported; FlopSolver is BB-first only"
+        )
+    positions = raw.get("positions", _SUPPORTED_POSITIONS)
+    if positions != _SUPPORTED_POSITIONS:
+        raise ValidationError(
+            f"positions={positions!r} unsupported; FlopSolver is "
+            f"{_SUPPORTED_POSITIONS} only (refusing a mismatched matchup label "
+            f"while still loading BB/BTN ranges)"
         )
     actions = raw.get("actions", {})
     allowed = set(actions.get("allowed", list(_SUPPORTED_ALLOWED)))
@@ -95,6 +110,14 @@ def load_scenario(raw: Dict) -> Scenario:
     w_ip = np.array([w for _, w in ip_wc], dtype=np.float64)
 
     sizes = raw["actions"]["bet_sizes_pct_pot"]
+    pot_bb = _require_finite("pot_bb", raw["pot_bb"])
+    small = _require_finite("bet_sizes_pct_pot.small", sizes["small"])
+    large = _require_finite("bet_sizes_pct_pot.large", sizes["large"])
+    iterations = int(_require_finite("solver.iterations", raw["solver"]["iterations"]))
+    if iterations <= 0:
+        raise ValidationError(f"solver.iterations must be > 0, got {iterations}")
+    if pot_bb <= 0:
+        raise ValidationError(f"pot_bb must be > 0, got {pot_bb}")
     return Scenario(
         raw=raw,
         board=board,
@@ -102,10 +125,10 @@ def load_scenario(raw: Dict) -> Scenario:
         ip_combos=ip_combos,
         w_oop=w_oop,
         w_ip=w_ip,
-        pot_bb=float(raw["pot_bb"]),
-        small_frac=sizes["small"] / 100.0,
-        large_frac=sizes["large"] / 100.0,
-        iterations=int(raw["solver"]["iterations"]),
+        pot_bb=pot_bb,
+        small_frac=small / 100.0,
+        large_frac=large / 100.0,
+        iterations=iterations,
     )
 
 

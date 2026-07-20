@@ -47,15 +47,23 @@ NODE_ROLE = {
 }
 
 
-def board_texture(flop: List[int]) -> List[str]:
-    ranks = sorted((card_rank(c) for c in flop), reverse=True)
-    suits = [card_suit(c) for c in flop]
+def board_texture(board: List[int]) -> List[str]:
+    """Texture tags for a flop/turn/river board.
+
+    Pairing uses any duplicated rank (works for 3–5 card boards). Suit /
+    connectedness labels stay coarse teaching tags, not a full runout taxonomy.
+    """
+    ranks = sorted((card_rank(c) for c in board), reverse=True)
+    suits = [card_suit(c) for c in board]
     tags = []
-    tags.append("paired" if len(set(ranks)) < 3 else "unpaired")
+    # One pair on a turn (4 cards) has 3 distinct ranks — do not hard-code "< 3".
+    tags.append("paired" if len(set(ranks)) < len(ranks) else "unpaired")
     nsuit = len(set(suits))
     tags.append("monotone" if nsuit == 1 else "two_tone" if nsuit == 2 else "rainbow")
     tags.append("high_card" if ranks[0] >= 8 else "low")           # T=8
-    span = ranks[0] - ranks[2]
+    # Connectedness: span of the top three ranks (flop-shaped teaching signal).
+    top = ranks[:3] if len(ranks) >= 3 else ranks
+    span = top[0] - top[-1]
     tags.append("connected" if span <= 4 else "disconnected")
     return tags
 
@@ -183,10 +191,19 @@ def _finite(x) -> bool:
 
 
 def _is_finite_record(r: Dict) -> bool:
+    """True when a record is safe to checkpoint/pack (finite + coherent strategy)."""
     ev, fr = r.get("ev", {}), r.get("freq", {})
-    if not ev or not fr:
+    actions = r.get("actions") or list(ev.keys())
+    if not ev or not fr or not actions:
+        return False
+    if set(ev.keys()) != set(actions) or set(fr.keys()) != set(actions):
         return False
     if not (all(_finite(v) for v in ev.values()) and all(_finite(v) for v in fr.values())):
+        return False
+    # Malformed frequencies were previously only soft-warned, then signed into packs.
+    if abs(sum(fr.values()) - 1.0) > 0.02:
+        return False
+    if r.get("preferred") not in ev:
         return False
     # reach_mass / ev_sep_pct also become SQLite REAL columns; a NaN there would
     # be coerced to NULL and silently break the pack signature at the very end of
@@ -391,26 +408,26 @@ def run(n=40, iters=300, roots=None, solver="cpu", dtype="float64",
                     print(f"[{k}/{len(board_idx)}] board {i:02d} {bstr}: "
                           f"{len(problems)} validate warnings "
                           f"(see board_{i:02d}.VALIDATE.json)", flush=True)
-                # Drop only the individual records with non-finite EV/freq (a
-                # float32 blow-up on one hand must not discard the whole board's
-                # 30-min solve, nor leak a NaN into the signed pack).
+                # Drop only the individual records that are unsafe to pack (a
+                # float32 blow-up or malformed strategy on one hand must not
+                # discard the whole board's solve, nor leak into the signed pack).
                 clean = [r for r in recs if _is_finite_record(r)]
                 dropped = len(recs) - len(clean)
                 if not clean:
                     _atomic_write_json(os.path.join(boards_dir, f"board_{i:02d}.raw.json"), recs)
-                    json.dump({"board": bstr, "reason": "no finite records",
+                    json.dump({"board": bstr, "reason": "no packable records",
                                "n_records": len(recs)},
                               open(os.path.join(boards_dir, f"board_{i:02d}.PROBLEM.json"), "w"), indent=2)
                     print(f"[{k}/{len(board_idx)}] board {i:02d} {bstr}: {len(recs)} recs but ALL "
-                          f"non-finite — not checkpointed (see board_{i:02d}.PROBLEM.json)", flush=True)
+                          f"unpackable — not checkpointed (see board_{i:02d}.PROBLEM.json)", flush=True)
                 else:
                     _atomic_write_json(bpath, clean)
-                    extra = f", {dropped} dropped NaN/inf" if dropped else ""
+                    extra = f", {dropped} dropped invalid" if dropped else ""
                     print(f"[{k}/{len(board_idx)}] board {i:02d} {bstr}: {len(clean)} recs "
                           f"({sum(r['accepted'] for r in clean)} accepted{extra}) OK "
                           f"[{time.time()-t0:.0f}s]", flush=True)
                     if dropped:
-                        json.dump({"board": bstr, "dropped_non_finite": dropped, "kept": len(clean)},
+                        json.dump({"board": bstr, "dropped_invalid": dropped, "kept": len(clean)},
                                   open(os.path.join(boards_dir, f"board_{i:02d}.DROPPED.json"), "w"), indent=2)
             except Exception:
                 # one board crashing must not abort the run — log and continue so
