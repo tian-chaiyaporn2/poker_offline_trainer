@@ -95,6 +95,8 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .read{margin:0 0 5px;font-size:14.5px;font-weight:600;color:var(--ink)}
 .read b{color:var(--brass)}
 .stand{margin:0 0 10px;font-size:12.5px;color:var(--muted);line-height:1.45}
+.rule{margin:8px 0 10px;font-size:12.5px;color:var(--ink);line-height:1.5;padding:8px 11px;border-radius:8px;background:color-mix(in srgb,var(--best) 9%,transparent)}
+.rule b{display:block;color:var(--best);text-transform:uppercase;font-size:10px;letter-spacing:.1em;margin-bottom:2px;font-weight:700}
 .cost{margin:-2px 0 8px;font-size:12.5px;color:var(--ink);background:color-mix(in srgb,var(--brass) 10%,transparent);border-left:3px solid var(--brass);padding:7px 11px;border-radius:0 7px 7px 0;font-variant-numeric:tabular-nums}
 .row.best-row,.row.you-row{padding:6px 9px;border-radius:9px;margin:6px -9px}
 .row.best-row{background:color-mix(in srgb,var(--rc) 12%,transparent)}
@@ -183,6 +185,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
         <p class="stand" id="stand" hidden></p>
         <span class="reason" id="reason"></span>
         <p class="head" id="head"></p>
+        <p class="rule" id="rule" hidden></p>
         <p class="cost" id="cost" hidden></p>
         <ul class="det" id="det"></ul>
       </div>
@@ -193,7 +196,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 
   <div class="hint">Pick with <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> · next hand with <kbd>Enter</kbd></div>
   <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8253</b> signed records, build <code>3ae5558</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8253</b> signed records, build <code>4dd0118</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots come from the full-range launch pack. Spots marked <span class="demo">raise demo</span>
     (Fold/Call/Raise) and <span class="demo">turn / river</span> (later-street boards, reduced range,
@@ -256,7 +259,7 @@ function hasStraight(vals){const s=new Set(vals);if(s.has(14))s.add(1);
   for(let lo=1;lo<=10;lo++){let ok=true;for(let k=0;k<5;k++)if(!s.has(lo+k)){ok=false;break;}if(ok)return true;}return false;}
 function straightDraw(vals){if(hasStraight(vals))return null;const base=new Set(vals);const comp=[];
   for(let r=2;r<=14;r++){if(base.has(r))continue;if(hasStraight([...base,r]))comp.push(r);}
-  if(!comp.length)return null;return comp.length>=2?"an open-ended straight draw":"a gutshot straight draw";}
+  if(!comp.length)return null;return comp.length>=2?"an open-ended straight draw (four to a straight, open both ends)":"a gutshot straight draw (four to a straight, needs one card in the middle)";}
 function handRead(hero,board){
   const hs=hero.map(c=>c[1]),bs=board.map(c=>c[1]);
   const hv=hero.map(c=>RV[c[0]]),bv=board.map(c=>RV[c[0]]);
@@ -273,13 +276,13 @@ function handRead(hero,board){
   else if(top===3&&second>=2){made="a full house";cat="full";}
   else if(flush){made="a flush";cat="flush";}
   else if(straight){made="a straight";cat="straight";}
-  else if(top===3){made=(pocket&&hv[0]===groups[0])?"a set of "+MANY[groups[0]]:"three "+MANY[groups[0]];cat="trips";}
+  else if(top===3){made=(pocket&&hv[0]===groups[0])?"a set of "+MANY[groups[0]]+" (three of a kind)":"three "+MANY[groups[0]]+" (three of a kind)";cat="trips";}
   else if(top===2&&second===2){made="two pair";cat="twopair";}
   else if(top===2){const pr=groups[0];made="a pair of "+MANY[pr];cat="pair";
     overs=[...new Set(bv.filter(v=>v>pr))].sort((a,b)=>b-a);
-    if(pocket&&hv[0]===pr){if(pr>maxB){pairKind="over";strength="an overpair (higher than every board card)";}
-      else{pairKind="under";strength="the "+ONE[maxB]+" on the board outranks it";}}
-    else if(pr===sortB[0]){pairKind="top";strength="top pair (you matched the highest board card)";}
+    if(pocket&&hv[0]===pr){if(pr>maxB){pairKind="over";strength="an overpair (higher than every shared card)";}
+      else{pairKind="under";strength="the "+ONE[maxB]+" among the shared cards outranks it";}}
+    else if(pr===sortB[0]){pairKind="top";strength="top pair (you matched the highest shared card)";}
     else if(pr===sortB[1]){pairKind="mid";strength="middle pair";}
     else{pairKind="low";strength="a low pair";}}
   else made=ONE[Math.max(...hv)]+" high (no pair)";
@@ -301,17 +304,17 @@ function orList(vals){const a=vals.map(nm);
 function standingText(rd){
   switch(rd.cat){
     case "pair":
-      if(rd.pairKind==="over")return "You're ahead of every worse pair and all the bluffs — mostly just two pair or a set beats you now.";
-      if(rd.pairKind==="top")return "You beat worse pairs and the draws — a better kicker, two pair, or a set has you beat.";
-      return "You beat high cards and bluffs, but "+orList(rd.overs)+" makes a better pair, and two pair or a set is ahead too.";
-    case "twopair":return "You're ahead of every one-pair hand — mainly a set or better beats you.";
-    case "trips":return "Very strong — only a straight, flush, or full house could beat you, and only if the board allows it.";
+      if(rd.pairKind==="over")return "You're ahead of every worse pair and all the bluffs — mostly only two pair or three of a kind beats you now.";
+      if(rd.pairKind==="top")return "You beat worse pairs and the hands still chasing — a bigger side card, two pair, or three of a kind has you beat.";
+      return "You beat high cards and bluffs, but "+orList(rd.overs)+" makes a better pair, and two pair or three of a kind is ahead too.";
+    case "twopair":return "You're ahead of every one-pair hand — mainly three of a kind or better beats you.";
+    case "trips":return "Very strong — only a straight, flush, or full house could beat you, and only if the shared cards line up for it.";
     case "straight":return "A big hand — only a flush or a full house beats you here.";
     case "flush":return "A big hand — only a full house or better beats you.";
     case "full":case "quads":case "sflush":return "You've got a monster — just about nothing beats this.";
     default:return rd.draw
-      ? "Nothing made yet, but your draw can still get there — for now you're behind any pair."
-      : "No pair yet — you're behind almost any made hand; you'd need to improve or get them to fold.";
+      ? "Nothing made yet, but your hand can still improve — for now you're behind any pair."
+      : "No pair yet — you're behind almost any hand that's already made a pair or better; you'd need to improve or get them to fold.";
   }
 }
 
@@ -329,7 +332,7 @@ const TERMS = {
     pos:{BTN:"You act last",BB:"You act first",SB:"You act first"},
     act:{check:"Check (pass, no bet)",bet:"Bet (put chips in)",fold:"Fold (give up the hand)",
       call:"Call (match their bet)",raise:"Raise (bet even more)"},
-    reason:{value:"Bet a strong hand to get paid",protection:"Bet so drawing hands pay to chase",
+    reason:{value:"Bet a strong hand to get paid",protection:"Bet so hands hoping to improve have to pay",
       bluff:"Bet a weak hand to make them give up",semi_bluff:"Bet a hand that can still improve",
       pot_control:"Just check to keep the pot small",trap:"Check a very strong hand to trap them",
       realization:"Check a weak hand and see the next card free",value_call:"Call — you're probably ahead",
@@ -343,15 +346,15 @@ const TERMS = {
   learning:{
     pos:{BTN:"BTN",BB:"BB",SB:"SB"},
     act:{check:"Check",bet:"Bet 66%",fold:"Fold",call:"Call",raise:"Raise 3×"},
-    reason:{value:"Value bet — get paid by worse",protection:"Protection — charge the draws",
-      bluff:"Bluff — make better hands fold",semi_bluff:"Semi-bluff — bet a hand that can improve",
-      pot_control:"Pot control — keep it small",trap:"Trap — check a monster",
-      realization:"Realize equity — take a free card",value_call:"Value call — you're ahead",
-      bluff_catch:"Bluff-catch — you beat their bluffs",call_odds:"Call on odds — right price to draw",
+    reason:{value:"Value bet — get paid by worse hands",protection:"Protection — charge the hands still chasing a card",
+      bluff:"Bluff — make better hands fold",semi_bluff:"Semi-bluff — bet a hand that can still improve",
+      pot_control:"Pot control — keep the pot small",trap:"Trap — check a very strong hand to hide it",
+      realization:"Realize equity — check and take a free card to improve",value_call:"Value call — you're ahead",
+      bluff_catch:"Bluff-catch — you beat the hands they'd bluff with",call_odds:"Call on odds — the price is right to chase",
       raise_value:"Value raise — build the pot",raise_bluff:"Bluff raise — make them fold",
-      raise_semibluff:"Semi-bluff raise — a draw",fold:"Fold — not strong enough",mixed:"Mixed — either is fine"},
+      raise_semibluff:"Semi-bluff raise — raise a hand that can improve",fold:"Fold — not strong enough",mixed:"Mixed — either is fine"},
     ev:"EV",boardcap:{flop:"Flop (first 3 shared cards)",turn:"Turn (4th card)",river:"River (5th card)"},
-    herocap:"Your hand (2 hole cards)"}
+    herocap:"Your hand (your 2 private cards)"}
 };
 let order=[], pos=0, answered=false, cur=null, chosen=null, stats={n:0,solid:0,ok:0,leak:0};
 let mode=(function(){try{const m=localStorage.getItem("lang");return (m==="poker"||m==="learning"||m==="plain"||m==="progressive")?m:"progressive";}catch(e){return "progressive";}})();
@@ -379,14 +382,14 @@ function reasonLabel(r){return (TERMS[eff("reason:"+r)].reason[r]||r);}
 const PLAIN_HEAD={
   value:"You're ahead of the hands that would call — bet so the weaker ones pay you off.",
   protection:"You're probably best, but cards could come that beat you — bet so the chasing hands have to pay.",
-  bluff:"You won't win if you just show it down, so bet to push better hands into folding.",
+  bluff:"Your hand probably can't win if you both check to the end — so bet to make better hands give up.",
   semi_bluff:"Betting can make better hands fold now — and if you're called, your hand can still improve to the best.",
   pot_control:"A decent hand, but not strong enough to build a big pot — check to keep it small and cheap.",
   trap:"You're very strong here — checking hides it and lets your opponent bluff or catch up before you pounce.",
   realization:"Not much yet — check to see the next card for free instead of throwing chips in.",
   value_call:"You're ahead of enough of their betting hands — call to keep collecting from the worse ones.",
   bluff_catch:"Your hand beats the ones they'd bluff with — call to catch those bluffs.",
-  call_odds:"Your draw is cheap enough to chase here — call and try to complete it.",
+  call_odds:"Your hand isn't made yet but could improve — it's cheap enough to call and try to get there.",
   fold:"There isn't enough here to keep going — fold and save your chips for a better spot.",
   raise_value:"You're strong — raise to build a bigger pot while the worse hands pay.",
   raise_bluff:"Raising tells the story of a big hand — do it to pressure them into folding.",
@@ -394,6 +397,25 @@ const PLAIN_HEAD={
   mixed:"This one's genuinely close — either play is fine here."
 };
 function plainHead(q){return PLAIN_HEAD[q.reason]||TERMS.plain.reason[q.reason]||q.headline;}
+// The generalizable lesson — a one-line pattern per spot type, so the takeaway
+// transfers to the next hand instead of staying stuck to this one. Jargon-free.
+const RULES={
+  value:"When you're ahead of the hands that would call, bet to get paid.",
+  protection:"Ahead, but dangerous cards could still come? Bet so the hands chasing a card have to pay.",
+  bluff:"No way to win at the end? Bet to make better hands fold.",
+  semi_bluff:"Bet hands that can still improve — you win now if they fold, later if your hand improves.",
+  pot_control:"A medium-strength hand plays best in a small pot — check.",
+  trap:"A huge hand can check to let a weaker one bluff or catch up.",
+  realization:"A weak hand wants to reach the end cheaply — check and take a free card.",
+  value_call:"Call when you're ahead of the hands doing the betting.",
+  bluff_catch:"Call when your hand beats the ones they'd bluff with.",
+  call_odds:"Chase an unfinished hand when it's cheap enough to be worth your chance of completing it.",
+  fold:"Not enough to keep going? Folding to save chips is the winning play.",
+  raise_value:"A strong hand raises to build a bigger pot.",
+  raise_bluff:"Raise as a bluff when a big hand is believable and they can fold.",
+  raise_semibluff:"Raise hands that can improve — pressure them now, and you can still hit.",
+  mixed:"When two plays are this close, either is fine — just pick one."
+};
 function situation(q){
   const first=q.node.endsWith("_first"), vscheck=q.node.endsWith("_vs_check");
   const sm=eff("positions");
@@ -405,7 +427,7 @@ function situation(q){
   const pre=q.street==="turn"?"On the turn, ":q.street==="river"?"On the river, ":"On the flop, ";
   if(sm==="learning"){
     const who="you're the "+q.acting_player+" (you act "+(q.acts_first?"first":"last")+")";
-    const role=first?", first to act.":vscheck?" — it's checked to you.":" facing a bet (their c-bet).";
+    const role=first?", first to act.":vscheck?" — it's checked to you.":" facing their c-bet (their flop bet).";
     return pre+who+role;
   }
   const role=first?", first to act.":vscheck?" and it's checked to you.":" facing a 66% c-bet.";
@@ -481,6 +503,12 @@ function renderFeedback(q,a,gained){
   if(rm==="plain"){rp.style.display="none";}
   else{rp.style.display="";rp.textContent=TERMS.poker.reason[q.reason]||q.reason;}
   document.getElementById("head").textContent=(rm==="poker")?q.headline:(rm==="plain")?plainHead(q):(TERMS[rm].reason[q.reason]||q.headline);
+  // The portable takeaway. Beginner-oriented, so hide it in Pro (like "where you stand").
+  const ruleEl=document.getElementById("rule");
+  if(mode==="poker"||!RULES[q.reason]){ruleEl.hidden=true;}
+  else{ruleEl.hidden=false;ruleEl.innerHTML="";
+    const lab=document.createElement("b");lab.textContent="Rule of thumb";ruleEl.appendChild(lab);
+    ruleEl.appendChild(document.createTextNode(RULES[q.reason]));}
   // Concrete cost: when the pick isn't the top play, show how much it gives up so
   // "why is this wrong?" has a number behind it, not just a color.
   const cost=document.getElementById("cost");
