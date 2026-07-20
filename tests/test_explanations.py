@@ -61,6 +61,21 @@ def test_mixed_headline_has_no_frequency_claim():
     assert "used a bit more" not in e["headline"]
 
 
+def test_three_action_near_top2_is_not_mixed_reason():
+    """Raise≈call with fold dominated must not teach 'any action is acceptable'."""
+    r = {
+        "node": "bb_vs_bet", "acting_player": "BB", "hand": "7h7c",
+        "hand_category": "weak_pair", "preferred": "raise",
+        "actions": ["fold", "call", "raise"],
+        "ev": {"fold": 0.0, "call": 0.985, "raise": 1.008},
+        "freq": {"fold": 0.05, "call": 0.4, "raise": 0.55},
+        "ev_sep_pct": 0.42, "mixed": False,
+        "board_texture": ["rainbow", "high_card"], "decision_type": "vs_bet",
+    }
+    assert classify_reason(r) == "raise_bluff"
+    assert explain(r)["reason"] != "mixed"
+
+
 def test_explanation_shape():
     e = explain(rec("bb_first", "strong_made", "bet", 3.0, 2.0, ("check", "bet")),
                 board_favored="BB")

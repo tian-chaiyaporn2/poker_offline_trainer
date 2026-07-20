@@ -54,7 +54,7 @@
   <div class="panel">
     <span class="who" id="who"></span>
     <div class="sit" id="sit">Loading…</div>
-    <div class="felt"><div class="label">Flop</div><div class="cards" id="board"></div></div>
+    <div class="felt"><div class="label" id="boardcap">Flop</div><div class="cards" id="board"></div></div>
     <div class="heroline" id="heroline"></div>
     <div class="cards" id="hero"></div>
     <div class="actions" id="acts"></div>
@@ -80,6 +80,9 @@ async function loadNext(){
   cur=q;
   document.getElementById("who").textContent=q.acting_player+" to act · "+q.node.replace(/_/g," ");
   document.getElementById("sit").textContent=q.situation;
+  const cap=document.getElementById("boardcap");
+  const street=(q.street||({3:"flop",4:"turn",5:"river"}[q.board.length]||"flop"));
+  cap.textContent=street.charAt(0).toUpperCase()+street.slice(1);
   render(q.board,document.getElementById("board"));
   document.getElementById("heroline").textContent="You hold:";
   render(q.hero_cards,document.getElementById("hero"));

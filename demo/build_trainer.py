@@ -98,10 +98,9 @@ def _to_q(d, oop_pos="BB"):
     board = [d["board"][i:i+2] for i in range(0, len(d["board"]), 2)]
     street = STREET.get(len(d["board"]), "flop")
     node = d["node"]
-    # Act order is a ROLE (OOP acts first, IP acts last), not tied to the position
-    # code — in SB-vs-BB the BB is IP (acts last), the opposite of BTN-vs-BB.
-    acts_first = node.endswith("_first") or (
-        not node.endswith("_vs_check") and d["acting_player"] == oop_pos)
+    # First-to-act on this street only — facing a check/bet is never "act first",
+    # even when hero is OOP (they already checked and now face a bet).
+    acts_first = node.endswith("_first")
     return {
         "board": board, "hero": [d["hand"][0:2], d["hand"][2:4]], "street": street,
         "node": node, "acting_player": d["acting_player"], "acts_first": acts_first,

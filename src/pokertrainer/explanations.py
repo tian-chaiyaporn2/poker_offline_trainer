@@ -32,7 +32,7 @@ HEADLINES = {
     "raise_semibluff": "Raise as a semi-bluff — fold out better hands now and improve if called.",
     "raise_bluff":   "Raise as a bluff — represent strength and pressure their bets.",
     "fold":          "Fold — not enough equity or showdown value against this bet.",
-    "mixed":         "Both actions are close here — either is acceptable.",
+    "mixed":         "All actions are close here — any of them is acceptable.",
 }
 
 # Casual board-texture phrasing (§6.4 style).

@@ -60,23 +60,30 @@ def _connect(path: str) -> sqlite3.Connection:
 
 
 def _situation(node: str, actor: str, bet_pct: int = 66,
-               oop: str | None = None) -> str:
+               oop: str | None = None, street: str = "flop") -> str:
     """Build situation text from structured fields — works across scenarios.
 
     Facing-bet copy differs for OOP (checked, then faced a bet) vs IP (opponent
-    led into them). Infer OOP from pack config when provided.
+    led into them). Infer OOP from pack config when provided. Street comes from
+    board length so turn/river packs are not labeled as flop.
     """
+    on = {"flop": "on the flop", "turn": "on the turn",
+          "river": "on the river"}.get(street, "on the board")
     if node.endswith("_first"):
-        return f"You are the {actor}, first to act on the flop."
+        return f"You are the {actor}, first to act {on}."
     if node.endswith("_vs_check"):
-        return f"You are the {actor}. The opponent checked to you."
+        return f"You are the {actor}. The opponent checked to you {on}."
     if node.endswith("_vs_bet"):
         if oop is not None and actor == oop:
             return (f"You are the {actor}. You checked and face a "
-                    f"{bet_pct}% pot bet.")
+                    f"{bet_pct}% pot bet {on}.")
         return (f"You are the {actor}. The opponent led into you for "
-                f"{bet_pct}% of the pot.")
-    return f"You are the {actor} ({node})."
+                f"{bet_pct}% of the pot {on}.")
+    return f"You are the {actor} ({node}) {on}."
+
+
+def _street_from_board(cards: list) -> str:
+    return {3: "flop", 4: "turn", 5: "river"}.get(len(cards), "flop")
 
 
 def find_pack() -> str:
@@ -152,10 +159,11 @@ def load_pack():
              reason, headline, detail, mixed) = row
             oop = cfg_oop
         cards = board.split() if " " in board else [board[i:i + 2] for i in range(0, len(board), 2)]
+        street = _street_from_board(cards)
         q[rid] = {
             "id": rid, "board": cards, "node": node, "acting_player": actor,
-            "hero_cards": [hand[0:2], hand[2:4]],
-            "situation": _situation(node, actor, bet_pct, oop=oop),
+            "hero_cards": [hand[0:2], hand[2:4]], "street": street,
+            "situation": _situation(node, actor, bet_pct, oop=oop, street=street),
             "actions": json.loads(actions), "ev": json.loads(ev), "freq": json.loads(freq),
             "preferred_action": pref, "action_grades": json.loads(grades),
             "reason": reason, "headline": headline, "detail": json.loads(detail),
@@ -167,7 +175,7 @@ def load_pack():
 def public_question(q):
     return {"id": q["id"], "board": q["board"], "node": q["node"],
             "acting_player": q["acting_player"], "hero_cards": q["hero_cards"],
-            "situation": q["situation"],
+            "situation": q["situation"], "street": q.get("street", "flop"),
             "actions": [{"key": a, "label": ACTION_LABEL.get(a, a)} for a in q["actions"]]}
 
 
