@@ -203,7 +203,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 
   <div class="hint">Pick with <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> · next hand with <kbd>Enter</kbd></div>
   <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8253</b> signed records, build <code>c995246</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8253</b> signed records, build <code>2126651</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots come from the full-range launch pack. Spots marked <span class="demo">raise demo</span>
     (Fold/Call/Raise) and <span class="demo">turn / river</span> (later-street boards, reduced range,
@@ -274,8 +274,11 @@ function handRead(hero,board){
   const cnt={};allV.forEach(v=>cnt[v]=(cnt[v]||0)+1);
   const groups=Object.keys(cnt).map(Number).sort((a,b)=>cnt[b]-cnt[a]||b-a);
   const suitCnt={};allS.forEach(s=>suitCnt[s]=(suitCnt[s]||0)+1);
-  const flush=Object.keys(suitCnt).some(s=>suitCnt[s]>=5);
+  const flushSuit=Object.keys(suitCnt).find(s=>suitCnt[s]>=5),flush=!!flushSuit;
   const straight=hasStraight(allV),maxB=Math.max(...bv),sortB=[...new Set(bv)].sort((a,b)=>b-a),pocket=hv[0]===hv[1];
+  // A straight flush needs 5 consecutive cards OF THE SAME SUIT — a flush and a
+  // straight made from different cards is not one.
+  const sflush=flush&&hasStraight(allV.filter((_,i)=>allS[i]===flushSuit));
   const bCnt={};bv.forEach(v=>bCnt[v]=(bCnt[v]||0)+1);
   const boardPaired=Object.keys(bCnt).some(v=>bCnt[v]>=2);
   const top=cnt[groups[0]],second=cnt[groups[1]]||0;
@@ -292,14 +295,12 @@ function handRead(hero,board){
     else if(pr===sortB[1]){pairKind="mid";strength="middle pair";}
     else{pairKind="low";strength="a low pair";}
   }
-  if(flush&&straight){made="a straight flush";cat="sflush";}
+  if(sflush){made="a straight flush";cat="sflush";}
   else if(top===4){made="four of a kind ("+MANY[groups[0]]+")";cat="quads";}
   else if(top===3&&second>=2){made="a full house";cat="full";}
   else if(flush){made="a flush";cat="flush";}
   else if(straight){made="a straight";cat="straight";}
-  else if(top===3){const tr=groups[0];const heroInTrips=pocket?hv[0]===tr:hv.includes(tr);
-    if(!heroInTrips)air();   // board shows trips; hero contributes nothing
-    else{made=(pocket&&hv[0]===tr)?"a set of "+MANY[tr]+" (three of a kind)":"three "+MANY[tr]+" (three of a kind)";cat="trips";}}
+  else if(top===3){made=(pocket&&hv[0]===groups[0])?"a set of "+MANY[groups[0]]+" (three of a kind)":"three "+MANY[groups[0]]+" (three of a kind)";cat="trips";}
   else if(top===2&&second===2){
     // Pocket pair + a separate board pair is two pair at showdown, but teach it as the pocket pair.
     if(pocket&&boardPaired&&(bCnt[hv[0]]||0)<2)pairOf(hv[0]);
@@ -312,7 +313,8 @@ function handRead(hero,board){
   let draw=null;
   if(!river&&!flush&&!straight){const parts=[];
     if(Object.keys(suitCnt).some(s=>suitCnt[s]===4&&hs.includes(s)))parts.push("a flush draw (four to a flush)");
-    const sd=straightDraw(allV);if(sd)parts.push(sd);
+    // Only the hero's draw — if the board alone already forms the straight draw, it's shared, not yours.
+    const sd=straightDraw(allV);if(sd&&!straightDraw(bv))parts.push(sd);
     if(parts.length)draw=parts.join(" and ");}
   return {made,strength,draw,cat,pairKind,overs};
 }
