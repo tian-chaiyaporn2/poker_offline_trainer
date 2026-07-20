@@ -158,7 +158,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 
   <div class="hint">Pick with <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> · next hand with <kbd>Enter</kbd></div>
   <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8253</b> signed records, build <code>4329b5a</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8253</b> signed records, build <code>6a6e0fa</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots come from the full-range launch pack. Spots marked <span class="demo">raise demo</span>
     (Fold/Call/Raise) and <span class="demo">turn / river</span> (later-street boards, reduced range,
@@ -309,9 +309,14 @@ function renderFeedback(q,a){
   const v=document.getElementById("verdict");v.className="verdict v-"+g;
   v.textContent="";const dot=document.createElement("span");dot.className="dot";v.appendChild(dot);
   v.appendChild(document.createTextNode(VERD[g]||g));
-  document.getElementById("reason").textContent=reasonLabel(q.reason);
-  document.getElementById("head").textContent=q.headline;
-  const dl=document.getElementById("det");dl.innerHTML="";q.detail.forEach(d=>{const li=document.createElement("li");li.textContent=d;dl.appendChild(li);});
+  // explanation adapts to the level: Beginner = plain 'why' only; Learning = term
+  // tag + explaining headline; Pro = term tag + richer baked headline + bullets.
+  const rp=document.getElementById("reason");
+  if(mode==="plain"){rp.style.display="none";}
+  else{rp.style.display="";rp.textContent=TERMS.poker.reason[q.reason]||q.reason;}
+  document.getElementById("head").textContent=(mode==="poker")?q.headline:(TERMS[mode].reason[q.reason]||q.headline);
+  const dl=document.getElementById("det");dl.innerHTML="";
+  if(mode==="poker"){q.detail.forEach(d=>{const li=document.createElement("li");li.textContent=d;dl.appendChild(li);});}
   const bars=document.getElementById("bars");bars.innerHTML="";
   const maxf=Math.max(1,...q.actions.map(x=>q.freq[x]));
   q.actions.slice().sort((x,y)=>q.freq[y]-q.freq[x]).forEach(x=>{

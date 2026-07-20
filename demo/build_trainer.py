@@ -516,9 +516,14 @@ function renderFeedback(q,a){
   const v=document.getElementById("verdict");v.className="verdict v-"+g;
   v.textContent="";const dot=document.createElement("span");dot.className="dot";v.appendChild(dot);
   v.appendChild(document.createTextNode(VERD[g]||g));
-  document.getElementById("reason").textContent=reasonLabel(q.reason);
-  document.getElementById("head").textContent=q.headline;
-  const dl=document.getElementById("det");dl.innerHTML="";q.detail.forEach(d=>{const li=document.createElement("li");li.textContent=d;dl.appendChild(li);});
+  // explanation adapts to the level: Beginner = plain 'why' only; Learning = term
+  // tag + explaining headline; Pro = term tag + richer baked headline + bullets.
+  const rp=document.getElementById("reason");
+  if(mode==="plain"){rp.style.display="none";}
+  else{rp.style.display="";rp.textContent=TERMS.poker.reason[q.reason]||q.reason;}
+  document.getElementById("head").textContent=(mode==="poker")?q.headline:(TERMS[mode].reason[q.reason]||q.headline);
+  const dl=document.getElementById("det");dl.innerHTML="";
+  if(mode==="poker"){q.detail.forEach(d=>{const li=document.createElement("li");li.textContent=d;dl.appendChild(li);});}
   const bars=document.getElementById("bars");bars.innerHTML="";
   const maxf=Math.max(1,...q.actions.map(x=>q.freq[x]));
   q.actions.slice().sort((x,y)=>q.freq[y]-q.freq[x]).forEach(x=>{
