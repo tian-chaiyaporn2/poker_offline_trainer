@@ -83,8 +83,9 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .track>i{display:block;height:100%;border-radius:5px;background:var(--rc,var(--muted))}
 .tag{font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px;color:#fff;background:var(--rc)}
 .g-best{--rc:var(--best)}.g-good{--rc:var(--good)}.g-acceptable{--rc:var(--accept)}.g-costly{--rc:var(--costly)}.g-major_error{--rc:var(--major)}
-.read{margin:0 0 9px;font-size:14.5px;font-weight:600;color:var(--ink)}
+.read{margin:0 0 5px;font-size:14.5px;font-weight:600;color:var(--ink)}
 .read b{color:var(--brass)}
+.stand{margin:0 0 10px;font-size:12.5px;color:var(--muted);line-height:1.45}
 .cost{margin:-2px 0 8px;font-size:12.5px;color:var(--ink);background:color-mix(in srgb,var(--brass) 10%,transparent);border-left:3px solid var(--brass);padding:7px 11px;border-radius:0 7px 7px 0;font-variant-numeric:tabular-nums}
 .row.best-row,.row.you-row{padding:6px 9px;border-radius:9px;margin:6px -9px}
 .row.best-row{background:color-mix(in srgb,var(--rc) 12%,transparent)}
@@ -168,6 +169,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
       <div class="unlock" id="unlock" hidden></div>
       <div class="why">
         <p class="read" id="read"></p>
+        <p class="stand" id="stand" hidden></p>
         <span class="reason" id="reason"></span>
         <p class="head" id="head"></p>
         <p class="cost" id="cost" hidden></p>
@@ -180,7 +182,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 
   <div class="hint">Pick with <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> · next hand with <kbd>Enter</kbd></div>
   <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8253</b> signed records, build <code>48fef63</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8253</b> signed records, build <code>a7eb23f</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots come from the full-range launch pack. Spots marked <span class="demo">raise demo</span>
     (Fold/Call/Raise) and <span class="demo">turn / river</span> (later-street boards, reduced range,
@@ -254,26 +256,52 @@ function handRead(hero,board){
   const flush=Object.keys(suitCnt).some(s=>suitCnt[s]>=5);
   const straight=hasStraight(allV),maxB=Math.max(...bv),sortB=[...new Set(bv)].sort((a,b)=>b-a),pocket=hv[0]===hv[1];
   const top=cnt[groups[0]],second=cnt[groups[1]]||0;
-  let made,strength=null;
-  if(flush&&straight)made="a straight flush";
-  else if(top===4)made="four of a kind ("+MANY[groups[0]]+")";
-  else if(top===3&&second>=2)made="a full house";
-  else if(flush)made="a flush";
-  else if(straight)made="a straight";
-  else if(top===3)made=(pocket&&hv[0]===groups[0])?"a set of "+MANY[groups[0]]:"three "+MANY[groups[0]];
-  else if(top===2&&second===2)made="two pair";
-  else if(top===2){const pr=groups[0];made="a pair of "+MANY[pr];
-    if(pocket&&hv[0]===pr)strength=pr>maxB?"an overpair — higher than every card on the board":"the "+ONE[maxB]+" on the board outranks it";
-    else if(pr===sortB[0])strength="top pair — you matched the highest board card";
-    else if(pr===sortB[1])strength="middle pair";
-    else strength="a low pair";}
+  let made,strength=null,cat="high",pairKind=null,overs=[];
+  if(flush&&straight){made="a straight flush";cat="sflush";}
+  else if(top===4){made="four of a kind ("+MANY[groups[0]]+")";cat="quads";}
+  else if(top===3&&second>=2){made="a full house";cat="full";}
+  else if(flush){made="a flush";cat="flush";}
+  else if(straight){made="a straight";cat="straight";}
+  else if(top===3){made=(pocket&&hv[0]===groups[0])?"a set of "+MANY[groups[0]]:"three "+MANY[groups[0]];cat="trips";}
+  else if(top===2&&second===2){made="two pair";cat="twopair";}
+  else if(top===2){const pr=groups[0];made="a pair of "+MANY[pr];cat="pair";
+    overs=[...new Set(bv.filter(v=>v>pr))].sort((a,b)=>b-a);
+    if(pocket&&hv[0]===pr){if(pr>maxB){pairKind="over";strength="an overpair (higher than every board card)";}
+      else{pairKind="under";strength="the "+ONE[maxB]+" on the board outranks it";}}
+    else if(pr===sortB[0]){pairKind="top";strength="top pair (you matched the highest board card)";}
+    else if(pr===sortB[1]){pairKind="mid";strength="middle pair";}
+    else{pairKind="low";strength="a low pair";}}
   else made=ONE[Math.max(...hv)]+" high (no pair)";
   let draw=null;
   if(!river&&!flush&&!straight){const parts=[];
     if(Object.keys(suitCnt).some(s=>suitCnt[s]===4&&hs.includes(s)))parts.push("a flush draw (four to a flush)");
     const sd=straightDraw(allV);if(sd)parts.push(sd);
     if(parts.length)draw=parts.join(" and ");}
-  return {made,strength,draw};
+  return {made,strength,draw,cat,pairKind,overs};
+}
+// "Where you stand" — plain relative strength: what you beat and what beats you.
+// The single most important read for a beginner; hedged so it stays true regardless
+// of the exact board (a set only loses to a straight/flush "if the board allows it").
+function nm(v){const w=ONE[v];return (/^[AE]/.test(w)?"an ":"a ")+w;}   // an Ace, an Eight
+function orList(vals){const a=vals.map(nm);
+  if(a.length<=1)return a[0]||"";
+  if(a.length===2)return a[0]+" or "+a[1];
+  return a.slice(0,-1).join(", ")+", or "+a[a.length-1];}
+function standingText(rd){
+  switch(rd.cat){
+    case "pair":
+      if(rd.pairKind==="over")return "You're ahead of every worse pair and all the bluffs — mostly just two pair or a set beats you now.";
+      if(rd.pairKind==="top")return "You beat worse pairs and the draws — a better kicker, two pair, or a set has you beat.";
+      return "You beat high cards and bluffs, but "+orList(rd.overs)+" makes a better pair, and two pair or a set is ahead too.";
+    case "twopair":return "You're ahead of every one-pair hand — mainly a set or better beats you.";
+    case "trips":return "Very strong — only a straight, flush, or full house could beat you, and only if the board allows it.";
+    case "straight":return "A big hand — only a flush or a full house beats you here.";
+    case "flush":return "A big hand — only a full house or better beats you.";
+    case "full":case "quads":case "sflush":return "You've got a monster — just about nothing beats this.";
+    default:return rd.draw
+      ? "Nothing made yet, but your draw can still get there — for now you're behind any pair."
+      : "No pair yet — you're behind almost any made hand; you'd need to improve or get them to fold.";
+  }
 }
 
 // Plain (no jargon) vs Poker (real terminology) — the same data, two vocabularies.
@@ -412,8 +440,10 @@ function renderFeedback(q,a,gained){
   v.textContent="";const dot=document.createElement("span");dot.className="dot";v.appendChild(dot);
   // Verdict names YOUR pick AND the better action — so a wrong answer immediately
   // shows what you should have done, not just an abstract grade.
+  // Key off the GRADE, not a===pref: a co-best action (graded "best" but not the
+  // single top-EV one) must still read as correct, not as a leak.
   let vmsg;
-  if(a===pref)vmsg="✓ "+you+" — the best play here.";
+  if(g==="best")vmsg=(a===pref)?"✓ "+you+" — the best play here.":"✓ "+you+" — also a top play here.";
   else if(g==="good")vmsg="✓ "+you+" works — "+best+" is only a touch better.";
   else if(g==="acceptable")vmsg="~ "+you+" is OK, but "+best+" is the better play.";
   else vmsg="✗ You picked "+you+" — "+(g==="major_error"?"a big mistake":"a costly leak")+". The play is "+best+".";
@@ -428,6 +458,10 @@ function renderFeedback(q,a,gained){
   if(rd.strength)readEl.appendChild(document.createTextNode(" — "+rd.strength));
   if(rd.draw)readEl.appendChild(document.createTextNode(", plus "+rd.draw));
   readEl.appendChild(document.createTextNode("."));
+  // "Where you stand" — plain relative strength. Beginner-oriented, so hide it in Pro.
+  const standEl=document.getElementById("stand");
+  if(mode==="poker"){standEl.hidden=true;}
+  else{standEl.hidden=false;standEl.textContent=standingText(rd);}
   // explanation adapts to the level: Beginner = plain 'why' only; Learning = term
   // tag + explaining headline; Pro = term tag + richer baked headline + bullets.
   const rm=eff("reason:"+q.reason);
@@ -440,7 +474,7 @@ function renderFeedback(q,a,gained){
   // "why is this wrong?" has a number behind it, not just a color.
   const cost=document.getElementById("cost");
   const dEv=Math.round((q.ev[pref]-q.ev[a])*100)/100;
-  if(a!==pref&&dEv>=0.05){cost.hidden=false;
+  if(g!=="best"&&dEv>=0.05){cost.hidden=false;
     cost.textContent=best+" averages "+fmtEv(q.ev[pref])+" "+unit+" here vs your "+you+" at "+fmtEv(q.ev[a])+" "+unit+" — about "+dEv+" "+unit+" per hand left behind.";
   }else{cost.hidden=true;}
   const dl=document.getElementById("det");dl.innerHTML="";
