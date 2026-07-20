@@ -42,6 +42,37 @@ _TEXTURE = {
 }
 
 
+def freq_pct_ints(freq: Dict[str, float],
+                  order: Optional[List[str]] = None) -> Dict[str, int]:
+    """Integer percentages that sum to 100 (largest-remainder method).
+
+    Independent `round(100 * p)` can yield 99 or 101 and mis-teach the mix.
+    """
+    keys = [k for k in (order or list(freq.keys())) if k in freq]
+    if not keys:
+        return {}
+    raw = [100.0 * float(freq[k]) for k in keys]
+    floors = [int(math.floor(x + 1e-12)) for x in raw]
+    need = 100 - sum(floors)
+    # Assign leftover points to the largest fractional parts.
+    by_frac = sorted(
+        range(len(keys)),
+        key=lambda i: (raw[i] - floors[i], raw[i]),
+        reverse=True,
+    )
+    out = {keys[i]: floors[i] for i in range(len(keys))}
+    if need > 0:
+        for j in range(need):
+            out[keys[by_frac[j % len(keys)]]] += 1
+    elif need < 0:
+        # Floor sum can exceed 100 with pathological inputs; peel from smallest fracs.
+        for j in range(-need):
+            i = by_frac[-(j % len(keys)) - 1]
+            if out[keys[i]] > 0:
+                out[keys[i]] -= 1
+    return out
+
+
 def _wet(texture: List[str]) -> bool:
     return any(t in texture for t in ("two_tone", "monotone", "connected"))
 
@@ -78,12 +109,14 @@ def classify_reason(rec: Dict) -> str:
             if hc in ("top_pair", "weak_pair"):
                 return "protection" if wet else "value"
             return "value"
-        # check
-        if hc == "strong_made":
-            return "trap"
-        if hc in ("top_pair", "weak_pair"):
-            return "pot_control"
-        return "realization"          # draw or air checking
+        if act == "check":
+            if hc == "strong_made":
+                return "trap"
+            if hc in ("top_pair", "weak_pair"):
+                return "pot_control"
+            return "realization"          # draw or air checking
+        # Mis-tagged first_action with a response action — do not call it a check.
+        return "fold"
     # response node (fold / call / raise)
     if act == "raise":
         if hc in ("strong_made", "top_pair"):
@@ -114,15 +147,22 @@ def explain(rec: Dict, board_favored: Optional[str] = None) -> Dict:
     freq = rec.get("freq", {})
     detail: List[str] = []
     if reason == "mixed":
-        detail.append(f"{_action_word(best)} and {_action_word(second)} are within "
-                      f"{gap_pct}% of the pot — treat both as acceptable.")
+        close = [_action_word(a) for a in ranked]
+        if len(close) <= 2:
+            detail.append(f"{close[0]} and {close[1]} are within "
+                          f"{gap_pct}% of the pot — treat both as acceptable.")
+        else:
+            detail.append(
+                f"All {len(close)} actions ({', '.join(close)}) are within "
+                f"{gap_pct}% of the pot — any is acceptable."
+            )
     else:
         detail.append(f"{_action_word(best).capitalize()} is best; "
                       f"{_action_word(second)} gives up ~{gap_pct}% of the pot.")
     # round() raises on NaN/inf, so only emit the frequency line when every value
     # is finite (a non-finite strategy is dropped upstream, but never crash here).
     if freq and all(isinstance(freq.get(a), (int, float)) and math.isfinite(freq[a]) for a in freq):
-        fp = {a: round(100 * freq[a]) for a in freq}
+        fp = freq_pct_ints(freq, order=ranked)
         detail.append("Solver frequency: " + ", ".join(f"{_action_word(a)} {fp[a]}%" for a in ranked))
     # board-level range-advantage note where relevant
     if board_favored and _is_first_action(rec) and pref == "bet":

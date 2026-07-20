@@ -180,6 +180,7 @@ def public_question(q):
 
 
 def grade_answer(q, action):
+    from pokertrainer.explanations import freq_pct_ints
     grade = q["action_grades"].get(action, "major_error")
     pref = q["preferred_action"]
     # Grade is EV-loss based; preferred is max-EV (freq on ties). When the pick
@@ -189,7 +190,7 @@ def grade_answer(q, action):
     elif grade == "best":
         verdict = f"Best — effectively tied with {_label(pref)}."
     elif q.get("mixed") and grade in ("good", "acceptable"):
-        verdict = f"Close — either play is fine here (listed preferred: {_label(pref)})."
+        verdict = f"Close — any play is fine here (listed preferred: {_label(pref)})."
     else:
         verdicts = {
             "good": "Good — a small concession.",
@@ -204,7 +205,7 @@ def grade_answer(q, action):
         "headline": q["headline"], "detail": q["detail"], "reason": q["reason"],
         "action_grades": q["action_grades"],
         "ev_bb": {a: round(q["ev"][a], 2) for a in q["actions"]},
-        "freq_pct": {a: round(100 * q["freq"][a]) for a in q["actions"]},
+        "freq_pct": freq_pct_ints(q["freq"], order=q["actions"]),
         "labels": {a: ACTION_LABEL.get(a, a) for a in q["actions"]},
     }
 

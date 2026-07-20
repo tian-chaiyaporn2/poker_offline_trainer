@@ -150,8 +150,16 @@ async function answer(action){
     "Your hand: " + fb.hand_descriptor;
 
   const bars=document.getElementById("bars"); bars.innerHTML="";
-  current.available_actions.forEach(a=>{
-    const freq=(fb.action_frequencies[a]*100)||0;
+  // Largest-remainder ints so displayed mix sums to 100 (not 99/101).
+  const acts=current.available_actions;
+  const raw=acts.map(a=>(fb.action_frequencies[a]*100)||0);
+  const floors=raw.map(x=>Math.floor(x+1e-9));
+  let need=100-floors.reduce((a,b)=>a+b,0);
+  const order=[...acts.keys()].sort((i,j)=>(raw[j]-floors[j])-(raw[i]-floors[i]));
+  const pct={}; acts.forEach((a,i)=>pct[a]=floors[i]);
+  for(let k=0;k<need;k++)pct[acts[order[k%order.length]]]++;
+  acts.forEach(a=>{
+    const freq=pct[a];
     const ev=fb.action_ev_bb[a];
     const g=fb.action_grade[a];
     const chosen = a===action ? " ← you" : "";
@@ -163,7 +171,7 @@ async function answer(action){
     if(a===fb.recommended_action){const r=document.createElement("span");r.className="tag rec";r.textContent="recommended";left.appendChild(r);}
     if(chosen){const b=document.createElement("b");b.textContent=chosen;left.appendChild(b);}
     const right=document.createElement("span"); right.className="muted";
-    right.textContent=freq.toFixed(0)+"% · EV "+ev.toFixed(2)+"bb";
+    right.textContent=freq+"% · EV "+ev.toFixed(2)+"bb";
     label.appendChild(left); label.appendChild(right);
     const bar=document.createElement("div"); bar.className="bar";
     const i=document.createElement("i"); i.style.width=freq+"%"; bar.appendChild(i);

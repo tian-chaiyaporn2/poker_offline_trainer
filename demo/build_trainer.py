@@ -48,7 +48,7 @@ def _situation(node, actor, street):
         return pre + f"you're the {actor}, first to act."
     if node.endswith("_vs_check"):
         return pre + f"it's checked to you ({actor})."
-    return pre + f"you face a 66% bet ({actor})."
+    return pre + f"you face a bet ({actor})."
 
 SITUATION = {
     "bb_first": "You're the BB, first to act on the flop.",
@@ -94,6 +94,7 @@ def _oop_pos(rows):
 
 
 def _to_q(d, oop_pos="BB"):
+    from pokertrainer.explanations import freq_pct_ints
     acts = json.loads(d["actions"])
     board = [d["board"][i:i+2] for i in range(0, len(d["board"]), 2)]
     street = STREET.get(len(d["board"]), "flop")
@@ -101,12 +102,14 @@ def _to_q(d, oop_pos="BB"):
     # First-to-act on this street only — facing a check/bet is never "act first",
     # even when hero is OOP (they already checked and now face a bet).
     acts_first = node.endswith("_first")
+    freq_raw = {k: float(v) for k, v in json.loads(d["freq"]).items()}
     return {
         "board": board, "hero": [d["hand"][0:2], d["hand"][2:4]], "street": street,
         "node": node, "acting_player": d["acting_player"], "acts_first": acts_first,
+        "is_oop": d["acting_player"] == oop_pos,
         "actions": acts, "labels": {a: ALAB.get(a, a) for a in acts},
         "ev": {k: round(v, 2) for k, v in json.loads(d["ev"]).items()},
-        "freq": {k: round(100 * v) for k, v in json.loads(d["freq"]).items()},
+        "freq": freq_pct_ints(freq_raw, order=acts),
         "preferred": d["preferred_action"], "grades": json.loads(d["action_grades"]),
         "reason": d["reason"], "reason_label": RLAB.get(d["reason"], d["reason"]),
         "headline": d["headline"], "detail": json.loads(d["detail"]),
@@ -448,7 +451,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
       <dt>Check · Bet · Call · Raise · Fold</dt>
       <dd>Pass (no bet) · put chips in · match a bet · bet even more · give up the hand.</dd>
       <dt>Position — Button (BTN), Big Blind (BB), Small Blind (SB)</dt>
-      <dd>Where you sit. The Button acts last after the flop (an advantage); the blinds act first.</dd>
+      <dd>Where you sit relative to the dealer. Postflop, the player in position (IP) acts last — usually the Button. Out of position (OOP) acts first. In blind-vs-blind, the BB is IP.</dd>
       <dt>In / out of position</dt>
       <dd>Whether you act last (in position) or first (out of position) on each street.</dd>
       <dt>C-bet (continuation bet)</dt>
@@ -496,7 +499,7 @@ const TERMS = {
       bluff_catch:"Call — you beat the hands they'd bluff with",call_odds:"Call — cheap enough to keep going",
       raise_value:"Raise a strong hand to build the pot",raise_bluff:"Raise as a bluff to make them fold",
       raise_semibluff:"Raise a hand that can improve",fold:"Fold — not strong enough to continue",
-      mixed:"It's close — either choice is fine"},
+      mixed:"It's close — any choice is fine"},
     ev:"profit",
     boardcap:{flop:"The 3 shared cards",turn:"The 4th shared card is out",river:"The last (5th) shared card"},
     herocap:"Your 2 cards (only you can see these)"},
@@ -509,7 +512,7 @@ const TERMS = {
       realization:"Realize equity — take a free card",value_call:"Value call — you're ahead",
       bluff_catch:"Bluff-catch — you beat their bluffs",call_odds:"Call on odds — right price to draw",
       raise_value:"Value raise — build the pot",raise_bluff:"Bluff raise — make them fold",
-      raise_semibluff:"Semi-bluff raise — a draw",fold:"Fold — not strong enough",mixed:"Mixed — either is fine"},
+      raise_semibluff:"Semi-bluff raise — a draw",fold:"Fold — not strong enough",mixed:"Mixed — any is fine"},
     ev:"EV",boardcap:{flop:"Flop (first 3 shared cards)",turn:"Turn (4th card)",river:"River (5th card)"},
     herocap:"Your hand (2 hole cards)"}
 };
@@ -542,12 +545,16 @@ function situation(q){
     return "Your opponent just put chips in (bet). It's on you — match it, put in even more, or give up?";
   }
   const pre=q.street==="turn"?"On the turn, ":q.street==="river"?"On the river, ":"On the flop, ";
+  // vs_bet: OOP checked then faces a bet; IP faces an opponent lead (not a c-bet).
+  const betRole=q.is_oop
+    ? " — you checked and face a bet."
+    : " — they led into you.";
   if(sm==="learning"){
     const who="you're the "+q.acting_player+" (you act "+(q.acts_first?"first":"last")+")";
-    const role=first?", first to act.":vscheck?" — it's checked to you.":" facing a bet (their c-bet).";
+    const role=first?", first to act.":vscheck?" — it's checked to you.":betRole;
     return pre+who+role;
   }
-  const role=first?", first to act.":vscheck?" and it's checked to you.":" facing a 66% c-bet.";
+  const role=first?", first to act.":vscheck?" and it's checked to you.":betRole;
   return pre+"you're the "+q.acting_player+role;
 }
 
@@ -595,7 +602,7 @@ function renderFeedback(q,a,gained){
   let vmsg;
   if(a===pref)vmsg="✓ "+you+" — the best play here.";
   else if(g==="best")vmsg="✓ "+you+" — also a top play (effectively tied with "+best+").";
-  else if(q.mixed&&(g==="good"||g==="acceptable"))vmsg="✓ "+you+" — close enough; either play is fine here (listed preferred: "+best+").";
+  else if(q.mixed&&(g==="good"||g==="acceptable"))vmsg="✓ "+you+" — close enough; any play is fine here (listed preferred: "+best+").";
   else if(g==="good")vmsg="✓ "+you+" works — "+best+" is only a touch better.";
   else if(g==="acceptable")vmsg="~ "+you+" is OK, but "+best+" is the better play.";
   else vmsg="✗ You picked "+you+" — "+(g==="major_error"?"a big mistake":"a costly leak")+". The play is "+best+".";
@@ -672,7 +679,7 @@ function tryUnlock(q,g){
   return gained;
 }
 function unlockText(t){
-  if(t==="positions")return "Positions — the seats. The Button (BTN) acts last; the blinds (BB/SB) act first.";
+  if(t==="positions")return "Positions — who acts when. In position (IP) acts last (usually the Button). Out of position (OOP) acts first. In blind-vs-blind, the BB is IP.";
   if(t==="streets")return "Flop, turn, river — the shared cards come in stages (3, then a 4th, then a 5th).";
   return (TERMS.poker.reason[t.slice(7)]||"")+" — "+(TERMS.learning.reason[t.slice(7)]||"").replace(/^[^—]*— /,"");
 }

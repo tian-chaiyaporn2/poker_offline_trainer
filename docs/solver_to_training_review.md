@@ -33,66 +33,110 @@ exists with different action names and coarser grades; do not mix contracts.
 | Layer | Rule |
 |-------|------|
 | Preferred / recommended | **Max EV** under the averaged strategy |
-| EV ties | Higher **solver frequency** (new; was insertion order) |
+| EV ties | Higher **solver frequency** |
 | Grades | EV regret as % of pot vs best EV |
-| Mixed lesson | EV gap &lt; 0.5% pot → `mixed=True`, reason `mixed` |
+| Mixed lesson | **Every** legal action within 0.5% pot of best |
 | Frequency bars | Teaching detail — **not** the recommendation selector |
 
 Integrity checks reject `preferred` that is not max-EV before a pack is signed.
 
 ---
 
-## Findings fixed in this pass
+## Pass 1 findings (fixed)
 
 ### H1. Trainer called tied-best picks a “costly leak” — **FIXED**
-- **Where:** `demo/build_trainer.py` feedback; also `trainer/pack_server.grade_answer`
-- **Bug:** Verdict branched on `chosen === preferred`, then `good` / `acceptable`,
-  else “costly leak”. ~11% of full-range pack rows have **two** actions graded
-  `best` (gap ≤ 0.25% pot). Picking the non-starred one showed grade color
-  `best` but text “costly leak”.
-- **Fix:** Honor grade first: `best` (even if not starred) is a top play; mixed
-  + good/acceptable gets soft “either is fine” copy.
+- Verdict now follows the precomputed grade; mixed + good gets soft copy.
 
 ### H2. `mixed` flag dropped before the trainer UI — **FIXED**
-- **Where:** `demo/build_trainer._to_q`
-- **Bug:** Pack column `mixed` was selected then discarded, so the UI could not
-  soften near-indifferent spots.
-- **Fix:** Pass `mixed` into question JSON; use it in feedback.
+- `_to_q` now passes `mixed` through.
 
 ### M1. EV ties preferred the first action key — **FIXED**
-- **Where:** `solver/batched.preferred_action`, GPU `flop_root_report`, `export`
-- **Bug:** `max(ev, key=ev.get)` / `check if ev_ch >= ev_bt` preferred check/fold
-  on exact ties even when the mix put more mass on bet/call.
-- **Fix:** Tie-break by frequency so the star matches what the solver plays more.
+- `preferred_action()` tie-breaks by frequency.
 
 ### M2. Priority impact used a global pot — **FIXED**
-- **Where:** `priority.score_records`
-- **Bug:** After per-record `pot_bb` landed in packs, priority still divided by
-  the CLI default (5.5), skewing SB-vs-BB impact.
-- **Fix:** Use `record["pot_bb"]` when present.
+- Uses per-record `pot_bb`.
 
-### L1. Legacy trainer labeled recommended as “GTO pick” — **FIXED**
-- Max-EV recommendation is not necessarily the modal frequency; tag is now
-  “recommended”.
+### L1. Legacy “GTO pick” label — **FIXED**
+- Relabeled “recommended”.
+
+---
+
+## Pass 2 findings (fixed)
+
+### H3. OOP facing a bet labeled “You act first” — **FIXED**
+- **Where:** `demo/build_trainer._to_q` `acts_first`
+- **Bug:** `acts_first` was true for OOP `*_vs_bet` (already checked, now facing
+  a bet). Beginner badge and Learning copy said “you act first” while the
+  situation said facing a bet (~25% of shipped demo vs-bet spots).
+- **Fix:** `acts_first = node.endswith("_first")` only.
+
+### H4. Top-2 indifference mislabeled 3-action spots as mixed — **FIXED**
+- **Where:** `content_yield.extract_records` `mixed`; raise-demo pack rows
+- **Bug:** `mixed = (best − 2nd) < 0.5% pot` ignored a dominated third action.
+  Example: raise≈call but fold −18% pot still got headline “either is
+  acceptable” / reason `mixed`.
+- **Fix:** `mixed` requires **all** legal actions within `CLEAR_SEP_PCT`.
+  Headline: “All actions are close…”. `refresh_pack_lessons` repaired shipped
+  packs in place (raise demo: 2 spots → `raise_bluff` / `bluff_catch`).
+
+### M3. Pack trainer always said “flop” — **FIXED**
+- **Where:** `pack_server._situation`, `pack_index.html`
+- **Bug:** Turn/river packs (via `POKERTRAINER_PACK`) still said “on the flop”
+  and showed a “Flop” board caption.
+- **Fix:** Derive street from board length; thread into situation + UI caption.
+
+### M4. Launch fullrange pack missing `pot_bb` / roles — **FIXED**
+- **Where:** `flop_pack_v1_fullrange.db`
+- **Fix:** `refresh_pack_lessons` backfills `pot_bb`, `oop_pos`, `ip_pos` from
+  pack config and re-signs. CLI: `--refresh-lessons`.
+
+---
+
+## Pass 3 findings (fixed)
+
+### H5. Displayed mix frequencies summed to 99 or 101 — **FIXED**
+- **Where:** `explanations.freq_pct_ints`, demo `_to_q`, pack_server,
+  legacy trainer bars
+- **Bug:** Independent `round(100 * p)` broke the mix (e.g. 69+30+2).
+- **Fix:** Largest-remainder ints that always sum to 100.
+
+### H6. Learning/Pro called IP leads a “c-bet” — **FIXED**
+- **Where:** demo trainer `situation()`
+- **Bug:** `btn_vs_bet` / IP facing-bet spots said “facing a 66% c-bet”; those
+  are opponent leads. Pack server already distinguished lead vs checked-then-bet.
+- **Fix:** OOP → “you checked and face a bet”; IP → “they led into you”
+  (`is_oop` on each question).
+
+### M5. Mixed detail still said “both” for 3-action spots — **FIXED**
+- Detail lists all actions; UI soft copy says “any,” not “either.”
+
+### M6. Adaptive unlock taught “blinds act first” — **FIXED**
+- Wrong for blended SB-vs-BB where BB is IP. Unlock/glossary now teach IP/OOP.
+
+### M7. Legacy trainer called non-recommended `good` “GTO-optimal” — **FIXED**
+- `trainer/server.grade_answer` mirrors pack soft-close wording.
+
+### L2. `classify_reason` mapped raise-on-first_action to check reasons — **FIXED**
+- Only `check` enters the check branch; other actions fall through safely.
 
 ---
 
 ## Design notes (not bugs)
 
-1. **★ vs frequency bars** — In ~6% of full-range rows (and ~29% of the reduced
-   raise demo), preferred ≠ highest frequency. Bars sort by freq; ★ marks max EV.
-   That is intentional for EV-loss grading; the star tooltip now says “Best EV”.
-2. **Explanations are labels** — `explanations.classify_reason` is a heuristic
-   matrix over hand category × action × texture. It does not invent strategy,
-   but reason tags can disagree with nuanced GTO motives.
-3. **Two pipelines** — Full-street pack vs flop-only export still differ in
-   actions, grade thresholds, and schemas.
-4. **Indifference thresholds** — 0.25% (grade `best`) / 0.5% (`mixed`) / 1.0%
+1. **★ vs frequency bars** — Preferred ≠ modal frequency in ~6% of full-range
+   rows. Bars sort by freq; ★ marks max EV.
+2. **Explanations are labels** — Heuristic matrix over category × action ×
+   texture; does not invent strategy.
+3. **Two pipelines** — Full-street pack vs flop-only export still differ.
+4. **Indifference thresholds** — 0.25% (`best`) / 0.5% (`mixed`) / 1.0%
    (cross-solver compare) remain intentionally layered.
 
 ---
 
-## Tests
+## Tests / tooling
 
-- `tests/test_solver_to_training.py` — preferred selection, export tie-break,
-  per-record priority pot.
+- `tests/test_solver_to_training.py` — preferred, export tie-break, priority pot,
+  all-action mixed refresh, pot/role backfill, `acts_first`, freq ints, mixed
+  detail, classify fallthrough.
+- `tests/test_explanations.py` — 3-action near-top-2 is not `mixed`.
+- `python -m pokertrainer.content_pack --refresh-lessons <pack.db>`
