@@ -61,9 +61,11 @@ def board_texture(flop: List[int]) -> List[str]:
 
 
 def extract_records(flop_str, oop, ip, iters, make, pot, bet_frac,
-                    oop_pos="BB", ip_pos="BTN", scenario="btn_vs_bb_srp") -> List[Dict]:
+                    oop_pos="BB", ip_pos="BTN", scenario="btn_vs_bb_srp", streets=3) -> List[Dict]:
     flop = parse_cards(flop_str)
-    s = make(flop, oop, ip, np.ones(len(oop)), np.ones(len(ip)), pot, bet_frac, 3)
+    # streets counts remaining betting streets: 3 = flop board (flop/turn/river),
+    # 2 = turn board (turn/river), 1 = river board (river then showdown).
+    s = make(flop, oop, ip, np.ones(len(oop)), np.ones(len(ip)), pot, bet_frac, streets)
     res = s.run(iters)
     ev_pct = res.get("root_ev_pct_pot", 50.0)     # OOP share of pot
     board_favored = ip_pos if ev_pct < 45 else (oop_pos if ev_pct > 55 else None)

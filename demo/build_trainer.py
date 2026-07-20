@@ -15,9 +15,25 @@ from collections import defaultdict
 
 DB = "output/packs/flop_pack_v1_fullrange.db"
 RAISE_DB = "output/packs/flop_pack_v1_raise_demo.db"   # reduced-range, but HAS fold/call/raise
+TR_DB = "output/packs/flop_pack_turnriver_demo.db"     # turn/river decisions (checked-through line)
 PER_REASON = 6          # cap questions per reason for variety
 MAX_Q = 60
 RAISE_Q = 12            # extra 3-action spots blended in to show the raise UX
+TR_Q = 16               # turn/river spots blended in
+
+STREET = {6: "flop", 8: "turn", 10: "river"}       # by board-string length
+
+
+def _situation(node, actor, street):
+    if street == "flop":
+        return SITUATION.get(node, f"You're the {actor}, on the flop.")
+    pre = ("The flop checked through — now on the turn, " if street == "turn"
+           else "Flop and turn checked through — now on the river, ")
+    if node.endswith("_first"):
+        return pre + f"you're the {actor}, first to act."
+    if node.endswith("_vs_check"):
+        return pre + f"it's checked to you ({actor})."
+    return pre + f"you face a 66% bet ({actor})."
 
 SITUATION = {
     "bb_first": "You're the BB, first to act on the flop.",
@@ -43,10 +59,11 @@ COLS = ("id board node acting_player hand actions ev freq preferred_action "
 def _to_q(d):
     acts = json.loads(d["actions"])
     board = [d["board"][i:i+2] for i in range(0, len(d["board"]), 2)]
+    street = STREET.get(len(d["board"]), "flop")
     return {
-        "board": board, "hero": [d["hand"][0:2], d["hand"][2:4]],
+        "board": board, "hero": [d["hand"][0:2], d["hand"][2:4]], "street": street,
         "node": d["node"], "acting_player": d["acting_player"],
-        "situation": SITUATION.get(d["node"], f"You're the {d['acting_player']}."),
+        "situation": _situation(d["node"], d["acting_player"], street),
         "actions": acts, "labels": {a: ALAB.get(a, a) for a in acts},
         "ev": {k: round(v, 2) for k, v in json.loads(d["ev"]).items()},
         "freq": {k: round(100 * v) for k, v in json.loads(d["freq"]).items()},
@@ -91,7 +108,29 @@ def load_raise(n=RAISE_Q):
     picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
     out = []
     for q in (_to_q(d) for d in picked):
-        q["demo_raise"] = True     # flag so the UI can note the reduced-range source
+        q["badge"] = "raise demo"     # flag so the UI can note the reduced-range source
+        out.append(q)
+    return out
+
+
+def load_turnriver(n=TR_Q):
+    """Turn + river decisions (checked-through line) from the reduced-range demo pack."""
+    if not os.path.exists(TR_DB):
+        return []
+    c = sqlite3.connect(TR_DB)
+    rows = c.execute(f"SELECT {','.join(COLS)} FROM flop_decision").fetchall()
+    c.close()
+    by_key = defaultdict(list)
+    for r in rows:
+        d = dict(zip(COLS, r))
+        street = STREET.get(len(d["board"]), "flop")
+        by_key[(street, d["node"], d["reason"])].append(d)
+    from itertools import zip_longest
+    groups = [g[:2] for g in by_key.values()]
+    picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
+    out = []
+    for q in (_to_q(d) for d in picked):
+        q["badge"] = q["street"] + " · demo"
         out.append(q)
     return out
 
@@ -99,10 +138,11 @@ def load_raise(n=RAISE_Q):
 def build():
     meta, qs = load_questions()
     raise_qs = load_raise()
-    qs = qs + raise_qs
+    tr_qs = load_turnriver()
+    qs = qs + raise_qs + tr_qs
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
                             capture_output=True, text=True).stdout.strip() or "local"
-    print(f"  ({len(raise_qs)} raise spots blended from the reduced-range raise pack)")
+    print(f"  ({len(raise_qs)} raise + {len(tr_qs)} turn/river spots blended from reduced-range demo packs)")
     data = json.dumps(qs, separators=(",", ":"))
     body = TEMPLATE.replace("__DATA__", data).replace("__VERSION__", meta.get("version", "")) \
                    .replace("__RECORDS__", str(meta.get("record_count", ""))).replace("__COMMIT__", commit)
@@ -220,7 +260,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
   <div class="card">
     <div class="sit"><span class="pos" id="pos"></span><span id="sit"></span><span class="demo" id="demotag" hidden>raise demo</span></div>
     <div class="felt">
-      <div class="cap">Flop</div>
+      <div class="cap" id="boardcap">Flop</div>
       <div class="cards" id="board"></div>
       <div class="hero"><div class="cap">Your hand</div><div class="cards" id="hero"></div></div>
     </div>
@@ -241,9 +281,10 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
   <div class="foot">
     Real solver output — pack <code>__VERSION__</code>, <b>__RECORDS__</b> signed records, build <code>__COMMIT__</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
-    Most spots are Check/Bet or Fold/Call (the launch pack). The few <b>Fold/Call/Raise</b> spots
-    (marked <span class="demo">raise demo</span>) come from a reduced-range pack — the full-range raise
-    run (FR-011) is the next depth pass.<br>
+    Flop spots come from the full-range launch pack. Spots marked <span class="demo">raise demo</span>
+    (Fold/Call/Raise) and <span class="demo">turn / river</span> (checked-through lines, 4- and 5-card
+    boards) are real solver output from reduced-range demo packs — the full-range raise + turn/river
+    passes are the next depth work.<br>
     Prefer to review the answers at a glance? See the <a href="preview.html">content gallery</a>.
   </div>
 </div>
@@ -266,7 +307,8 @@ function deal(){
   document.getElementById("fb").className="fb";
   const posEl=document.getElementById("pos");posEl.textContent=q.acting_player;posEl.className="pos "+q.acting_player;
   document.getElementById("sit").textContent=q.situation;
-  document.getElementById("demotag").hidden=!q.demo_raise;
+  const bd=document.getElementById("demotag");bd.hidden=!q.badge;bd.textContent=q.badge||"";
+  document.getElementById("boardcap").textContent=q.street?q.street[0].toUpperCase()+q.street.slice(1):"Flop";
   render(q.board,document.getElementById("board"));
   render(q.hero,document.getElementById("hero"));
   const box=document.getElementById("acts");box.innerHTML="";
