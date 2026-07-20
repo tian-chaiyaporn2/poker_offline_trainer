@@ -28,12 +28,18 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
 .wrap{max-width:640px;margin:0 auto;padding:20px 16px 56px}
-header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .brand{font-family:var(--disp);font-weight:600;font-size:19px}
 .brand .sp{color:var(--brass)}
-.score{display:flex;gap:12px;font-family:var(--mono);font-size:12px;color:var(--muted);align-items:baseline}
-.score b{color:var(--ink)}
-.score .acc{font-size:15px;color:var(--brass);font-weight:700}
+.score{display:flex;gap:10px;align-items:baseline}
+.score .acc{font-family:var(--mono);font-size:18px;color:var(--brass);font-weight:700;font-variant-numeric:tabular-nums}
+.score .sbits{font-size:11.5px;color:var(--muted)}
+.score .sbits b{font-variant-numeric:tabular-nums}
+.cSolid{color:var(--best)}.cOk{color:var(--accept)}.cLeak{color:var(--costly)}
+.controls{margin-bottom:14px}
+.level{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+.lvl-cap{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.lvl-hint{margin:9px 0 0;font-size:12px;color:var(--muted);line-height:1.45}
 .bar-top{height:4px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:16px}
 .bar-top>i{display:block;height:100%;background:var(--brass);transition:width .3s}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
@@ -98,7 +104,6 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .foot code{font-family:var(--mono)}.foot a{color:var(--brass)}
 .hint{font-size:11px;color:var(--muted);text-align:center;margin-top:10px}
 kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--ink) 8%,transparent);border:1px solid var(--line);border-radius:4px;padding:0 4px}
-.hright{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .lang{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;font-size:11.5px;flex:none}
 .lang button{appearance:none;border:none;background:transparent;color:var(--muted);padding:5px 11px;cursor:pointer;font-family:var(--sans);font-weight:600;white-space:nowrap}
 .lang button.on{background:var(--brass);color:#fff}
@@ -125,20 +130,22 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 <div class="wrap">
   <header>
     <div class="brand"><span class="sp">&spades;</span> Full-Street Flop Trainer</div>
-    <div class="hright">
+    <div class="score" id="score" hidden>
+      <span class="acc" id="acc">—</span>
+      <span class="sbits"><b id="n">0</b> played · <b class="cSolid" id="solid">0</b> solid ·
+        <b class="cOk" id="ok">0</b> ok · <b class="cLeak" id="leak">0</b> leak</span>
+    </div>
+  </header>
+  <div class="controls">
+    <div class="level">
+      <span class="lvl-cap">Language</span>
       <div class="lang" id="lang" role="group" aria-label="Language level">
         <button data-m="progressive" type="button">Adaptive</button><button data-m="plain" type="button">Beginner</button><button data-m="learning" type="button">Learning</button><button data-m="poker" type="button">Pro</button>
       </div>
       <span class="vocab" id="vocab" hidden></span>
-      <div class="score" id="score" hidden>
-        <span class="acc" id="acc">—</span>
-        <span>played <b id="n">0</b></span>
-        <span style="color:var(--best)">solid <b id="solid">0</b></span>
-        <span style="color:var(--accept)">ok <b id="ok">0</b></span>
-        <span style="color:var(--costly)">leak <b id="leak">0</b></span>
-      </div>
     </div>
-  </header>
+    <p class="lvl-hint" id="levelhint"></p>
+  </div>
   <div class="bar-top"><i id="prog" style="width:0"></i></div>
 
   <details class="intro" id="intro">
@@ -175,14 +182,14 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
         <p class="cost" id="cost" hidden></p>
         <ul class="det" id="det"></ul>
       </div>
-      <div class="mix"><h4>Solver mix — how often each action is right, and its EV</h4><div id="bars"></div></div>
+      <div class="mix"><h4 id="mixhead"></h4><div id="bars"></div></div>
       <button class="next" id="next">Next hand &nbsp;&#8629;</button>
     </div>
   </div>
 
   <div class="hint">Pick with <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> · next hand with <kbd>Enter</kbd></div>
   <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8253</b> signed records, build <code>71bc6c4</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8253</b> signed records, build <code>48fef63</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots come from the full-range launch pack. Spots marked <span class="demo">raise demo</span>
     (Fold/Call/Raise) and <span class="demo">turn / river</span> (later-street boards, reduced range,
@@ -336,6 +343,27 @@ const ACT_SHORT={check:"Check",bet:"Bet",fold:"Fold",call:"Call",raise:"Raise"};
 function shortAct(a){return ACT_SHORT[a]||a;}
 function fmtEv(v){return (v>=0?"+":"")+v;}
 function reasonLabel(r){return (TERMS[eff("reason:"+r)].reason[r]||r);}
+// Beginner "why": explains the LOGIC of the play in plain words, not just names the
+// action. Replaces the generic per-reason phrase for plain mode; Learning keeps the
+// term-tagged phrase, Pro keeps the solver's baked headline.
+const PLAIN_HEAD={
+  value:"You're ahead of the hands that would call — bet so the weaker ones pay you off.",
+  protection:"You're probably best, but cards could come that beat you — bet so the chasing hands have to pay.",
+  bluff:"You won't win if you just show it down, so bet to push better hands into folding.",
+  semi_bluff:"Betting can make better hands fold now — and if you're called, your hand can still improve to the best.",
+  pot_control:"A decent hand, but not strong enough to build a big pot — check to keep it small and cheap.",
+  trap:"You're very strong here — checking hides it and lets your opponent bluff or catch up before you pounce.",
+  realization:"Not much yet — check to see the next card for free instead of throwing chips in.",
+  value_call:"You're ahead of enough of their betting hands — call to keep collecting from the worse ones.",
+  bluff_catch:"Your hand beats the ones they'd bluff with — call to catch those bluffs.",
+  call_odds:"Your draw is cheap enough to chase here — call and try to complete it.",
+  fold:"There isn't enough here to keep going — fold and save your chips for a better spot.",
+  raise_value:"You're strong — raise to build a bigger pot while the worse hands pay.",
+  raise_bluff:"Raising tells the story of a big hand — do it to pressure them into folding.",
+  raise_semibluff:"Raise: you can fold out better hands now, and still improve if they call.",
+  mixed:"This one's genuinely close — either play is fine here."
+};
+function plainHead(q){return PLAIN_HEAD[q.reason]||TERMS.plain.reason[q.reason]||q.headline;}
 function situation(q){
   const first=q.node.endsWith("_first"), vscheck=q.node.endsWith("_vs_check");
   const sm=eff("positions");
@@ -416,7 +444,7 @@ function renderFeedback(q,a,gained){
   const rp=document.getElementById("reason");
   if(rm==="plain"){rp.style.display="none";}
   else{rp.style.display="";rp.textContent=TERMS.poker.reason[q.reason]||q.reason;}
-  document.getElementById("head").textContent=(rm==="poker")?q.headline:(TERMS[rm].reason[q.reason]||q.headline);
+  document.getElementById("head").textContent=(rm==="poker")?q.headline:(rm==="plain")?plainHead(q):(TERMS[rm].reason[q.reason]||q.headline);
   // Concrete cost: when the pick isn't the top play, show how much it gives up so
   // "why is this wrong?" has a number behind it, not just a color.
   const cost=document.getElementById("cost");
@@ -434,6 +462,9 @@ function renderFeedback(q,a,gained){
   if(gained&&gained.length){ut.hidden=false;ut.innerHTML="";
     gained.forEach(t=>{const d=document.createElement("div");d.className="ul-row";d.textContent="🔓 New term learned — "+unlockText(t);ut.appendChild(d);});
   }else{ut.hidden=true;}
+  document.getElementById("mixhead").textContent=(unit==="chips")
+    ?"How the solver plays it — how often each action is right, and its average payoff"
+    :"Solver mix — how often each action is right, and its EV";
   const bars=document.getElementById("bars");bars.innerHTML="";
   const maxf=Math.max(1,...q.actions.map(x=>q.freq[x]));
   q.actions.slice().sort((x,y)=>q.freq[y]-q.freq[x]).forEach(x=>{
@@ -493,9 +524,15 @@ function unlockText(t){
 function updateVocab(){const v=document.getElementById("vocab");
   v.hidden=(mode!=="progressive");
   v.textContent="🔓 "+learned.size+" / "+VOCAB_TOTAL+" terms";}
+const LEVEL_HINT={
+  progressive:"Starts in plain words; poker terms unlock as you play them well.",
+  plain:"Plain English — no poker jargon.",
+  learning:"Real poker terms, each with a short explanation.",
+  poker:"Full terminology and solver detail."};
+function updateLevelHint(){const el=document.getElementById("levelhint");if(el)el.textContent=LEVEL_HINT[mode]||"";}
 
 function applyModeUI(){document.querySelectorAll("#lang button").forEach(b=>b.classList.toggle("on",b.dataset.m===mode));}
-function setMode(m){mode=m;try{localStorage.setItem("lang",m);}catch(e){}applyModeUI();updateVocab();
+function setMode(m){mode=m;try{localStorage.setItem("lang",m);}catch(e){}applyModeUI();updateVocab();updateLevelHint();
   if(cur){renderQuestion(cur);if(answered)renderFeedback(cur,chosen,[]);}}
 document.querySelectorAll("#lang button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
 // intro: open by default, remember if the reader dismisses it
@@ -509,7 +546,7 @@ document.addEventListener("keydown",e=>{
   if(!answered){const i=parseInt(e.key);if(cur&&i>=1&&i<=cur.actions.length)answer(cur.actions[i-1]);}
   else if(e.key==="Enter"||e.key===" "){e.preventDefault();next();}
 });
-applyModeUI();updateVocab();order=shuffle([...Q.keys()]);deal();
+applyModeUI();updateVocab();updateLevelHint();order=shuffle([...Q.keys()]);deal();
 </script>
 </body>
 </html>
