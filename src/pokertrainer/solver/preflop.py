@@ -45,6 +45,41 @@ def _fold(kind, pot, invO, invD):
     return {"term": kind, "pot": pot, "inv": (invO, invD)}
 
 
+def raise_ladder_game(stack: float = 100.0, bb: float = 1.0, sb: float = 0.5,
+                      open_to: float = 2.5, tbet_to: float = 10.0,
+                      fbet_to: float = 24.0) -> Dict:
+    """Deep-stack RFI ladder: opener (player 0) opens; defender (player 1) fold/call/3bet;
+    opener fold/call/4bet; defender fold/call/jam; opener fold/call. Calls that aren't
+    all-in end at a 'flop' terminal (realization model); the jam-call is an exact all-in
+    showdown. Sizes in bb; dead SB stays in the pot. (open+call gives pot 5.5 — the same
+    single-raised pot the postflop trainer already uses.)"""
+    dead = sb
+
+    def fold0(invO, invD):  # opener folded
+        return {"term": "fold0", "pot": invO + invD + dead, "inv": (invO, invD)}
+
+    def fold1(invO, invD):  # defender folded
+        return {"term": "fold1", "pot": invO + invD + dead, "inv": (invO, invD)}
+
+    def flop(invO, invD):
+        return {"term": "flop", "pot": invO + invD + dead, "inv": (invO, invD)}
+
+    def allin(invO, invD):
+        return {"term": "allin", "pot": invO + invD + dead, "inv": (invO, invD)}
+
+    o_vs_jam = {"actor": 0, "actions": [
+        ("fold", fold0(fbet_to, stack)), ("call", allin(stack, stack))]}
+    d_vs_4bet = {"actor": 1, "actions": [
+        ("fold", fold1(fbet_to, tbet_to)), ("call", flop(fbet_to, fbet_to)), ("jam", o_vs_jam)]}
+    o_vs_3bet = {"actor": 0, "actions": [
+        ("fold", fold0(open_to, tbet_to)), ("call", flop(tbet_to, tbet_to)), ("4bet", d_vs_4bet)]}
+    d_vs_open = {"actor": 1, "actions": [
+        ("fold", fold1(open_to, bb)), ("call", flop(open_to, open_to)), ("3bet", o_vs_3bet)]}
+    root = {"actor": 0, "actions": [
+        ("fold", fold0(0.0, bb)), ("open", d_vs_open)]}
+    return root
+
+
 def push_fold_game(stack: float = 10.0, bb: float = 1.0, sb: float = 0.5) -> Dict:
     """Opener (player 0, the button) jams or folds; defender (player 1, BB) calls or
     folds. All non-fold ends are all-in -> exact (no realization term). Dead SB stays
