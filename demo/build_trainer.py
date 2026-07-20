@@ -329,6 +329,8 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .track>i{display:block;height:100%;border-radius:5px;background:var(--rc,var(--muted))}
 .tag{font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px;color:#fff;background:var(--rc)}
 .g-best{--rc:var(--best)}.g-good{--rc:var(--good)}.g-acceptable{--rc:var(--accept)}.g-costly{--rc:var(--costly)}.g-major_error{--rc:var(--major)}
+.read{margin:0 0 9px;font-size:14.5px;font-weight:600;color:var(--ink)}
+.read b{color:var(--brass)}
 .cost{margin:-2px 0 8px;font-size:12.5px;color:var(--ink);background:color-mix(in srgb,var(--brass) 10%,transparent);border-left:3px solid var(--brass);padding:7px 11px;border-radius:0 7px 7px 0;font-variant-numeric:tabular-nums}
 .row.best-row,.row.you-row{padding:6px 9px;border-radius:9px;margin:6px -9px}
 .row.best-row{background:color-mix(in srgb,var(--rc) 12%,transparent)}
@@ -410,6 +412,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
       <div class="verdict" id="verdict"></div>
       <div class="unlock" id="unlock" hidden></div>
       <div class="why">
+        <p class="read" id="read"></p>
         <span class="reason" id="reason"></span>
         <p class="head" id="head"></p>
         <p class="cost" id="cost" hidden></p>
@@ -473,6 +476,51 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 <script>
 const Q = __DATA__;
 const SUIT = {s:["♠",0],h:["♥",1],d:["♦",1],c:["♣",0]};
+
+// Plain-English hand reader — tells the player WHAT they hold and where they stand
+// (top pair / overpair / a set / just a draw). This is the piece beginners lack:
+// they can't yet read their own hand, so every "why" falls flat. Computed live from
+// the hero cards + board; validated against the pack's real hands.
+const RV={2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,T:10,J:11,Q:12,K:13,A:14};
+const ONE={2:"Two",3:"Three",4:"Four",5:"Five",6:"Six",7:"Seven",8:"Eight",9:"Nine",10:"Ten",11:"Jack",12:"Queen",13:"King",14:"Ace"};
+const MANY={2:"Twos",3:"Threes",4:"Fours",5:"Fives",6:"Sixes",7:"Sevens",8:"Eights",9:"Nines",10:"Tens",11:"Jacks",12:"Queens",13:"Kings",14:"Aces"};
+function hasStraight(vals){const s=new Set(vals);if(s.has(14))s.add(1);
+  for(let lo=1;lo<=10;lo++){let ok=true;for(let k=0;k<5;k++)if(!s.has(lo+k)){ok=false;break;}if(ok)return true;}return false;}
+function straightDraw(vals){if(hasStraight(vals))return null;const base=new Set(vals);const comp=[];
+  for(let r=2;r<=14;r++){if(base.has(r))continue;if(hasStraight([...base,r]))comp.push(r);}
+  if(!comp.length)return null;return comp.length>=2?"an open-ended straight draw":"a gutshot straight draw";}
+function handRead(hero,board){
+  const hs=hero.map(c=>c[1]),bs=board.map(c=>c[1]);
+  const hv=hero.map(c=>RV[c[0]]),bv=board.map(c=>RV[c[0]]);
+  const allV=[...hv,...bv],allS=[...hs,...bs],river=board.length>=5;
+  const cnt={};allV.forEach(v=>cnt[v]=(cnt[v]||0)+1);
+  const groups=Object.keys(cnt).map(Number).sort((a,b)=>cnt[b]-cnt[a]||b-a);
+  const suitCnt={};allS.forEach(s=>suitCnt[s]=(suitCnt[s]||0)+1);
+  const flush=Object.keys(suitCnt).some(s=>suitCnt[s]>=5);
+  const straight=hasStraight(allV),maxB=Math.max(...bv),sortB=[...new Set(bv)].sort((a,b)=>b-a),pocket=hv[0]===hv[1];
+  const top=cnt[groups[0]],second=cnt[groups[1]]||0;
+  let made,strength=null;
+  if(flush&&straight)made="a straight flush";
+  else if(top===4)made="four of a kind ("+MANY[groups[0]]+")";
+  else if(top===3&&second>=2)made="a full house";
+  else if(flush)made="a flush";
+  else if(straight)made="a straight";
+  else if(top===3)made=(pocket&&hv[0]===groups[0])?"a set of "+MANY[groups[0]]:"three "+MANY[groups[0]];
+  else if(top===2&&second===2)made="two pair";
+  else if(top===2){const pr=groups[0];made="a pair of "+MANY[pr];
+    if(pocket&&hv[0]===pr)strength=pr>maxB?"an overpair — higher than every card on the board":"the "+ONE[maxB]+" on the board outranks it";
+    else if(pr===sortB[0])strength="top pair — you matched the highest board card";
+    else if(pr===sortB[1])strength="middle pair";
+    else strength="a low pair";}
+  else made=ONE[Math.max(...hv)]+" high (no pair)";
+  let draw=null;
+  if(!river&&!flush&&!straight){const parts=[];
+    if(Object.keys(suitCnt).some(s=>suitCnt[s]===4&&hs.includes(s)))parts.push("a flush draw (four to a flush)");
+    const sd=straightDraw(allV);if(sd)parts.push(sd);
+    if(parts.length)draw=parts.join(" and ");}
+  return {made,strength,draw};
+}
+
 // Plain (no jargon) vs Poker (real terminology) — the same data, two vocabularies.
 const TERMS = {
   poker:{
@@ -594,9 +642,20 @@ function renderFeedback(q,a,gained){
   else if(g==="acceptable")vmsg="~ "+you+" is OK, but "+best+" is the better play.";
   else vmsg="✗ You picked "+you+" — "+(g==="major_error"?"a big mistake":"a costly leak")+". The play is "+best+".";
   v.appendChild(document.createTextNode(vmsg));
+  // Ground the explanation in the actual holding: "You held a pair of Jacks — the
+  // Ace on the board outranks it." Beginners can't read their own hand yet, so this
+  // is what makes the 'why' land.
+  const rd=handRead(q.hero,q.board);
+  const readEl=document.getElementById("read");readEl.innerHTML="";
+  readEl.appendChild(document.createTextNode("You held "));
+  const mb=document.createElement("b");mb.textContent=rd.made;readEl.appendChild(mb);
+  if(rd.strength)readEl.appendChild(document.createTextNode(" — "+rd.strength));
+  if(rd.draw)readEl.appendChild(document.createTextNode(", plus "+rd.draw));
+  readEl.appendChild(document.createTextNode("."));
   // explanation adapts to the level: Beginner = plain 'why' only; Learning = term
   // tag + explaining headline; Pro = term tag + richer baked headline + bullets.
   const rm=eff("reason:"+q.reason);
+  const unit=(rm==="plain")?"chips":"bb";     // plain mode avoids the "bb" jargon
   const rp=document.getElementById("reason");
   if(rm==="plain"){rp.style.display="none";}
   else{rp.style.display="";rp.textContent=TERMS.poker.reason[q.reason]||q.reason;}
@@ -606,10 +665,14 @@ function renderFeedback(q,a,gained){
   const cost=document.getElementById("cost");
   const dEv=Math.round((q.ev[pref]-q.ev[a])*100)/100;
   if(a!==pref&&dEv>=0.05){cost.hidden=false;
-    cost.textContent=best+" averages "+fmtEv(q.ev[pref])+" bb here vs your "+you+" at "+fmtEv(q.ev[a])+" bb — about "+dEv+" bb per hand left behind.";
+    cost.textContent=best+" averages "+fmtEv(q.ev[pref])+" "+unit+" here vs your "+you+" at "+fmtEv(q.ev[a])+" "+unit+" — about "+dEv+" "+unit+" per hand left behind.";
   }else{cost.hidden=true;}
   const dl=document.getElementById("det");dl.innerHTML="";
-  if(rm==="poker"){q.detail.forEach(d=>{const li=document.createElement("li");li.textContent=d;dl.appendChild(li);});}
+  // Pro detail: keep the baked bullets but tame the false precision ("~7.951%") and
+  // the meaningless >100% figures that pop out on tiny pots.
+  if(rm==="poker"){q.detail.forEach(d=>{
+    const clean=d.replace(/~?(\d+(?:\.\d+)?)%/g,(m,n)=>{const v=Math.round(parseFloat(n));return v>100?"a large amount":v+"%";});
+    const li=document.createElement("li");li.textContent=clean;dl.appendChild(li);});}
   const ut=document.getElementById("unlock");
   if(gained&&gained.length){ut.hidden=false;ut.innerHTML="";
     gained.forEach(t=>{const d=document.createElement("div");d.className="ul-row";d.textContent="🔓 New term learned — "+unlockText(t);ut.appendChild(d);});
@@ -627,7 +690,7 @@ function renderFeedback(q,a,gained){
     if(you){const yp=document.createElement("span");yp.className="you";yp.textContent="YOUR PICK";nm.appendChild(yp);}
     const num=document.createElement("span");num.className="num";
     const ev=q.ev[x];
-    num.appendChild(document.createTextNode(q.freq[x]+"% · "+(ev>=0?"+":"")+ev+" bb "));
+    num.appendChild(document.createTextNode(q.freq[x]+"% · "+(ev>=0?"+":"")+ev+" "+unit+" "));
     const tag=document.createElement("span");tag.className="tag";tag.textContent=ga.replace("_"," ");
     num.appendChild(tag);
     rlab.appendChild(nm);rlab.appendChild(num);
