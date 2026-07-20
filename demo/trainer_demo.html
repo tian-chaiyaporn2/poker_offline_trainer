@@ -108,7 +108,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
     <div class="brand"><span class="sp">&spades;</span> Full-Street Flop Trainer</div>
     <div class="hright">
       <div class="lang" id="lang" role="group" aria-label="Language level">
-        <button data-m="plain" type="button">Plain</button><button data-m="poker" type="button">Poker</button>
+        <button data-m="plain" type="button">Beginner</button><button data-m="learning" type="button">Learning</button><button data-m="poker" type="button">Pro</button>
       </div>
       <div class="score" id="score" hidden>
         <span class="acc" id="acc">—</span>
@@ -131,8 +131,9 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
       middle are the <b>pot</b> — that's what you're playing for.</p>
     <p>One player <b>acts first</b>, the other <b>acts last</b>. Acting last is an advantage — you see what your
       opponent does before deciding. The trainer tells you which you are each hand.</p>
-    <p>Your job: pick the action a strong player would. You're graded instantly and told why. Flip to
-      <b>Poker</b> mode (top right) once the words feel familiar — that's part of the training.</p>
+    <p>Your job: pick the action a strong player would — you're graded instantly and told why. Three levels
+      up top: <b>Beginner</b> (plain words) → <b>Learning</b> (words + what they mean) → <b>Pro</b> (poker
+      shorthand). Move up as the terms click — learning the lingo is part of the training.</p>
   </details>
 
   <div class="card">
@@ -157,7 +158,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 
   <div class="hint">Pick with <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> · next hand with <kbd>Enter</kbd></div>
   <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8253</b> signed records, build <code>b8069f6</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8253</b> signed records, build <code>4329b5a</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots come from the full-range launch pack. Spots marked <span class="demo">raise demo</span>
     (Fold/Call/Raise) and <span class="demo">turn / river</span> (later-street boards, reduced range,
@@ -234,24 +235,41 @@ const TERMS = {
       mixed:"It's close — either choice is fine"},
     ev:"profit",
     boardcap:{flop:"The 3 shared cards",turn:"The 4th shared card is out",river:"The last (5th) shared card"},
-    herocap:"Your 2 cards (only you can see these)"}
+    herocap:"Your 2 cards (only you can see these)"},
+  learning:{
+    pos:{BTN:"BTN",BB:"BB",SB:"SB"},
+    act:{check:"Check",bet:"Bet 66%",fold:"Fold",call:"Call",raise:"Raise 3×"},
+    reason:{value:"Value bet — get paid by worse",protection:"Protection — charge the draws",
+      bluff:"Bluff — make better hands fold",semi_bluff:"Semi-bluff — bet a hand that can improve",
+      pot_control:"Pot control — keep it small",trap:"Trap — check a monster",
+      realization:"Realize equity — take a free card",value_call:"Value call — you're ahead",
+      bluff_catch:"Bluff-catch — you beat their bluffs",call_odds:"Call on odds — right price to draw",
+      raise_value:"Value raise — build the pot",raise_bluff:"Bluff raise — make them fold",
+      raise_semibluff:"Semi-bluff raise — a draw",fold:"Fold — not strong enough",mixed:"Mixed — either is fine"},
+    ev:"EV",boardcap:{flop:"Flop (first 3 shared cards)",turn:"Turn (4th card)",river:"River (5th card)"},
+    herocap:"Your hand (2 hole cards)"}
 };
 let order=[], pos=0, answered=false, cur=null, chosen=null, stats={n:0,solid:0,ok:0,leak:0};
-let mode=(function(){try{return localStorage.getItem("lang")==="poker"?"poker":"plain";}catch(e){return "plain";}})();
+let mode=(function(){try{const m=localStorage.getItem("lang");return (m==="poker"||m==="learning")?m:"plain";}catch(e){return "plain";}})();
 function T(){return TERMS[mode];}
 function posLabel(p){return (T().pos[p]||p);}
 function actLabel(a){return (T().act[a]||a);}
 function reasonLabel(r){return (T().reason[r]||r);}
 function situation(q){
-  if(mode==="poker"){
-    const pre=q.street==="turn"?"On the turn, ":q.street==="river"?"On the river, ":"On the flop, ";
-    const role=q.node.endsWith("_first")?", first to act.":q.node.endsWith("_vs_check")?" and it's checked to you.":" facing a 66% c-bet.";
-    return pre+"you're the "+q.acting_player+role;
+  const first=q.node.endsWith("_first"), vscheck=q.node.endsWith("_vs_check");
+  if(mode==="plain"){
+    if(first) return "It's your turn, and you go first — you decide before your opponent does.";
+    if(vscheck) return "Your opponent passed (checked) to you. It's your turn.";
+    return "Your opponent just put chips in (bet). It's on you — match it, put in even more, or give up?";
   }
-  // plain — no street/position jargon (the caption + pill carry those)
-  if(q.node.endsWith("_first")) return "It's your turn, and you go first — you decide before your opponent does.";
-  if(q.node.endsWith("_vs_check")) return "Your opponent passed (checked) to you. It's your turn.";
-  return "Your opponent just put chips in (bet). It's on you — match it, put in even more, or give up?";
+  const pre=q.street==="turn"?"On the turn, ":q.street==="river"?"On the river, ":"On the flop, ";
+  if(mode==="learning"){
+    const who="you're the "+q.acting_player+" (you act "+(q.acting_player==="BTN"?"last":"first")+")";
+    const role=first?", first to act.":vscheck?" — it's checked to you.":" facing a bet (their c-bet).";
+    return pre+who+role;
+  }
+  const role=first?", first to act.":vscheck?" and it's checked to you.":" facing a 66% c-bet.";
+  return pre+"you're the "+q.acting_player+role;
 }
 
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
