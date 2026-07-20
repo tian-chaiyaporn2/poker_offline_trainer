@@ -50,6 +50,32 @@ def preflop_equity(hero: Combo, villain: Combo,
     return wins / samples
 
 
+def build_class_equity_table(samples: int = 2000, seed: int = 7):
+    """Precompute a 169x169 class-vs-class equity matrix for the solver's inner loop.
+
+    Representative-combo per class (canonical first combo), card-removal aware at the
+    pair level; a class-level approximation (small suit-specific error), which is what
+    lightweight pre-flop solvers use. Returns (classes, E) where E[i][j] is class i's
+    equity vs class j. Diagonal = 0.5 (a class vs itself is symmetric)."""
+    import numpy as np
+    classes = hand_classes()
+    n = len(classes)
+    E = np.full((n, n), 0.5, dtype=float)
+    reps = [class_to_combos(c)[0] for c in classes]
+    for i in range(n):
+        a = reps[i]
+        for j in range(i + 1, n):
+            b = reps[j]
+            if set(a) & set(b):  # representatives collide -> pick a non-colliding combo of j
+                b = next((cc for cc in class_to_combos(classes[j]) if not set(cc) & set(a)), None)
+                if b is None:
+                    continue  # no legal matchup (shouldn't happen for distinct classes)
+            e = preflop_equity(a, b, samples=samples, seed=seed + i * n + j)
+            E[i, j] = e
+            E[j, i] = 1.0 - e
+    return classes, E
+
+
 def class_equity(class_a: str, class_b: str,
                  samples: int = 4000, seed: int = 7) -> float:
     """Average pre-flop equity of hand-class A vs hand-class B, averaged over every

@@ -42,3 +42,24 @@ def test_collision_rejected():
     import pytest
     with pytest.raises(ValueError):
         preflop_equity(ca, ca)  # same cards -> collision
+
+
+def test_pushfold_cfr_converges_and_is_monotone():
+    """CFR engine correctness on the EXACT push/fold game (all-in terminals, no
+    realization model) using a synthetic monotone equity matrix — fast + deterministic."""
+    import numpy as np
+    from pokertrainer.solver.preflop import PreflopCFR, push_fold_game, combo_weights
+    from pokertrainer.preflop_equity import hand_classes
+    classes = hand_classes()
+    n = len(classes)
+    strength = np.linspace(1.0, 0.0, n)                 # index 0 = strongest
+    E = 0.5 + 0.5 * (strength[:, None] - strength[None, :])  # valid: E + E.T == 1
+    np.fill_diagonal(E, 0.5)
+    w = combo_weights(classes)
+    cfr = PreflopCFR(push_fold_game(stack=10.0), E, w, ip_player=0, realize=0.0)
+    avg = cfr.run(iters=1500)
+    assert cfr.exploitability(avg) < 0.01, "CFR did not converge to ~equilibrium"
+    jam = avg[0][:, 1]                                   # opener jam prob per class
+    assert jam[0] > 0.99 and jam[-1] < 0.01             # strongest jams, weakest folds
+    # monotone-ish: the jam frequency should broadly decrease with weakness
+    assert (w * jam).sum() / w.sum() > 0.2              # a non-trivial jamming range
