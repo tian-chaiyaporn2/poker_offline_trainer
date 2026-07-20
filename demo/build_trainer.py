@@ -329,6 +329,10 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .track>i{display:block;height:100%;border-radius:5px;background:var(--rc,var(--muted))}
 .tag{font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px;color:#fff;background:var(--rc)}
 .g-best{--rc:var(--best)}.g-good{--rc:var(--good)}.g-acceptable{--rc:var(--accept)}.g-costly{--rc:var(--costly)}.g-major_error{--rc:var(--major)}
+.cost{margin:-2px 0 8px;font-size:12.5px;color:var(--ink);background:color-mix(in srgb,var(--brass) 10%,transparent);border-left:3px solid var(--brass);padding:7px 11px;border-radius:0 7px 7px 0;font-variant-numeric:tabular-nums}
+.row.best-row,.row.you-row{padding:6px 9px;border-radius:9px;margin:6px -9px}
+.row.best-row{background:color-mix(in srgb,var(--rc) 12%,transparent)}
+.row.you-row{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--rc) 55%,var(--line))}
 .next{margin:8px 18px 18px;width:calc(100% - 36px);padding:14px;border:none;border-radius:11px;background:var(--brass);color:#fff;font-family:var(--sans);font-size:15px;font-weight:700;cursor:pointer}
 .next:hover{filter:brightness(1.06)}.next:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .foot{margin-top:18px;text-align:center;color:var(--muted);font-size:11.5px;line-height:1.6}
@@ -408,6 +412,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
       <div class="why">
         <span class="reason" id="reason"></span>
         <p class="head" id="head"></p>
+        <p class="cost" id="cost" hidden></p>
         <ul class="det" id="det"></ul>
       </div>
       <div class="mix"><h4>Solver mix — how often each action is right, and its EV</h4><div id="bars"></div></div>
@@ -468,8 +473,6 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 <script>
 const Q = __DATA__;
 const SUIT = {s:["♠",0],h:["♥",1],d:["♦",1],c:["♣",0]};
-const VERD = {best:"Best — the top play.",good:"Good — barely gives anything up.",
-  acceptable:"OK — playable, not ideal.",costly:"Costly — a recurring leak.",major_error:"Major error — clearly dominated."};
 // Plain (no jargon) vs Poker (real terminology) — the same data, two vocabularies.
 const TERMS = {
   poker:{
@@ -522,6 +525,11 @@ function posLabel(q){const m=eff("positions");
 function actLabel(a){const m=eff("positions");
   if(m!=="plain"&&cur&&cur.labels&&cur.labels[a])return cur.labels[a];  // per-pack bet/raise sizing
   return (TERMS[m].act[a]||a);}
+// Short, jargon-free action names for the verdict/cost sentences (the verbose plain
+// labels like "Check (pass, no bet)" are for the buttons, not for prose).
+const ACT_SHORT={check:"Check",bet:"Bet",fold:"Fold",call:"Call",raise:"Raise"};
+function shortAct(a){return ACT_SHORT[a]||a;}
+function fmtEv(v){return (v>=0?"+":"")+v;}
 function reasonLabel(r){return (TERMS[eff("reason:"+r)].reason[r]||r);}
 function situation(q){
   const first=q.node.endsWith("_first"), vscheck=q.node.endsWith("_vs_check");
@@ -574,10 +582,18 @@ function renderFeedback(q,a,gained){
     b.disabled=true;const ga=q.grades[b.dataset.a];b.className="act g-"+ga;
     if(b.dataset.a===a)b.classList.add("chosen");
   });
-  const g=q.grades[a];
+  const g=q.grades[a],pref=q.preferred;
+  const you=shortAct(a),best=shortAct(pref);
   const v=document.getElementById("verdict");v.className="verdict v-"+g;
   v.textContent="";const dot=document.createElement("span");dot.className="dot";v.appendChild(dot);
-  v.appendChild(document.createTextNode(VERD[g]||g));
+  // Verdict names YOUR pick AND the better action — so a wrong answer immediately
+  // shows what you should have done, not just an abstract grade.
+  let vmsg;
+  if(a===pref)vmsg="✓ "+you+" — the best play here.";
+  else if(g==="good")vmsg="✓ "+you+" works — "+best+" is only a touch better.";
+  else if(g==="acceptable")vmsg="~ "+you+" is OK, but "+best+" is the better play.";
+  else vmsg="✗ You picked "+you+" — "+(g==="major_error"?"a big mistake":"a costly leak")+". The play is "+best+".";
+  v.appendChild(document.createTextNode(vmsg));
   // explanation adapts to the level: Beginner = plain 'why' only; Learning = term
   // tag + explaining headline; Pro = term tag + richer baked headline + bullets.
   const rm=eff("reason:"+q.reason);
@@ -585,6 +601,13 @@ function renderFeedback(q,a,gained){
   if(rm==="plain"){rp.style.display="none";}
   else{rp.style.display="";rp.textContent=TERMS.poker.reason[q.reason]||q.reason;}
   document.getElementById("head").textContent=(rm==="poker")?q.headline:(TERMS[rm].reason[q.reason]||q.headline);
+  // Concrete cost: when the pick isn't the top play, show how much it gives up so
+  // "why is this wrong?" has a number behind it, not just a color.
+  const cost=document.getElementById("cost");
+  const dEv=Math.round((q.ev[pref]-q.ev[a])*100)/100;
+  if(a!==pref&&dEv>=0.05){cost.hidden=false;
+    cost.textContent=best+" averages "+fmtEv(q.ev[pref])+" bb here vs your "+you+" at "+fmtEv(q.ev[a])+" bb — about "+dEv+" bb per hand left behind.";
+  }else{cost.hidden=true;}
   const dl=document.getElementById("det");dl.innerHTML="";
   if(rm==="poker"){q.detail.forEach(d=>{const li=document.createElement("li");li.textContent=d;dl.appendChild(li);});}
   const ut=document.getElementById("unlock");
@@ -596,6 +619,8 @@ function renderFeedback(q,a,gained){
   q.actions.slice().sort((x,y)=>q.freq[y]-q.freq[x]).forEach(x=>{
     const ga=q.grades[x],rec=x===q.preferred,you=x===a;
     const row=document.createElement("div");row.className="row g-"+ga;
+    if(rec)row.classList.add("best-row");
+    if(you)row.classList.add("you-row");
     const rlab=document.createElement("div");rlab.className="rlab";
     const nm=document.createElement("span");nm.className="nm";nm.textContent=actLabel(x)+" ";
     if(rec){const st=document.createElement("span");st.className="star";st.textContent="★";nm.appendChild(st);nm.appendChild(document.createTextNode(" "));}
