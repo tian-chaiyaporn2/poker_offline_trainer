@@ -232,15 +232,35 @@ def load_sb(n=SB_Q, required=False):
     return out
 
 
+PF_Q = 16   # pre-flop spots blended in ("Chapter 0")
+
+
+def load_preflop(n=PF_Q):
+    """Pre-flop spots (open/fold + BB defense) from the calibrated ranges — a different
+    question KIND the trainer renders on its own path (no board)."""
+    from pokertrainer.preflop_content import build_questions
+    out = []
+    for q in build_questions()[:n]:
+        out.append({
+            "preflop": True, "badge": "Preflop", "pos": q["pos"],
+            "situation": q["situation"], "hand": q["hand"], "actions": q["actions"],
+            "answer": q["answer"], "mixed": q.get("mixed", False), "alt": q.get("alt"),
+            "read": q["read"], "why": q["why"], "rule": q["rule"],
+        })
+    return out
+
+
 def build(allow_missing_demo_packs=False):
     meta, qs = load_questions()
     raise_qs = load_raise(required=not allow_missing_demo_packs)
     tr_qs = load_turnriver(required=not allow_missing_demo_packs)
     sb_qs = load_sb()
-    qs = qs + raise_qs + tr_qs + sb_qs
+    pf_qs = load_preflop()
+    qs = qs + raise_qs + tr_qs + sb_qs + pf_qs
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
                             capture_output=True, text=True).stdout.strip() or "local"
-    print(f"  ({len(raise_qs)} raise + {len(tr_qs)} turn/river + {len(sb_qs)} SB-vs-BB spots blended in)")
+    print(f"  ({len(raise_qs)} raise + {len(tr_qs)} turn/river + {len(sb_qs)} SB-vs-BB "
+          f"+ {len(pf_qs)} pre-flop spots blended in)")
     # Escape </script> so pack strings cannot break out of the inline script.
     data = json.dumps(qs, separators=(",", ":")).replace("<", "\\u003c")
     body = TEMPLATE.replace("__DATA__", data).replace("__VERSION__", html.escape(meta.get("version", ""))) \
@@ -295,7 +315,7 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
 .sit{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px;font-family:var(--disp);font-size:16px}
 .pos{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.05em;padding:2px 8px;border-radius:6px;flex:none}
-.pos.BB,.pos.SB{background:color-mix(in srgb,var(--brass) 20%,transparent);color:var(--brass)}
+.pos.BB,.pos.SB,.pos.UTG,.pos.HJ,.pos.CO{background:color-mix(in srgb,var(--brass) 20%,transparent);color:var(--brass)}
 .pos.BTN{background:color-mix(in srgb,var(--best) 20%,transparent);color:var(--best)}
 .demo{margin-left:auto;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accept);border:1px solid color-mix(in srgb,var(--accept) 45%,var(--line));border-radius:6px;padding:1px 6px}
 .felt{background:radial-gradient(120% 130% at 50% -10%,color-mix(in srgb,var(--best) 20%,var(--panel)),var(--panel));padding:20px 18px 18px;text-align:center}
@@ -734,7 +754,26 @@ function card(t){const r=t[0],s=(t[1]||"").toLowerCase(),su=SUIT[s]||[s,0];
   e.appendChild(b);e.appendChild(i);return e;}
 function render(cs,el){el.innerHTML="";cs.forEach(c=>el.appendChild(card(c)));}
 
+// --- pre-flop ("Chapter 0"): a distinct question kind, its own render/feedback path ---
+const PF_ACT={plain:{fold:"Fold",open:"Raise (open)",call:"Call","3bet":"Re-raise"},
+  poker:{fold:"Fold",open:"Open 2.5bb",call:"Call","3bet":"3-bet"}};
+function pfActLabel(a){return (eff("positions")==="plain"?PF_ACT.plain:PF_ACT.poker)[a]||a;}
+function renderPreflop(q){
+  const posEl=document.getElementById("pos");posEl.textContent=q.pos;posEl.className="pos "+q.pos;
+  document.getElementById("sit").textContent=q.situation;
+  const bd=document.getElementById("demotag");bd.hidden=false;bd.textContent="Preflop";
+  document.getElementById("boardcap").style.display="none";document.getElementById("board").style.display="none";
+  document.getElementById("herocap").textContent="Your hand";
+  render(q.hand,document.getElementById("hero"));
+  const box=document.getElementById("acts");box.innerHTML="";
+  q.actions.forEach((a,i)=>{const b=document.createElement("button");b.className="act";b.dataset.a=a;
+    const l=document.createElement("span");l.textContent=pfActLabel(a);const k=document.createElement("span");k.className="k";k.textContent=String(i+1);
+    b.appendChild(l);b.appendChild(k);b.onclick=()=>answer(a);box.appendChild(b);});
+  document.getElementById("prog").style.width=(100*pos/Q.length)+"%";
+}
 function renderQuestion(q){
+  if(q.preflop)return renderPreflop(q);
+  document.getElementById("boardcap").style.display="";document.getElementById("board").style.display="";
   const posEl=document.getElementById("pos");posEl.textContent=posLabel(q);posEl.className="pos "+q.acting_player;
   document.getElementById("sit").textContent=situation(q);
   const bd=document.getElementById("demotag");bd.hidden=!q.badge;bd.textContent=q.badge||"";
@@ -754,7 +793,34 @@ function renderQuestion(q){
 }
 function deal(){answered=false;chosen=null;cur=Q[order[pos]];document.getElementById("fb").className="fb";renderQuestion(cur);}
 
+function renderPreflopFeedback(q,a){
+  const correct=a===q.answer, closeOk=q.mixed&&a===q.alt;
+  document.querySelectorAll("#acts .act").forEach(b=>{b.disabled=true;b.className="act";
+    if(b.dataset.a===q.answer)b.classList.add("g-best","chosen");
+    else if(q.mixed&&b.dataset.a===q.alt)b.classList.add("g-good","chosen");
+    else if(b.dataset.a===a)b.classList.add("g-major_error","chosen");});
+  const v=document.getElementById("verdict");
+  if(correct){v.className="verdict v-best";
+    v.textContent=q.mixed?("✓ "+pfActLabel(a)+" — right, and it's close ("+pfActLabel(q.alt).toLowerCase()+" is fine too).")
+      :("✓ Correct — "+pfActLabel(a).toLowerCase()+".");}
+  else if(closeOk){v.className="verdict v-good";
+    v.textContent="≈ Close — "+pfActLabel(a).toLowerCase()+" is fine; "+pfActLabel(q.answer).toLowerCase()+" is the small favourite.";}
+  else{v.className="verdict v-major_error";v.textContent="✗ Not quite — the play is "+pfActLabel(q.answer)+".";}
+  const rd=document.getElementById("read");rd.innerHTML="";rd.appendChild(document.createTextNode("You held "));
+  const bc=document.createElement("b");bc.textContent=q.read;rd.appendChild(bc);rd.appendChild(document.createTextNode("."));
+  document.getElementById("reason").style.display="none";
+  document.getElementById("head").textContent=q.why;
+  document.getElementById("cost").hidden=true;document.getElementById("det").innerHTML="";
+  document.getElementById("unlock").hidden=true;document.getElementById("moretoggle").hidden=true;
+  document.getElementById("stand").hidden=true;document.getElementById("morebody").hidden=false;
+  const ruleEl=document.getElementById("rule");ruleEl.hidden=false;ruleEl.innerHTML="";
+  const lb=document.createElement("b");lb.textContent="Rule of thumb";ruleEl.appendChild(lb);ruleEl.appendChild(document.createTextNode(q.rule));
+  document.querySelector(".mix").style.display="none";
+  document.getElementById("fb").className="fb on";
+}
 function renderFeedback(q,a,gained){
+  if(q.preflop)return renderPreflopFeedback(q,a);
+  document.querySelector(".mix").style.display="";document.getElementById("stand").hidden=false;
   document.querySelectorAll("#acts .act").forEach(b=>{
     b.disabled=true;const ga=q.grades[b.dataset.a];b.className="act g-"+ga;
     if(b.dataset.a===a)b.classList.add("chosen");
@@ -875,6 +941,16 @@ function renderFeedback(q,a,gained){
 }
 function answer(a){
   if(answered)return;answered=true;chosen=a;
+  if(cur.preflop){
+    const correct=a===cur.answer, closeOk=!correct&&cur.mixed&&a===cur.alt;
+    stats.n++; if(correct||closeOk)stats.solid++; else stats.leak++;
+    document.getElementById("n").textContent=stats.n;document.getElementById("solid").textContent=stats.solid;
+    document.getElementById("ok").textContent=stats.ok;document.getElementById("leak").textContent=stats.leak;
+    document.getElementById("acc").textContent=Math.round(100*(stats.solid+stats.ok)/stats.n)+"%";
+    renderFeedback(cur,a,[]);
+    document.getElementById("next").focus({preventScroll:true});
+    return;
+  }
   const g=cur.grades[a];
   stats.n++;
   if(g==="best"||g==="good")stats.solid++;else if(g==="acceptable")stats.ok++;else stats.leak++;
