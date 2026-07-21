@@ -407,6 +407,40 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .intro p{margin:0 0 10px;font-size:13px;color:var(--ink);line-height:1.6}
 .intro p:first-of-type{margin-top:2px}
 .intro b{color:var(--ink)}
+/* coach (bring-your-own-key) */
+.coach{margin-top:14px;border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden}
+.coach>summary{cursor:pointer;font-weight:600;padding:13px 16px;font-size:13px;color:var(--brass);list-style:none;display:flex;align-items:center;gap:8px}
+.coach>summary::-webkit-details-marker{display:none}
+.coach>summary .byok{margin-left:auto;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 6px}
+.coach-body{padding:0 16px 16px}
+.coach-note{font-size:11.5px;color:var(--muted);line-height:1.55;margin:0 0 12px}
+.coach-note b{color:var(--ink)}
+.coach-set{display:flex;flex-direction:column;gap:9px;margin-bottom:12px;padding:12px;background:var(--panel2);border:1px solid var(--line);border-radius:11px}
+.coach-set label{display:block;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.coach-set input,.coach-set select{font-family:var(--sans);font-size:13px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%}
+.coach-set input:focus,.coach-set select:focus{outline:2px solid var(--brass);outline-offset:1px}
+.coach-row2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.coach-save{appearance:none;border:none;background:var(--brass);color:#fff;font-family:var(--sans);font-weight:700;font-size:13px;padding:10px;border-radius:9px;cursor:pointer;margin-top:2px}
+.coach-save:hover{filter:brightness(1.06)}
+.coach-conn{font-size:11.5px;color:var(--muted);margin:0 0 11px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.coach-conn b{color:var(--ink)}
+.coach-conn button{appearance:none;background:none;border:none;color:var(--brass);font-family:var(--sans);font-size:11.5px;font-weight:600;cursor:pointer;padding:0}
+.coach-conn button:hover{text-decoration:underline}
+.coach-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:11px}
+.coach-chips button{appearance:none;font-family:var(--sans);font-size:11.5px;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:6px 11px;cursor:pointer}
+.coach-chips button:hover{border-color:var(--brass)}
+.coach-log{display:flex;flex-direction:column;gap:9px;margin-bottom:11px;max-height:340px;overflow-y:auto}
+.coach-log:empty{display:none}
+.cmsg{font-size:13px;line-height:1.5;padding:9px 12px;border-radius:12px;max-width:88%;white-space:pre-wrap;overflow-wrap:anywhere}
+.cmsg.user{align-self:flex-end;background:color-mix(in srgb,var(--brass) 16%,var(--panel2));border:1px solid color-mix(in srgb,var(--brass) 30%,var(--line))}
+.cmsg.bot{align-self:flex-start;background:var(--panel2);border:1px solid var(--line)}
+.cmsg.think{color:var(--muted)}
+.cmsg.err{align-self:stretch;max-width:100%;background:color-mix(in srgb,var(--costly) 12%,var(--panel2));border:1px solid color-mix(in srgb,var(--costly) 40%,var(--line));color:var(--ink)}
+.coach-ask{display:flex;gap:8px}
+.coach-ask input{flex:1;min-width:0;font-family:var(--sans);font-size:13px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+.coach-ask input:focus{outline:2px solid var(--brass);outline-offset:1px}
+.coach-ask button{appearance:none;border:none;background:var(--brass);color:#fff;font-family:var(--sans);font-weight:700;font-size:13px;padding:0 16px;border-radius:9px;cursor:pointer;flex:none}
+.coach-ask button:disabled{opacity:.5;cursor:default}
 </style>
 <div class="wrap">
   <header>
@@ -479,6 +513,33 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
       <button class="next" id="next">Next hand &nbsp;&#8629;</button>
     </div>
   </div>
+
+  <details class="coach" id="coach">
+    <summary>💬 Ask a coach about this hand<span class="byok">your API key</span></summary>
+    <div class="coach-body">
+      <p class="coach-note">Ask anything about this spot in plain language. The coach is handed this hand's exact solver
+        numbers, so it explains the real decision — not generic tips. It runs on <b>your own API key</b>, kept only on
+        this device and sent straight to your provider (we never see it). Use a spend-limited key. <span id="coach-envnote"></span></p>
+      <div class="coach-set" id="coach-set" hidden>
+        <div><label for="coach-prov">Provider</label><select id="coach-prov"></select></div>
+        <div class="coach-row2">
+          <div><label for="coach-model">Model</label>
+            <input id="coach-model" list="coach-models" autocomplete="off" spellcheck="false"></div>
+          <div><label for="coach-key">API key</label>
+            <input id="coach-key" type="password" autocomplete="off" spellcheck="false"></div>
+        </div>
+        <datalist id="coach-models"></datalist>
+        <button class="coach-save" id="coach-save" type="button">Save &amp; connect</button>
+      </div>
+      <p class="coach-conn" id="coach-conn" hidden></p>
+      <div class="coach-chips" id="coach-chips"></div>
+      <div class="coach-log" id="coach-log"></div>
+      <div class="coach-ask">
+        <input id="coach-input" placeholder="Ask about this hand…" autocomplete="off">
+        <button id="coach-send" type="button">Send</button>
+      </div>
+    </div>
+  </details>
 
   <div class="hint">Pick with <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> · next hand with <kbd>Enter</kbd></div>
   <div class="foot">
@@ -855,7 +916,7 @@ function renderQuestion(q){
   });
   document.getElementById("prog").style.width=(100*pos/Math.max(1,order.length))+"%";
 }
-function deal(){answered=false;chosen=null;cur=Q[order[pos]];document.getElementById("fb").className="fb";renderQuestion(cur);}
+function deal(){answered=false;chosen=null;cur=Q[order[pos]];document.getElementById("fb").className="fb";renderQuestion(cur);coachReset();}
 
 function renderPreflopFeedback(q,a){
   const correct=a===q.answer, closeOk=q.mixed&&a===q.alt;
@@ -1092,10 +1153,167 @@ document.getElementById("moretoggle").onclick=function(){
   this.textContent=moreOpen?"Show less ▾":"Explain more ▸";};
 document.addEventListener("keydown",e=>{
   if(e.target.tagName==="SUMMARY"||e.target.id==="moretoggle")return;   // let the toggle handle its own Enter/Space
+  if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;         // don't hijack typing in the coach panel
   if(!answered){const i=parseInt(e.key);if(cur&&i>=1&&i<=cur.actions.length)answer(cur.actions[i-1]);}
   else if(e.key==="Enter"||e.key===" "){e.preventDefault();next();}
 });
-applyModeUI();updateVocab();updateLevelHint();applyCatUI();buildOrder();deal();
+// ===== Ask-a-coach — bring-your-own-key. Transport seam: web fetch today, native
+// CapacitorHttp when this same page is wrapped as the mobile app (no CORS/CSP there). =====
+const SUIT_T={h:"♥",d:"♦",c:"♣",s:"♠"};
+function cardsText(a){return (a||[]).map(c=>c[0]+(SUIT_T[c[1]]||c[1])).join(" ");}
+// Providers are config-driven so adding one (or a custom base URL for a local model) is a
+// data change, not new plumbing. Claude is the default; each entry builds its own request.
+const PROVIDERS={
+  claude:{label:"Claude (Anthropic)",dflt:"claude-sonnet-5",
+    models:["claude-sonnet-5","claude-opus-4-8","claude-haiku-4-5-20251001"],keyhint:"sk-ant-…",
+    req(k,sys,ms,model){return{url:"https://api.anthropic.com/v1/messages",
+      headers:{"content-type":"application/json","x-api-key":k,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:{model:model,max_tokens:1024,system:sys,messages:ms}};},
+    parse(j){return ((j&&j.content)||[]).map(b=>b.text||"").join("").trim();},
+    emsg(j){return j&&j.error&&j.error.message;}},
+  openai:{label:"OpenAI",dflt:"gpt-4o-mini",
+    models:["gpt-4o-mini","gpt-4o","o4-mini"],keyhint:"sk-…",
+    req(k,sys,ms,model){return{url:"https://api.openai.com/v1/chat/completions",
+      headers:{"content-type":"application/json","authorization":"Bearer "+k},
+      body:{model:model,messages:[{role:"system",content:sys}].concat(ms)}};},
+    parse(j){return ((j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||"").trim();},
+    emsg(j){return j&&j.error&&j.error.message;}},
+};
+function coachCfg(){try{return JSON.parse(localStorage.getItem("coach")||"{}");}catch(e){return {};}}
+function coachSaveCfg(c){try{localStorage.setItem("coach",JSON.stringify(c));}catch(e){}}
+let coachMsgs=[],coachBusy=false,coachErr=null;
+
+// Serialize the current spot's real solver data so the model explains THIS hand, not
+// generic theory. Everything here already drives the on-screen feedback.
+function coachSpot(q){
+  const L=[];
+  if(q.preflop){
+    L.push("Street: PRE-FLOP.");
+    L.push("Your position: "+(q.pos||"?")+".");
+    L.push("Your hand: "+cardsText(q.hand)+".");
+    try{L.push("Situation: "+pfSituation(q)+".");}catch(e){}
+    if(q.answer){let s="Solver's recommended action: "+coachPfLabel(q.answer);
+      if(q.mixed&&q.alt)s+=" (also acceptable: "+coachPfLabel(q.alt)+")";L.push(s+".");}
+    if(q.why)L.push("Short reason: "+q.why);
+    if(q.rule)L.push("Rule of thumb: "+q.rule);
+    return L.join("\n");
+  }
+  L.push("Street: "+(q.street||"flop")+".");
+  L.push("Board (shared cards): "+cardsText(q.board)+".");
+  L.push("Your hand: "+cardsText(q.hero)+".");
+  L.push("You "+(q.acts_first?"act first":"act last")+" ("+(q.is_oop?"out of position":"in position")+").");
+  try{L.push("Situation: "+situation(q)+".");}catch(e){}
+  L.push("Your options — solver EV (in pot units, higher is better), how often the solver takes each, and its grade:");
+  q.actions.forEach(a=>{const lab=(q.labels&&q.labels[a])||a;
+    L.push("  • "+lab+": EV "+q.ev[a]+", played "+q.freq[a]+"% of the time, grade "+String(q.grades[a]).replace("_"," ")+(a===q.preferred?"  <- solver's preferred play":""));});
+  try{L.push("Plain explanation already shown to the learner: "+plainHead(q));}catch(e){}
+  return L.join("\n");
+}
+function coachPfLabel(a){try{return pfActLabel(a);}catch(e){return a;}}
+function coachSystem(q){
+  return "You are a friendly, concise poker coach inside a beginner training app. Answer ONLY about the "+
+  "current spot below, grounded in its exact numbers. Never contradict the solver's preferred play — if the "+
+  "learner proposes a different line, explain what the numbers say about it. If a question needs information not "+
+  "shown here, say what you'd need. Keep answers to 2–5 short sentences, plain English, focused on WHY. This is "+
+  "a study tool using play chips — do not give real-money gambling or betting advice.\n\n--- CURRENT SPOT ---\n"+coachSpot(q);
+}
+
+function coachRender(){
+  const log=document.getElementById("coach-log");if(!log)return;log.innerHTML="";
+  coachMsgs.forEach(m=>{const d=document.createElement("div");d.className="cmsg "+(m.role==="user"?"user":"bot");d.textContent=m.content;log.appendChild(d);});
+  if(coachBusy){const d=document.createElement("div");d.className="cmsg bot think";d.textContent="Thinking…";log.appendChild(d);}
+  if(coachErr){const d=document.createElement("div");d.className="cmsg err";d.textContent=coachErr;log.appendChild(d);}
+  log.scrollTop=log.scrollHeight;
+}
+function coachToggleSend(){const b=document.getElementById("coach-send"),i=document.getElementById("coach-input");
+  if(b)b.disabled=coachBusy;if(i)i.disabled=coachBusy;}
+
+async function coachTransport(url,headers,body){
+  const cap=window.Capacitor;
+  if(cap&&cap.isNativePlatform&&cap.isNativePlatform()){       // native app: no CORS/CSP, key from secure store
+    const http=(cap.Plugins&&cap.Plugins.CapacitorHttp)||window.CapacitorHttp;
+    if(http){const r=await http.request({url:url,method:"POST",headers:headers,data:body});
+      const d=typeof r.data==="string"?JSON.parse(r.data||"{}"):r.data;
+      return {ok:r.status>=200&&r.status<300,status:r.status,json:d};}
+  }
+  const resp=await fetch(url,{method:"POST",headers:headers,body:JSON.stringify(body)});
+  let j=null;try{j=await resp.json();}catch(e){}
+  return {ok:resp.ok,status:resp.status,json:j};
+}
+async function coachAsk(text){
+  if(coachBusy||!text)return;
+  const cfg=coachCfg();
+  if(!cfg.key){coachSettings(true);coachErr="Add your API key above to start.";coachRender();return;}
+  const P=PROVIDERS[cfg.provider]||PROVIDERS.claude;
+  coachErr=null;coachMsgs.push({role:"user",content:text});coachBusy=true;coachRender();coachToggleSend();
+  try{
+    const r0=P.req(cfg.key,coachSystem(cur),coachMsgs,cfg.model||P.dflt);
+    const r=await coachTransport(r0.url,r0.headers,r0.body);
+    coachBusy=false;
+    if(!r.ok){coachMsgs.pop();coachErr=coachHttpHelp(r.status,r.json&&P.emsg(r.json));}
+    else{const t=P.parse(r.json);
+      if(t)coachMsgs.push({role:"assistant",content:t});
+      else{coachMsgs.pop();coachErr="The provider returned an empty reply — try again.";}}
+  }catch(e){coachBusy=false;coachMsgs.pop();coachErr=coachNetHelp();}
+  coachRender();coachToggleSend();
+}
+function coachHttpHelp(status,msg){
+  if(status===401||status===403)return "Your API key was rejected ("+status+"). Check it in the box above.";
+  if(status===429)return "Rate-limited or out of credit (429). Check your provider account.";
+  return "Request failed"+(status?(" ("+status+")"):"")+(msg?": "+msg:".");
+}
+function coachNetHelp(){
+  return "Couldn't reach the provider. If you're viewing this inside the Claude artifact preview, external calls are "+
+  "blocked here — open the GitHub Pages site or the app to chat. Otherwise check your connection and key.";
+}
+
+function coachSettings(show){
+  const set=document.getElementById("coach-set"),conn=document.getElementById("coach-conn");
+  const cfg=coachCfg(),connected=!!cfg.key;
+  set.hidden=connected&&!show;
+  if(connected){conn.hidden=false;conn.innerHTML="";
+    const P=PROVIDERS[cfg.provider]||PROVIDERS.claude;
+    const s=document.createElement("span");s.textContent="Connected — ";
+    const b=document.createElement("b");b.textContent=P.label+" · "+(cfg.model||P.dflt);s.appendChild(b);
+    const btn=document.createElement("button");btn.type="button";btn.textContent=set.hidden?"Change key / model":"Hide";
+    btn.onclick=()=>coachSettings(set.hidden);
+    conn.appendChild(s);conn.appendChild(btn);
+  }else{conn.hidden=true;set.hidden=false;}
+}
+function coachInit(){
+  const prov=document.getElementById("coach-prov");if(!prov)return;
+  Object.keys(PROVIDERS).forEach(k=>{const o=document.createElement("option");o.value=k;o.textContent=PROVIDERS[k].label;prov.appendChild(o);});
+  const cfg=coachCfg();prov.value=cfg.provider||"claude";
+  const applyProv=resetModel=>{const P=PROVIDERS[prov.value]||PROVIDERS.claude;
+    const dl=document.getElementById("coach-models");dl.innerHTML="";
+    P.models.forEach(m=>{const o=document.createElement("option");o.value=m;dl.appendChild(o);});
+    document.getElementById("coach-key").placeholder=P.keyhint;
+    if(resetModel)document.getElementById("coach-model").value=P.dflt;};
+  applyProv(false);
+  document.getElementById("coach-model").value=cfg.model||(PROVIDERS[prov.value]||PROVIDERS.claude).dflt;
+  if(cfg.key)document.getElementById("coach-key").value=cfg.key;
+  prov.onchange=()=>applyProv(true);
+  document.getElementById("coach-save").onclick=()=>{
+    const key=document.getElementById("coach-key").value.trim();
+    if(!key){coachErr="Please paste an API key first.";coachRender();return;}
+    coachSaveCfg({provider:prov.value,model:document.getElementById("coach-model").value.trim(),key:key});
+    coachErr=null;coachSettings(false);coachRender();
+  };
+  // Best-effort hint that an embedded preview will block the network call.
+  try{if(window.self!==window.top)document.getElementById("coach-envnote").textContent="Note: embedded previews block external calls — if chat fails, open the Pages site or app.";}
+  catch(e){document.getElementById("coach-envnote").textContent="Note: embedded previews block external calls — if chat fails, open the Pages site or app.";}
+  const chips=["Why is that the best play?","What hands beat me here?","When would the other option be right?"];
+  const cw=document.getElementById("coach-chips");
+  chips.forEach(c=>{const b=document.createElement("button");b.type="button";b.textContent=c;b.onclick=()=>coachAsk(c);cw.appendChild(b);});
+  const send=document.getElementById("coach-send"),inp=document.getElementById("coach-input");
+  const fire=()=>{const t=inp.value.trim();if(t){inp.value="";coachAsk(t);}};
+  send.onclick=fire;
+  inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();fire();}});
+  coachSettings(false);
+}
+function coachReset(){coachMsgs=[];coachErr=null;coachBusy=false;coachRender();coachToggleSend();}
+
+coachInit();applyModeUI();updateVocab();updateLevelHint();applyCatUI();buildOrder();deal();
 </script>'''
 
 if __name__ == "__main__":
