@@ -351,7 +351,7 @@ __FONTFACE__
   --label:"Space Mono",ui-monospace,Menlo,monospace;
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
+body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
 .wrap{max-width:640px;margin:0 auto;padding:20px 16px 56px}
 header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .brand{font-family:var(--disp);font-weight:600;font-size:19px}
@@ -504,51 +504,67 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .coach-ask input:focus{outline:2px solid var(--brass);outline-offset:1px}
 .coach-ask button{appearance:none;border:none;background:var(--brass);color:#fff;font-family:var(--sans);font-weight:700;font-size:13px;padding:0 16px;border-radius:9px;cursor:pointer;flex:none}
 .coach-ask button:disabled{opacity:.5;cursor:default}
+/* ===== mobile app shell ===== */
+.app{max-width:440px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative;background:var(--bg)}
+.appbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.appbar .brand{font-size:18px}
+.views{flex:1;padding-bottom:72px}
+.view{display:none;padding:14px 15px 8px}
+.view.on{display:block;animation:viewin .24s ease}
+@keyframes viewin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.no-motion *{animation:none!important;transition:none!important}
+.tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:440px;z-index:30;display:flex;background:color-mix(in srgb,var(--panel) 94%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.tabbar button{flex:1;appearance:none;border:none;background:none;color:var(--muted);font-family:var(--label);font-size:9px;letter-spacing:.05em;text-transform:uppercase;font-weight:700;padding:9px 4px 11px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
+.tabbar button .ti{width:19px;height:19px;font-size:16px;line-height:1;display:grid;place-items:center;color:currentColor}
+.tabbar button.on{color:var(--brass)}
+.street-seg{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px;scrollbar-width:none}
+.street-seg::-webkit-scrollbar{display:none}
+.street-seg button{appearance:none;flex:none;font-family:var(--label);font-size:11px;text-transform:uppercase;letter-spacing:.03em;font-weight:700;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:7px 13px;cursor:pointer}
+.street-seg button.on{background:var(--brass);color:#0b0c10;border-color:var(--brass)}
+.street-seg button:disabled{opacity:.4}
+.catcount{display:block;font-family:var(--mono);font-size:10.5px;color:var(--muted);margin:0 2px 10px}
+/* progress view */
+.phead{margin-bottom:12px}.ptitle{font-family:var(--disp);font-size:26px}
+.big-stat{display:flex;align-items:baseline;gap:9px;margin-bottom:14px}
+.big-stat .acc{font-family:var(--mono);font-size:40px;color:var(--best);font-weight:700;font-variant-numeric:tabular-nums}
+.big-stat span{font-family:var(--label);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.statrow{display:flex;gap:8px;margin-bottom:22px}
+.statrow .stat{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 6px;text-align:center}
+.statrow .stat b{display:block;font-family:var(--mono);font-size:18px;font-variant-numeric:tabular-nums}
+.statrow .stat span{font-family:var(--label);font-size:8px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.prow-h{font-family:var(--label);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;margin-bottom:12px}
+.prow{display:flex;align-items:center;gap:9px;margin-bottom:11px}
+.prow .pn{font-family:var(--label);font-size:11px;text-transform:uppercase;width:62px;color:var(--ink);font-weight:700}
+.prow .pbar{flex:1;height:9px;background:var(--panel2);border-radius:5px;overflow:hidden}
+.prow .pbar>i{display:block;height:100%;border-radius:5px;transition:width .5s ease}
+.c-pre{background:linear-gradient(90deg,#8aa0ff,#5b74ff)}.c-flop{background:linear-gradient(90deg,#5ee7a8,#2fd08a)}.c-turn{background:linear-gradient(90deg,#ffd67a,#ffb020)}.c-river{background:linear-gradient(90deg,#ff8a6e,#ff6a4d)}
+.prow .pv{font-family:var(--mono);font-size:11px;color:var(--muted);width:36px;text-align:right}
+/* settings view */
+.s-sec{font-family:var(--label);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;margin:20px 0 8px}
+.seg{display:flex;background:var(--panel2);border-radius:11px;padding:3px;gap:2px;border:1px solid var(--line)}
+.seg button{flex:1;appearance:none;border:none;text-align:center;font-family:var(--label);font-size:9px;text-transform:uppercase;letter-spacing:.02em;padding:9px 2px;border-radius:8px;color:var(--muted);font-weight:700;cursor:pointer;background:none}
+.seg button.on{background:var(--brass);color:#0b0c10}
+.s-row{display:flex;align-items:center;justify-content:space-between;padding:12px 2px;border-bottom:1px solid var(--line);font-size:13px}
+.tog{appearance:none;width:40px;height:23px;border-radius:12px;background:var(--line);position:relative;border:none;cursor:pointer;flex:none}
+.tog::after{content:"";position:absolute;top:2px;left:2px;width:19px;height:19px;border-radius:50%;background:#fff;transition:.18s}
+.tog.on{background:var(--best)}.tog.on::after{left:19px}
+.s-reset{appearance:none;width:100%;background:none;border:1px solid var(--line);color:var(--costly);font-family:var(--label);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:13px;border-radius:12px;cursor:pointer;margin-top:16px}
+.view .foot{text-align:left;margin-top:6px}
+.view .intro,.view .glossary{margin-top:8px}
 </style>
 __SUITDEFS__
-<div class="wrap">
-  <header>
-    <div class="brand"><span class="sp">&spades;</span> Full-Street Flop Trainer</div>
-    <div class="score" id="score">
-      <span class="acc" id="acc">—</span>
-      <span class="sbits"><b id="n">0</b> played · <b class="cSolid" id="solid">0</b> solid ·
-        <b class="cOk" id="ok">0</b> ok · <b class="cLeak" id="leak">0</b> leak</span>
-    </div>
-  </header>
-  <div class="controls">
-    <div class="level">
-      <span class="lvl-cap">Language</span>
-      <div class="lang" id="lang" role="group" aria-label="Language level">
-        <button data-m="progressive" type="button">Adaptive</button><button data-m="plain" type="button">Beginner</button><button data-m="learning" type="button">Learning</button><button data-m="poker" type="button">Pro</button>
-      </div>
-      <span class="vocab" id="vocab" hidden></span>
-    </div>
-    <div class="level" style="margin-top:9px">
-      <span class="lvl-cap">Train</span>
-      <div class="lang" id="cats" role="group" aria-label="Which part to train">
-        <button data-c="all" type="button">All</button><button data-c="preflop" type="button">Pre-flop</button><button data-c="flop" type="button">Flop</button><button data-c="turn" type="button">Turn</button><button data-c="river" type="button">River</button>
-      </div>
-      <span class="vocab" id="catcount"></span>
-    </div>
-    <p class="lvl-hint" id="levelhint"></p>
+<div class="app">
+  <div class="appbar">
+    <div class="brand"><span class="sp">&spades;</span> Hold'em Trainer</div>
+    <span class="vocab" id="vocab" hidden></span>
   </div>
-  <div class="bar-top"><i id="prog" style="width:0"></i></div>
-
-  <details class="intro" id="intro">
-    <summary>🔰 New to poker? Start here (30 seconds)</summary>
-    <p>You and one opponent each get <b>2 secret cards</b> (only you see yours). Then <b>5 shared cards</b>
-      everyone can use are dealt in stages: <b>3 at once</b>, then a <b>4th</b>, then a <b>5th</b>. You make your
-      best five-card hand from your 2 cards plus the shared ones.</p>
-    <p>At each stage you choose: <b>Check</b> (pass, bet nothing), <b>Bet</b> (put chips in), <b>Call</b>
-      (match a bet), <b>Raise</b> (bet even more), or <b>Fold</b> (give up the hand). The chips already in the
-      middle are the <b>pot</b> — that's what you're playing for.</p>
-    <p>One player <b>acts first</b>, the other <b>acts last</b>. Acting last is an advantage — you see what your
-      opponent does before deciding. The trainer tells you which you are each hand.</p>
-    <p>Your job: pick the action a strong player would — graded instantly, told why. The <b>Adaptive</b> setting
-      (top) starts in plain words and <b>teaches you the poker terms as you play them well</b> — each one you earn
-      is added to your vocabulary (🔓 counter). Prefer a fixed level? Switch to <b>Beginner</b>, <b>Learning</b>,
-      or <b>Pro</b> any time.</p>
-  </details>
+  <div class="views">
+  <section class="view on" id="v-train">
+    <div class="street-seg" id="cats" role="group" aria-label="Which part to train">
+      <button data-c="all" type="button">All</button><button data-c="preflop" type="button">Pre-flop</button><button data-c="flop" type="button">Flop</button><button data-c="turn" type="button">Turn</button><button data-c="river" type="button">River</button>
+    </div>
+    <span class="catcount" id="catcount"></span>
+    <div class="bar-top"><i id="prog" style="width:0"></i></div>
 
   <div class="card">
     <div class="sit"><span class="pos" id="pos"></span><span id="sit"></span><span class="demo" id="demotag" hidden>raise demo</span></div>
@@ -606,7 +622,46 @@ __SUITDEFS__
   </details>
 
   <div class="hint">Pick with <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> · next hand with <kbd>Enter</kbd></div>
-  <div class="foot">
+  </section>
+
+  <section class="view" id="v-progress">
+    <div class="phead"><div class="ptitle">Progress</div></div>
+    <div class="big-stat"><b class="acc" id="acc">—</b><span>overall accuracy</span></div>
+    <div class="statrow">
+      <div class="stat"><b id="n">0</b><span>Played</span></div>
+      <div class="stat"><b class="cSolid" id="solid">0</b><span>Solid</span></div>
+      <div class="stat"><b class="cOk" id="ok">0</b><span>OK</span></div>
+      <div class="stat"><b class="cLeak" id="leak">0</b><span>Leak</span></div>
+    </div>
+    <div class="prow-h">Mastery by street</div>
+    <div id="mastery"></div>
+  </section>
+
+  <section class="view" id="v-settings">
+    <div class="phead"><div class="ptitle">Settings</div></div>
+    <div class="s-sec">Language</div>
+    <div class="seg" id="lang" role="group" aria-label="Language level">
+      <button data-m="progressive" type="button">Adaptive</button><button data-m="plain" type="button">Beginner</button><button data-m="learning" type="button">Learning</button><button data-m="poker" type="button">Pro</button>
+    </div>
+    <p class="lvl-hint" id="levelhint"></p>
+    <div class="s-sec">App</div>
+    <div class="s-row"><span>Reduce motion</span><button class="tog" id="tog-motion" type="button" aria-label="Reduce motion"></button></div>
+    <div class="s-sec">New to poker?</div>
+    <details class="intro" id="intro">
+      <summary>🔰 The 30-second primer</summary>
+      <p>You and one opponent each get <b>2 secret cards</b> (only you see yours). Then <b>5 shared cards</b>
+        everyone can use are dealt in stages: <b>3 at once</b>, then a <b>4th</b>, then a <b>5th</b>. You make your
+        best five-card hand from your 2 cards plus the shared ones.</p>
+      <p>At each stage you choose: <b>Check</b> (pass, bet nothing), <b>Bet</b> (put chips in), <b>Call</b>
+        (match a bet), <b>Raise</b> (bet even more), or <b>Fold</b> (give up the hand). The chips already in the
+        middle are the <b>pot</b> — that's what you're playing for.</p>
+      <p>One player <b>acts first</b>, the other <b>acts last</b>. Acting last is an advantage — you see what your
+        opponent does before deciding. The trainer tells you which you are each hand.</p>
+      <p>Your job: pick the action a strong player would — graded instantly, told why. The <b>Adaptive</b> setting
+        starts in plain words and <b>teaches you the poker terms as you play them well</b>.</p>
+    </details>
+    <div class="s-sec">About</div>
+    <div class="foot">
     Real solver output — pack <code>__VERSION__</code>, <b>__RECORDS__</b> signed records, build <code>__COMMIT__</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
@@ -616,6 +671,7 @@ __SUITDEFS__
     (solver-approximate, tuned to standard frequencies).<br>
     Prefer to review the answers at a glance? See the <a href="preview.html">content gallery</a>.
   </div>
+  <div class="s-sec">Poker terms</div>
   <details class="glossary">
     <summary>Poker terms — tap to learn the lingo</summary>
     <dl>
@@ -661,6 +717,14 @@ __SUITDEFS__
       <dd>The price you're getting to call, compared with the size of the pot.</dd>
     </dl>
   </details>
+    <button class="s-reset" id="reset-btn" type="button">Reset progress</button>
+  </section>
+  </div>
+  <nav class="tabbar" id="tabbar">
+    <button data-v="train" class="on"><svg class="ti"><use href="#so-spade"/></svg>Train</button>
+    <button data-v="progress"><span class="ti">&#9636;</span>Progress</button>
+    <button data-v="settings"><span class="ti">&#9776;</span>Settings</button>
+  </nav>
 </div>
 <script>
 const Q = __DATA__;
@@ -818,7 +882,8 @@ const TERMS = {
     ev:"EV",boardcap:{flop:"Flop (first 3 shared cards)",turn:"Turn (4th card)",river:"River (5th card)"},
     herocap:"Your hand (your 2 private cards)"}
 };
-let order=[], pos=0, answered=false, cur=null, chosen=null, stats={n:0,solid:0,ok:0,leak:0};
+let order=[], pos=0, answered=false, cur=null, chosen=null, stats={n:0,solid:0,ok:0,leak:0,street:{}};
+function trackStreet(hit){const k=qcat(cur);const s=stats.street[k]||(stats.street[k]={n:0,hit:0});s.n++;if(hit)s.hit++;}
 let mode=(function(){try{const m=localStorage.getItem("lang");return (m==="poker"||m==="learning"||m==="plain"||m==="progressive")?m:"progressive";}catch(e){return "progressive";}})();
 // Which part to train (pre-flop / flop / turn / river / all).
 let cat=(function(){try{const c=localStorage.getItem("cat");return ["all","preflop","flop","turn","river"].includes(c)?c:"all";}catch(e){return "all";}})();
@@ -1153,6 +1218,7 @@ function answer(a){
   if(cur.preflop){
     const correct=a===cur.answer, closeOk=!correct&&cur.mixed&&a===cur.alt;
     stats.n++; if(correct||closeOk)stats.solid++; else stats.leak++;
+    trackStreet(correct||closeOk);
     document.getElementById("n").textContent=stats.n;document.getElementById("solid").textContent=stats.solid;
     document.getElementById("ok").textContent=stats.ok;document.getElementById("leak").textContent=stats.leak;
     document.getElementById("acc").textContent=Math.round(100*(stats.solid+stats.ok)/stats.n)+"%";
@@ -1163,6 +1229,7 @@ function answer(a){
   const g=cur.grades[a];
   stats.n++;
   if(g==="best"||g==="good")stats.solid++;else if(g==="acceptable")stats.ok++;else stats.leak++;
+  trackStreet(g!=="costly"&&g!=="major_error");
   document.getElementById("n").textContent=stats.n;document.getElementById("solid").textContent=stats.solid;
   document.getElementById("ok").textContent=stats.ok;document.getElementById("leak").textContent=stats.leak;
   document.getElementById("acc").textContent=Math.round(100*(stats.solid+stats.ok)/stats.n)+"%";
@@ -1232,6 +1299,7 @@ document.addEventListener("keydown",e=>{
   if(e.target.tagName==="SUMMARY"||e.target.id==="moretoggle")return;   // let the toggle handle its own Enter/Space
   if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;         // don't hijack typing in inputs
   if(e.target.closest&&e.target.closest("#coach"))return;              // coach panel owns its own keys (chips/send/input)
+  const tv=document.getElementById("v-train");if(tv&&!tv.classList.contains("on"))return;  // only the Train view takes hotkeys
   if(!answered){const i=parseInt(e.key);if(cur&&i>=1&&i<=cur.actions.length)answer(cur.actions[i-1]);}
   else if(e.key==="Enter"||e.key===" "){e.preventDefault();next();}
 });
@@ -1392,6 +1460,38 @@ function coachInit(){
   coachSettings(false);
 }
 function coachReset(){coachGen++;coachMsgs=[];coachErr=null;coachBusy=false;coachRender();coachToggleSend();}
+
+// ===== mobile-app shell: view switching, progress, settings =====
+function renderProgress(){
+  const el=document.getElementById("mastery");if(!el)return;el.innerHTML="";
+  [["preflop","Preflop","c-pre"],["flop","Flop","c-flop"],["turn","Turn","c-turn"],["river","River","c-river"]].forEach(function(r){
+    const s=stats.street[r[0]]||{n:0,hit:0};const pct=s.n?Math.round(100*s.hit/s.n):0;
+    const row=document.createElement("div");row.className="prow";
+    const nm=document.createElement("span");nm.className="pn";nm.textContent=r[1];
+    const bar=document.createElement("span");bar.className="pbar";
+    const i=document.createElement("i");i.className=r[2];i.style.width=pct+"%";bar.appendChild(i);
+    const v=document.createElement("span");v.className="pv";v.textContent=s.n?pct+"%":"—";
+    row.appendChild(nm);row.appendChild(bar);row.appendChild(v);el.appendChild(row);
+  });
+}
+function setView(v){
+  document.querySelectorAll(".view").forEach(function(s){s.classList.toggle("on",s.id==="v-"+v);});
+  document.querySelectorAll("#tabbar button").forEach(function(b){b.classList.toggle("on",b.dataset.v===v);});
+  if(v==="progress")renderProgress();
+  window.scrollTo(0,0);
+  try{localStorage.setItem("view",v);}catch(e){}
+}
+document.querySelectorAll("#tabbar button").forEach(function(b){b.onclick=function(){setView(b.dataset.v);};});
+// reduce-motion toggle
+let motionOff=false;try{motionOff=localStorage.getItem("motion")==="off";}catch(e){}
+function applyMotion(){document.documentElement.classList.toggle("no-motion",motionOff);
+  const t=document.getElementById("tog-motion");if(t)t.classList.toggle("on",motionOff);}
+document.getElementById("tog-motion").onclick=function(){motionOff=!motionOff;try{localStorage.setItem("motion",motionOff?"off":"on");}catch(e){}applyMotion();};
+document.getElementById("reset-btn").onclick=function(){
+  if(!confirm("Reset your progress and learned terms?"))return;
+  try{localStorage.removeItem("learned");localStorage.removeItem("cat");}catch(e){}location.reload();};
+applyMotion();
+try{setView(localStorage.getItem("view")||"train");}catch(e){setView("train");}
 
 coachInit();applyModeUI();updateVocab();updateLevelHint();applyCatUI();buildOrder();deal();
 </script>'''
