@@ -220,26 +220,24 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .view .foot{text-align:left;margin-top:6px}
 .view .intro,.view .glossary{margin-top:8px}
 /* ===== position / situation graphic ===== */
-.seats{padding:12px 16px 2px}
-.hu{display:flex;flex-direction:column;align-items:center}
-.hu .seat{display:flex;align-items:center;gap:8px;width:100%;max-width:290px;justify-content:center;padding:6px 0}
-.pgrp{display:inline-flex;align-items:center;gap:5px}
-.dbtn{width:17px;height:17px;border-radius:50%;background:#f5f0e7;color:#15171e;font-family:var(--mono);font-weight:700;font-size:9px;display:grid;place-items:center;box-shadow:0 1px 3px rgba(0,0,0,.5)}
-.ppos{font-family:var(--label);font-size:11px;font-weight:700;letter-spacing:.04em;padding:3px 9px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
-.ppos.p-BTN{color:var(--best);border-color:color-mix(in srgb,var(--best) 45%,var(--line))}
-.ppos.p-SB,.ppos.p-BB{color:var(--brass);border-color:color-mix(in srgb,var(--brass) 45%,var(--line))}
-.ppos.cur{background:var(--brass);color:#0b0c10;border-color:var(--brass)}
-.pwho{font-size:12px;color:var(--muted)}
-.hu .seat.me .pwho{color:var(--ink);font-weight:700}
-.fd{display:inline-flex;gap:3px}
-.fd i{width:13px;height:18px;border-radius:3px;background:linear-gradient(150deg,#2a2f52,#15172b);border:1px solid rgba(138,160,255,.3)}
-.mid{display:flex;align-items:center;gap:8px;width:100%;max-width:290px}
-.mid .line{flex:1;height:1px;background:var(--line)}
-.flag{font-family:var(--label);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:4px 10px;border-radius:999px;white-space:nowrap}
-.flag.f-bet{background:color-mix(in srgb,var(--costly) 18%,transparent);color:var(--costly);border:1px solid color-mix(in srgb,var(--costly) 40%,var(--line))}
-.flag.f-check{background:color-mix(in srgb,var(--accept) 16%,transparent);color:var(--accept);border:1px solid color-mix(in srgb,var(--accept) 40%,var(--line))}
-.flag.f-first{background:color-mix(in srgb,var(--brass) 16%,transparent);color:var(--brass);border:1px solid color-mix(in srgb,var(--brass) 40%,var(--line))}
-.tag-turn{font-family:var(--label);font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--best);font-weight:700}
+.seats{padding:12px 15px 4px}
+.tbl{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:color-mix(in srgb,var(--panel2) 55%,transparent)}
+.prow{display:flex;align-items:center;gap:10px;padding:10px 13px}
+.prow.me{background:color-mix(in srgb,var(--brass) 11%,transparent)}
+.pdot{width:9px;height:9px;border-radius:50%;flex:none}
+.pdot.opp{background:var(--muted)}
+.pdot.you{background:var(--best);box-shadow:0 0 0 3px color-mix(in srgb,var(--best) 26%,transparent)}
+.pinfo{flex:1;display:flex;flex-direction:column;line-height:1.25;min-width:0}
+.pinfo b{font-size:13px;font-weight:700}
+.psub{font-size:11px;color:var(--muted)}
+.pact{font-family:var(--label);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:4px 10px;border-radius:999px;white-space:nowrap;flex:none;border:1px solid transparent}
+.a-check{background:color-mix(in srgb,var(--accept) 16%,transparent);color:var(--accept);border-color:color-mix(in srgb,var(--accept) 40%,var(--line))}
+.a-bet{background:color-mix(in srgb,var(--costly) 16%,transparent);color:var(--costly);border-color:color-mix(in srgb,var(--costly) 40%,var(--line))}
+.a-wait{color:var(--muted);border-color:var(--line)}
+.a-you{background:var(--brass);color:#0b0c10}
+.pdiv{display:flex;align-items:center;gap:8px;padding:2px 13px}
+.pdiv::before,.pdiv::after{content:"";flex:1;height:1px;background:var(--line)}
+.pdiv span{font-family:var(--label);font-size:8.5px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted)}
 .pfstrip{padding:2px 0}
 .pfrow{display:flex;gap:5px;justify-content:center;flex-wrap:wrap}
 .pf-seat{font-family:var(--label);font-size:10px;font-weight:700;letter-spacing:.03em;padding:5px 8px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
@@ -360,7 +358,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
     </details>
     <div class="s-sec">About</div>
     <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>57cfcc9</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>dff8701</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
     <span class="demo">Turn / river</span> spots are now full-range solver output too, but
@@ -773,33 +771,35 @@ function renderSeats(q){
   el.innerHTML="";el.hidden=false;
   el.appendChild(q.preflop?preflopStrip(q):headsupTable(q));
 }
+const POS_PLAIN={BTN:"on the button",BB:"in the big blind",SB:"in the small blind",CO:"in the cutoff",HJ:"in the hijack",UTG:"first to act"};
 function headsupTable(q){
   const sbbb=String(q.badge||"").indexOf("SB vs BB")>=0;
   const hero=q.acting_player||"BB";
   const villain=sbbb?(hero==="SB"?"BB":"SB"):(hero==="BTN"?"BB":"BTN");
-  const heroIP=!q.is_oop;                         // in position = has the button, acts last
+  const heroLast=!q.is_oop;                        // in position = acts last
   const node=q.node||"";
-  let flag="Your move",fk="first";
-  if(node.endsWith("_vs_check")){flag="Opponent checked to you";fk="check";}
-  else if(node.endsWith("_vs_bet")){flag=q.is_oop?"You checked · opponent bet":"Opponent bet into you";fk="bet";}
-  else if(node.endsWith("_first")){flag="You're first to act";fk="first";}
-  const st=(q.street||"flop");
-  const w=document.createElement("div");w.className="hu";
-  const db='<span class="dbtn" title="Dealer button">D</span>';
+  let oppAct="waiting…",ok="wait";
+  if(node.endsWith("_vs_check")){oppAct="checked";ok="check";}
+  else if(node.endsWith("_vs_bet")){oppAct=q.is_oop?"bet after your check":"bet";ok="bet";}
+  const w=document.createElement("div");w.className="tbl";
   w.innerHTML=
-    '<div class="seat opp"><span class="pgrp">'+(heroIP?"":db)+'<span class="ppos p-'+villain+'">'+villain+'</span></span>'
-    +'<span class="pwho">Opponent</span><span class="fd"><i></i><i></i></span></div>'
-    +'<div class="mid"><span class="line"></span><span class="flag f-'+fk+'">'+flag+'</span><span class="line"></span></div>'
-    +'<div class="seat me"><span class="pgrp">'+(heroIP?db:"")+'<span class="ppos p-'+hero+' cur">'+hero+'</span></span>'
-    +'<span class="pwho">You</span><span class="tag-turn">● your turn on the '+st+'</span></div>';
+    '<div class="prow"><span class="pdot opp"></span>'
+    +'<span class="pinfo"><b>Opponent</b><span class="psub">'+(POS_PLAIN[villain]||villain)+' &middot; '+(heroLast?"acts first":"acts last")+'</span></span>'
+    +'<span class="pact a-'+ok+'">'+oppAct+'</span></div>'
+    +'<div class="pdiv"><span>the pot</span></div>'
+    +'<div class="prow me"><span class="pdot you"></span>'
+    +'<span class="pinfo"><b>You</b><span class="psub">'+(POS_PLAIN[hero]||hero)+' &middot; '+(heroLast?"you act last":"you act first")+'</span></span>'
+    +'<span class="pact a-you">your move &rarr;</span></div>';
   return w;
 }
 function preflopStrip(q){
   const opener=q.opener||null,tb=q.tbettor||null;
-  const ctx=q.ctx==="rfi"?"Folded to you — first to enter"
-    :q.ctx==="def"?("Facing "+(opener||"an")+" open — your call")
-    :q.ctx==="sbdef"?"You're the small blind, folded to you"
-    :q.ctx==="vs3bet"?("You opened — "+(tb||"a blind")+" 3-bet you"):"Pre-flop";
+  const N={BTN:"the button",BB:"the big blind",SB:"the small blind",CO:"the cutoff",HJ:"the hijack",UTG:"UTG"};
+  const you="You're "+(POS_PLAIN[q.pos]||("in "+q.pos));
+  const ctx=q.ctx==="rfi"?(you+" — folded to you, you're first in")
+    :q.ctx==="def"?(you+" — "+(N[opener]||"an opponent")+" opened, it's on you")
+    :q.ctx==="sbdef"?(you+" — folded to you")
+    :q.ctx==="vs3bet"?(you+" — you opened, "+(N[tb]||"a blind")+" re-raised"):you;
   let seats="";
   SEATS6.forEach(function(s){var c="pf-seat";if(s===q.pos)c+=" cur";
     if(s===opener||s===tb)c+=" villain";if(s==="SB"||s==="BB")c+=" blind";
