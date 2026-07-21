@@ -6,6 +6,7 @@ with no server. Writes demo/trainer_demo.html + trainer.html (Pages).
 
 Run:  PYTHONPATH=src python demo/build_trainer.py
 """
+import base64
 import html
 import json
 import os
@@ -16,6 +17,62 @@ from collections import defaultdict
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from pokertrainer.content_pack import verify_pack
+
+# ---- Locked visual assets: embedded fonts (Rye + Space Mono) and the custom
+# paper-craft folded suit SVG symbols. Emitted into the page at build time.
+_FONT_DIR = os.path.join(os.path.dirname(__file__), "fonts")
+
+
+def _fontface():
+    out = []
+    for fam, w, fn in [("Rye", 400, "Rye-Regular.ttf"),
+                       ("Space Mono", 400, "SpaceMono-Regular.ttf"),
+                       ("Space Mono", 700, "SpaceMono-Bold.ttf")]:
+        p = os.path.join(_FONT_DIR, fn)
+        if not os.path.exists(p):
+            continue
+        b = base64.b64encode(open(p, "rb").read()).decode()
+        out.append("@font-face{font-family:'%s';font-style:normal;font-weight:%d;"
+                   "font-display:swap;src:url(data:font/ttf;base64,%s) format('truetype');}" % (fam, w, b))
+    return "".join(out)
+
+
+# suit shapes + per-suit (light, light_hi, dark, dark_lo, lightRegion, foldCurve)
+_SPD = 'M50 9 C 61 32, 90 46, 90 64 C 90 78, 79 85, 68 82.5 C 62 81, 57 77, 54.5 72 C 55 79, 58 87, 65 92 L 35 92 C 42 87, 45 79, 45.5 72 C 43 77, 38 81, 32 82.5 C 21 85, 10 78, 10 64 C 10 46, 39 32, 50 9 Z'
+_HRT = 'M50 86 C 22 63, 8 48, 8 32 C 8 18, 19 10, 31 10 C 40 10, 47 15, 50 23 C 53 15, 60 10, 69 10 C 81 10, 92 18, 92 32 C 92 48, 78 63, 50 86 Z'
+_DIA = 'M50 8 C 58 24, 76 42, 92 50 C 76 58, 58 76, 50 92 C 42 76, 24 58, 8 50 C 24 42, 42 24, 50 8 Z'
+_CLB = '<circle cx="50" cy="31" r="19"/><circle cx="30" cy="56" r="19"/><circle cx="70" cy="56" r="19"/><path d="M50 48 C 47 68, 41 83, 30 92 L 70 92 C 59 83, 53 68, 50 48 Z"/>'
+_GEOM = {'heart': f'<path d="{_HRT}"/>', 'spade': f'<path d="{_SPD}"/>',
+         'diam': f'<path d="{_DIA}"/>', 'club': _CLB}
+_SUIT = {
+    'spade': ('#34373d', '#454951', '#141519', '#0c0d11', 'M50 11 C 39 30 12 46 12 64 C 12 79 27 85 39 79 C 51 73 58 56 57 42 C 56 30 54 19 50 11 Z', 'M50 11 C 54 19 56 30 57 42 C 58 56 51 73 39 79'),
+    'heart': ('#e8232f', '#f6454f', '#a8121d', '#880c15', 'M50 22 C 45 14 38 10 30 10 C 18 10 8 18 8 32 C 8 47 24 63 50 82 C 61 62 61 36 50 22 Z', 'M50 22 C 61 36 61 62 50 82'),
+    'diam': ('#f4551b', '#ff7134', '#c31f12', '#9f170c', 'M50 8 C 41 26 22 44 8 50 C 24 57 43 75 50 92 C 61 66 61 34 50 8 Z', 'M50 8 C 61 34 61 66 50 92'),
+    'club': ('#334339', '#415448', '#15231c', '#0d1712', 'M48 10 C 40 14 34 22 32 30 C 20 33 10 44 12 56 C 14 70 28 80 42 75 C 52 71 58 58 57 42 C 56 28 54 18 48 10 Z', 'M48 10 C 54 18 56 28 57 42 C 58 58 52 71 42 75'),
+}
+
+
+def _suitdefs():
+    d = ('<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>'
+         '<filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.6"/></filter>'
+         '<filter id="soft2" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="1.4"/></filter>'
+         '<radialGradient id="sheen" cx="0.34" cy="0.26" r="0.62"><stop offset="0" stop-color="#fff" stop-opacity="0.17"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>')
+    for sid, v in _SUIT.items():
+        light, lhi, dark, dlo, lr, fold = v
+        d += f'<clipPath id="cl-{sid}">{_GEOM[sid]}</clipPath><clipPath id="lr-{sid}"><path d="{lr}"/></clipPath>'
+        d += f'<linearGradient id="gl-{sid}" x1="0.3" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="{lhi}"/><stop offset="1" stop-color="{light}"/></linearGradient>'
+        d += f'<linearGradient id="gd-{sid}" x1="0.4" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="{dark}"/><stop offset="1" stop-color="{dlo}"/></linearGradient>'
+    for sid, v in _SUIT.items():
+        fold = v[5]
+        inner = (f'<rect width="100" height="100" fill="url(#gd-{sid})"/>'
+                 f'<path d="{fold}" fill="none" stroke="#000" stroke-width="8" opacity="0.42" filter="url(#soft)" transform="translate(2.6 1)"/>'
+                 f'<g clip-path="url(#lr-{sid})"><rect width="100" height="100" fill="url(#gl-{sid})"/>'
+                 f'<path d="{fold}" fill="none" stroke="#000" stroke-width="4" opacity="0.16" filter="url(#soft2)" transform="translate(-0.6 0)"/></g>'
+                 f'<ellipse cx="31" cy="24" rx="34" ry="26" fill="url(#sheen)"/>')
+        d += f'<symbol id="sym-{sid}" viewBox="0 0 100 100"><g clip-path="url(#cl-{sid})">{inner}</g></symbol>'
+        d += f'<symbol id="so-{sid}" viewBox="0 0 100 100"><g fill="currentColor">{_GEOM[sid]}</g></symbol>'
+    d += '</defs></svg>'
+    return d
 
 DB = "output/packs/flop_pack_v1_fullrange.db"
 RAISE_DB = "output/packs/flop_pack_v1_raise_demo.db"   # reduced-range, but HAS fold/call/raise
@@ -266,7 +323,8 @@ def build(allow_missing_demo_packs=False):
     # Escape </script> so pack strings cannot break out of the inline script.
     data = json.dumps(qs, separators=(",", ":")).replace("<", "\\u003c")
     body = TEMPLATE.replace("__DATA__", data).replace("__VERSION__", html.escape(meta.get("version", ""))) \
-                   .replace("__RECORDS__", html.escape(str(meta.get("record_count", "")))).replace("__COMMIT__", html.escape(commit))
+                   .replace("__RECORDS__", html.escape(str(meta.get("record_count", "")))).replace("__COMMIT__", html.escape(commit)) \
+                   .replace("__FONTFACE__", _fontface()).replace("__SUITDEFS__", _suitdefs())
     os.makedirs("demo", exist_ok=True)
     open("demo/trainer_demo.html", "w").write(body)
     doc = ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
@@ -280,23 +338,18 @@ def build(allow_missing_demo_packs=False):
 
 
 TEMPLATE = r'''<style>
-:root{
-  --bg:#e9ece6; --panel:#ffffff; --panel2:#f4f5f0; --ink:#171d19; --muted:#59635c; --line:#dbe0d8;
-  --brass:#9a7c41; --brass-soft:#b8975a;
-  --best:#2f7d54; --good:#4f8f66; --accept:#b07f2a; --costly:#bf5330; --major:#9c3320;
-  --pc-bg:#fcfbf7; --pc-ink:#181818; --pc-red:#bf1d2c; --pc-line:#d9d7cd;
-  --disp:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
-  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,sans-serif;
-  --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+__FONTFACE__
+/* Locked dark visual design — one committed dark world (Rye + Space Mono + folded suits). */
+:root, :root[data-theme="light"], :root[data-theme="dark"]{
+  --bg:#0b0c10; --panel:#16171d; --panel2:#1d1f27; --ink:#f2f1ea; --muted:#888e9b; --line:#2a2c35;
+  --brass:#8aa0ff; --brass-soft:#5b74ff;
+  --best:#2fd08a; --good:#5ee7a8; --accept:#ffc24d; --costly:#ff8a6e; --major:#e0341a;
+  --pc-bg:#f5f0e7; --pc-ink:#15171e; --pc-red:#cf1a2c; --pc-line:#e3ddcf;
+  --disp:"Rye","Iowan Old Style",Georgia,serif;
+  --sans:"Avenir Next","Avenir",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,sans-serif;
+  --mono:"Space Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --label:"Space Mono",ui-monospace,Menlo,monospace;
 }
-@media (prefers-color-scheme:dark){:root{
-  --bg:#0e1512; --panel:#151d18; --panel2:#1b241f; --ink:#e6ece7; --muted:#8f9d94; --line:#25302a;
-  --brass:#cba066; --brass-soft:#d8b478;
-  --best:#4bb57e; --good:#66b784; --accept:#d1a048; --costly:#e0714e; --major:#cf5138;
-  --pc-bg:#f6f4ee; --pc-ink:#181818; --pc-red:#c02636; --pc-line:#cbc9bf;
-}}
-:root[data-theme="light"]{--bg:#e9ece6;--panel:#ffffff;--panel2:#f4f5f0;--ink:#171d19;--muted:#59635c;--line:#dbe0d8;--brass:#9a7c41;--best:#2f7d54;--good:#4f8f66;--accept:#b07f2a;--costly:#bf5330;--major:#9c3320;--pc-bg:#fcfbf7;--pc-ink:#181818;--pc-red:#bf1d2c;--pc-line:#d9d7cd;}
-:root[data-theme="dark"]{--bg:#0e1512;--panel:#151d18;--panel2:#1b241f;--ink:#e6ece7;--muted:#8f9d94;--line:#25302a;--brass:#cba066;--best:#4bb57e;--good:#66b784;--accept:#d1a048;--costly:#e0714e;--major:#cf5138;--pc-bg:#f6f4ee;--pc-ink:#181818;--pc-red:#c02636;--pc-line:#cbc9bf;}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
 .wrap{max-width:640px;margin:0 auto;padding:20px 16px 56px}
@@ -315,7 +368,7 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .bar-top{height:4px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:16px}
 .bar-top>i{display:block;height:100%;background:var(--brass);transition:width .3s}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
-.sit{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px;font-family:var(--disp);font-size:16px}
+.sit{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px;font-family:var(--sans);font-size:15px;line-height:1.45}
 .pos{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.05em;padding:2px 8px;border-radius:6px;flex:none}
 .pos.BB,.pos.SB,.pos.UTG,.pos.HJ,.pos.CO{background:color-mix(in srgb,var(--brass) 20%,transparent);color:var(--brass)}
 .pos.BTN{background:color-mix(in srgb,var(--best) 20%,transparent);color:var(--best)}
@@ -323,9 +376,19 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .felt{background:radial-gradient(120% 130% at 50% -10%,color-mix(in srgb,var(--best) 20%,var(--panel)),var(--panel));padding:20px 18px 18px;text-align:center}
 .cap{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
 .cards{display:flex;gap:8px;justify-content:center}
-.pc{background:var(--pc-bg);color:var(--pc-ink);border:1px solid var(--pc-line);border-radius:7px;width:46px;height:62px;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(0,0,0,.22);line-height:1}
-.pc b{font-size:22px;font-weight:700}.pc i{font-size:19px;font-style:normal;margin-top:1px}
-.pc.red{color:var(--pc-red)}
+/* folded-suit playing cards: corner rank (Space Mono) + centered paper-craft suit */
+.pc{position:relative;background:linear-gradient(160deg,#f5f0e7,#e7e1d3);border-radius:8px;width:48px;height:66px;
+  box-shadow:0 7px 16px -5px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.7);animation:dealIn .5s cubic-bezier(.2,.9,.3,1.25) both}
+.pc::after{content:"";position:absolute;inset:3px;border:1px solid rgba(20,25,40,.09);border-radius:5px;pointer-events:none}
+.pc .ix{position:absolute;top:3px;left:4px;display:flex;flex-direction:column;align-items:center;line-height:.82;z-index:2}
+.pc .ix b{font-family:var(--mono);font-weight:700;font-size:12px}
+.pc .ix .mini{width:8px;height:8px;margin-top:1px}
+.pc .center{position:absolute;inset:0;display:grid;place-items:center;z-index:1}
+.pc .center .psuit{width:26px;height:26px;filter:drop-shadow(0 2px 3px rgba(20,15,10,.4))}
+.pc.pc-heart .ix{color:#cf1a2c}.pc.pc-diam .ix{color:#d84a17}.pc.pc-club .ix{color:#2f3d35}.pc.pc-spade .ix{color:#26282e}
+.cards .pc:nth-child(2){animation-delay:.08s}.cards .pc:nth-child(3){animation-delay:.16s}.cards .pc:nth-child(4){animation-delay:.24s}.cards .pc:nth-child(5){animation-delay:.32s}
+@keyframes dealIn{from{opacity:0;transform:translateY(16px) rotate(-8deg) scale(.9)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.pc{animation:none}}
 .hero{margin-top:16px}
 .hero .cap{color:var(--brass);font-weight:600}
 .acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;padding:16px 18px}
@@ -442,6 +505,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .coach-ask button{appearance:none;border:none;background:var(--brass);color:#fff;font-family:var(--sans);font-weight:700;font-size:13px;padding:0 16px;border-radius:9px;cursor:pointer;flex:none}
 .coach-ask button:disabled{opacity:.5;cursor:default}
 </style>
+__SUITDEFS__
 <div class="wrap">
   <header>
     <div class="brand"><span class="sp">&spades;</span> Full-Street Flop Trainer</div>
@@ -869,11 +933,17 @@ function situation(q){
 }
 
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
-function card(t){const r=t[0],s=(t[1]||"").toLowerCase(),su=SUIT[s]||[s,0];
-  const e=document.createElement("div");e.className="pc"+(su[1]?" red":"");
-  const b=document.createElement("b");b.textContent=(r==="T"?"10":r);
-  const i=document.createElement("i");i.textContent=su[0];
-  e.appendChild(b);e.appendChild(i);return e;}
+const SYM={h:"heart",d:"diam",c:"club",s:"spade"};
+function svgUse(cls,id){const NS="http://www.w3.org/2000/svg";
+  const svg=document.createElementNS(NS,"svg");svg.setAttribute("class",cls);
+  const u=document.createElementNS(NS,"use");u.setAttribute("href","#"+id);svg.appendChild(u);return svg;}
+function card(t){const r=t[0],s=(t[1]||"").toLowerCase(),sy=SYM[s]||"spade";
+  const e=document.createElement("div");e.className="pc pc-"+sy;
+  const ix=document.createElement("span");ix.className="ix";
+  const b=document.createElement("b");b.textContent=(r==="T"?"10":r);ix.appendChild(b);
+  ix.appendChild(svgUse("mini","so-"+sy));
+  const ct=document.createElement("span");ct.className="center";ct.appendChild(svgUse("psuit","sym-"+sy));
+  e.appendChild(ix);e.appendChild(ct);return e;}
 function render(cs,el){el.innerHTML="";cs.forEach(c=>el.appendChild(card(c)));}
 
 // --- pre-flop ("Chapter 0"): a distinct question kind, its own render/feedback path ---
