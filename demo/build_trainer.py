@@ -621,7 +621,7 @@ __SUITDEFS__
     </div>
   </details>
 
-  <div class="hint">Pick with <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> · next hand with <kbd>Enter</kbd></div>
+  <div class="hint" id="hint">Pick with <kbd>1</kbd><kbd>2</kbd> · next hand with <kbd>Enter</kbd></div>
   </section>
 
   <section class="view" id="v-progress">
@@ -982,7 +982,9 @@ function situation(q){
   if(sm==="plain"){
     if(first) return "It's your turn, and you go first — you decide before your opponent does.";
     if(vscheck) return "Your opponent passed (checked) to you. It's your turn.";
-    return "Your opponent just put chips in (bet). It's on you — match it, put in even more, or give up?";
+    return q.actions.indexOf("raise")>=0
+      ? "Your opponent just put chips in (bet). It's on you — match it, put in even more, or give up?"
+      : "Your opponent just put chips in (bet). It's on you — match it, or give up?";
   }
   const pre=q.street==="turn"?"On the turn, ":q.street==="river"?"On the river, ":"On the flop, ";
   // vs_bet: an OOP player checked and now faces a bet; an IP player faces an opponent
@@ -1037,6 +1039,7 @@ function renderPreflop(q){
   q.actions.forEach((a,i)=>{const b=document.createElement("button");b.className="act";b.dataset.a=a;
     const l=document.createElement("span");l.textContent=pfActLabel(a);const k=document.createElement("span");k.className="k";k.textContent=String(i+1);
     b.appendChild(l);b.appendChild(k);b.onclick=()=>answer(a);box.appendChild(b);});
+  setHint(q.actions.length);
   document.getElementById("prog").style.width=(100*pos/Math.max(1,order.length))+"%";
 }
 function renderQuestion(q){
@@ -1057,8 +1060,12 @@ function renderQuestion(q){
     b.appendChild(lab);b.appendChild(k);
     b.onclick=()=>answer(a);box.appendChild(b);
   });
+  setHint(q.actions.length);
   document.getElementById("prog").style.width=(100*pos/Math.max(1,order.length))+"%";
 }
+function setHint(n){const el=document.getElementById("hint");if(!el)return;
+  let ks="";for(let i=1;i<=n;i++)ks+="<kbd>"+i+"</kbd>";
+  el.innerHTML="Pick with "+ks+" &middot; next hand with <kbd>Enter</kbd>";}
 function deal(){answered=false;chosen=null;cur=Q[order[pos]];document.getElementById("fb").className="fb";renderQuestion(cur);coachReset();}
 
 function renderPreflopFeedback(q,a){
