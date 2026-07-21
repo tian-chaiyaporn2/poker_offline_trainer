@@ -751,8 +751,11 @@ function plainHead(q){
   // really a bluff-catcher there, so betting bloats the pot into likely straights/flushes.
   const rd=handRead(q.hero,q.board);
   if((q.reason==="trap"||q.reason==="value")&&(rd.boardStraighty>=2||rd.boardFlushy>=2)
-     &&(rd.cat==="pair"||rd.cat==="twopair"||rd.cat==="trips"))
-    return "The board is coordinated — a straight or flush is very possible — so your hand is more of a bluff-catcher than a monster. Check to keep the pot small and take a cheap showdown rather than bet into the hands that beat you.";
+     &&(rd.cat==="pair"||rd.cat==="twopair"||rd.cat==="trips")){
+    let s="The board is coordinated — a straight or flush is very possible — so your hand is more of a bluff-catcher than a monster. Check to keep the pot small and take a cheap showdown rather than bet into the hands that beat you.";
+    // If it was checked to you, name the trap: a check does NOT rule out the straight here.
+    if(!q.acts_first)s+=" It was checked to you, but on a board this connected a check doesn't rule out a straight — strong hands often check to trap — so betting mostly folds out the hands you beat and gets called by the ones that beat you.";
+    return s;}
   if(q.street==="river"&&RIVER_PLAIN[q.reason])return RIVER_PLAIN[q.reason];
   return PLAIN_HEAD[q.reason]||TERMS.plain.reason[q.reason]||q.headline;
 }
