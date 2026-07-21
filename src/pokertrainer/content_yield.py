@@ -391,6 +391,7 @@ def run(n=40, iters=300, roots=None, solver="cpu", dtype="float64",
     oop_pos, ip_pos = sc["oop_pos"], sc["ip_pos"]
     pot = sc["pot"] if pot is None else pot
     bet_frac = sc["bet_frac"] if bet_frac is None else bet_frac
+    eff_stack = sc.get("eff_stack")     # None for deep SRP; set (~90bb) for 3-bet pots
     board_idx = list(roots) if roots is not None else list(range(len(BOARDS)))
     # True full range for the projection: when --n >= the range, we solve every
     # combo, so hands_per_side == full range and the scale factor is 1.0 (avoids
@@ -401,12 +402,13 @@ def run(n=40, iters=300, roots=None, solver="cpu", dtype="float64",
 
     cfg = _solve_config(n, iters, solver, dtype, pot, bet_frac, raise_x, board_idx)
     cfg["scenario"] = scenario
+    cfg["eff_stack"] = eff_stack
     # Always fingerprint-check, including --aggregate-only: rebuilding reports
     # from checkpoints under mismatched CLI settings would silently mix runs.
     _ensure_checkpoint_config(out, cfg, fresh=False if aggregate_only else fresh)
 
     if not aggregate_only:
-        make = _make_solver(solver, dtype, raise_x=raise_x)
+        make = _make_solver(solver, dtype, raise_x=raise_x, eff_stack=eff_stack)
         t0 = time.time()
         for k, i in enumerate(board_idx, 1):
             bstr = BOARDS[i]["board"]

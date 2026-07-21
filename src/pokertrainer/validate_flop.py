@@ -88,20 +88,21 @@ def _streets_for_board(flop) -> int:
     return n
 
 
-def _make_solver(solver, dtype, raise_x=None):
+def _make_solver(solver, dtype, raise_x=None, eff_stack=None):
     """Return a factory building a flop-root-reporting solver on cpu or gpu.
 
     bet_streets controls which streets have betting; raise_x enables fold/call/raise.
+    eff_stack caps bets at the remaining stack (SPR / 3-bet-pot dynamics; None = deep).
     n_streets is derived from the starting board length so turn/river demos deal
     the correct number of runout cards (not a hard-coded flop tree).
     """
     if solver == "gpu":
         return lambda f, o, i, wo, wi, pot, bf, bet_streets: BatchedGPUCFR(
             f, o, i, wo, wi, pot, bf, streets=_streets_for_board(f),
-            bet_streets=bet_streets, backend="auto", dtype=dtype, raise_x=raise_x)
+            bet_streets=bet_streets, backend="auto", dtype=dtype, raise_x=raise_x, eff_stack=eff_stack)
     return lambda f, o, i, wo, wi, pot, bf, bet_streets: BatchedCFR(
         f, o, i, wo, wi, pot, bf, streets=_streets_for_board(f),
-        bet_streets=bet_streets, raise_x=raise_x)
+        bet_streets=bet_streets, raise_x=raise_x, eff_stack=eff_stack)
 
 
 def solve_board(flop, oop, ip, pot, bet_frac, iters, make):

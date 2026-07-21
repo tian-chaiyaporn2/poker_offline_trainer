@@ -35,13 +35,17 @@ def _strat(reg: np.ndarray) -> np.ndarray:
 class BatchedCFR:
     def __init__(self, flop: List[int], oop, ip, w_oop, w_ip, pot_bb,
                  bet_frac: float = 0.66, streets: int = 3, bet_streets=None,
-                 raise_x=None):
+                 raise_x=None, eff_stack=None):
         self.flop = list(flop)
         self.oc = np.array(oop, dtype=np.int64)
         self.ic = np.array(ip, dtype=np.int64)
         self.no, self.ni = len(oop), len(ip)
         self.P0 = float(pot_bb)
         self.bet_frac = bet_frac
+        # Effective stack behind the pot (bb). A bet/raise can't put in more than
+        # what's left, so on a low-SPR (3-bet) pot bets hit all-in and later-street
+        # betting is capped — the SPR dynamic. None = no cap (deep SRP, unchanged).
+        self.eff = float(eff_stack) if eff_stack else None
         self.n_streets = streets
         # Betting happens only on streets 1..bet_streets; later streets are pure
         # chance runouts (both check) that still realize equity to showdown. So
@@ -64,6 +68,14 @@ class BatchedCFR:
         self._done = 0               # total iterations run (persists across run() calls)
         self._eval = False           # evaluation pass: no regret/strategy updates
         self._cap = None             # captured (s_root, u_root) at the flop root
+
+    def _capbet(self, x, eo, ei):
+        """Cap a bet/raise-to amount at the min remaining stack (all-in). No-op when
+        no effective stack is set."""
+        if self.eff is None:
+            return x
+        rem = np.maximum(np.minimum(self.eff - eo, self.eff - ei), 0.0)
+        return np.minimum(x, rem)
 
     def _compat(self):
         B = np.ones((self.no, self.ni))
@@ -155,8 +167,8 @@ class BatchedCFR:
         """Flop betting with a raise facing a bet (fold/call/raise, one raise per
         street). Batched mirror of MultiStreetSpike._solve_street_raise."""
         C = len(boards)
-        b = self.bet_frac * (self.P0 + eo + ei)              # [C]
-        Rz = self.raise_x * b                                 # raise-to
+        b = self._capbet(self.bet_frac * (self.P0 + eo + ei), eo, ei)   # [C]
+        Rz = self._capbet(self.raise_x * b, eo, ei)                      # raise-to (all-in capped)
         s_root = self._get_strat(path, "R", C, 2)
         s_ipc = self._get_strat(path, "P", C, 2)
         s_ovb = self._get_strat(path, "V", C, 3)
@@ -225,7 +237,7 @@ class BatchedCFR:
             return self._chance(street, boards, eo, ei, ro, ri, path + "c")
         if self.raise_x is not None:
             return self._solve_raise(street, boards, eo, ei, ro, ri, path)
-        b = self.bet_frac * (self.P0 + eo + ei)          # [C]
+        b = self._capbet(self.bet_frac * (self.P0 + eo + ei), eo, ei)   # [C]
         s_root = self._get_strat(path, "R", C, 2)
         s_ipc = self._get_strat(path, "P", C, 2)
         s_ovb = self._get_strat(path, "V", C, 2)

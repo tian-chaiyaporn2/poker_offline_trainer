@@ -88,10 +88,27 @@ SB_vs_BTN: Dict[str, float] = {c: 1.0 for c in [  # SB flat-call vs BTN open (OO
     "AJo", "KQo", "KJo", "QJo",
 ]}
 
+# --- BTN-vs-BB 3-BET pot. BTN opens, BB 3-bets, BTN calls. Postflop the BB is OOP
+#     (the 3-bettor / aggressor, acts first) and the BTN is IP (caller). The whole
+#     point is the LOW SPR: pot ~20bb with ~88bb behind (SPR ~4.4) vs the deep ~18
+#     SPR of a single-raised pot — so stacks get in by the river (the eff_stack cap
+#     models this). Ranges are v1 polarized estimates to validate.
+BB_3BET: Dict[str, float] = {c: 1.0 for c in [  # BB 3-bets vs BTN open (polarized, OOP)
+    "AA", "KK", "QQ", "JJ", "TT",                      # value pairs
+    "AKs", "AQs", "AKo",                               # value broadways
+    "A5s", "A4s", "A3s", "A2s",                        # nut-blocker bluffs
+    "KJs", "QJs", "JTs", "76s", "65s",                 # suited bluffs
+]}
+BTN_vs_3BET: Dict[str, float] = {c: 1.0 for c in [  # BTN calls the 3-bet (IP, flats)
+    "22", "33", "44", "55", "66", "77", "88", "99", "TT", "JJ",
+    "AKs", "AQs", "AJs", "ATs",
+    "KQs", "KJs", "KTs", "QJs", "QTs", "JTs", "T9s", "98s", "87s", "76s", "65s",
+]}
+
 # Scenario registry — parameterizes the content pipeline (--scenario). Each entry
 # names the OOP (first-to-act) and IP (last-to-act) ranges + position labels; the
-# solver is scenario-agnostic (it just takes the two ranges). All are single-raised
-# pots (same pot/SPR); 3-bet pots and multi-size trees need solver changes, not a range.
+# solver is scenario-agnostic (it just takes the two ranges). Single-raised pots have
+# no eff_stack (deep, SPR ~18); the 3-bet pot sets eff_stack so bets hit all-in (SPR ~4).
 SCENARIOS: Dict[str, Dict] = {
     "btn_vs_bb_srp": {"oop_range": BB_SRP, "ip_range": BTN_SRP,
                       "oop_pos": "BB", "ip_pos": "BTN", "pot": 5.5, "bet_frac": 0.66,
@@ -105,6 +122,10 @@ SCENARIOS: Dict[str, Dict] = {
     "btn_vs_sb_srp": {"oop_range": SB_vs_BTN, "ip_range": BTN_SRP,
                       "oop_pos": "SB", "ip_pos": "BTN", "pot": 5.5, "bet_frac": 0.66,
                       "label": "BTN opens, SB calls (single-raised pot)"},
+    "btn_bb_3bet": {"oop_range": BB_3BET, "ip_range": BTN_vs_3BET,
+                    "oop_pos": "BB", "ip_pos": "BTN", "pot": 20.0, "bet_frac": 0.66,
+                    "eff_stack": 88.0,
+                    "label": "BTN opens, BB 3-bets, BTN calls (3-bet pot, low SPR)"},
 }
 
 

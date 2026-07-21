@@ -63,9 +63,12 @@ def _strat(xp, reg):
 class BatchedGPUCFR:
     def __init__(self, flop, oop, ip, w_oop, w_ip, pot_bb,
                  bet_frac=0.66, streets=3, backend="auto", dtype="float64",
-                 bet_streets=None, raise_x=None):
+                 bet_streets=None, raise_x=None, eff_stack=None):
         self.xp, self.scatter_add, self.to_dev, self.to_host, self.backend = get_backend(backend)
         xp = self.xp
+        # Effective stack behind the pot (bb); a bet/raise can't exceed what's left
+        # (all-in cap → SPR dynamic on 3-bet pots). None = no cap (deep SRP).
+        self.eff = float(eff_stack) if eff_stack else None
         # Compute dtype for reaches/regrets/showdown. float32 is much faster on
         # consumer GPUs (which are FP64-crippled); float64 is exact.
         self.dtype = np.dtype(dtype)
@@ -190,11 +193,19 @@ class BatchedGPUCFR:
             return xp.where(tot > 0, s / xp.where(tot > 0, tot, 1.0), 1.0 / na)
         return _strat(xp, self.R[path + node])
 
+    def _capbet(self, x, eo, ei):
+        """Cap a bet/raise-to at the min remaining stack (all-in). No-op without eff."""
+        if self.eff is None:
+            return x
+        xp = self.xp
+        rem = xp.maximum(xp.minimum(self.eff - eo, self.eff - ei), 0.0)
+        return xp.minimum(x, rem)
+
     def _solve_raise(self, street, boards, eo, ei, ro, ri, path):
         xp = self.xp
         C = len(boards)
-        b = self.bet_frac * (self.P0 + eo + ei)
-        Rz = self.raise_x * b
+        b = self._capbet(self.bet_frac * (self.P0 + eo + ei), eo, ei)
+        Rz = self._capbet(self.raise_x * b, eo, ei)
         s_root = self._get_strat(path, "R", C, True)
         s_ipc = self._get_strat(path, "P", C, False)
         s_ovb = self._get_strat(path, "V", C, True, 3)
@@ -261,7 +272,7 @@ class BatchedGPUCFR:
             return self._chance(street, boards, eo, ei, ro, ri, path + "c")
         if self.raise_x is not None:
             return self._solve_raise(street, boards, eo, ei, ro, ri, path)
-        b = self.bet_frac * (self.P0 + eo + ei)
+        b = self._capbet(self.bet_frac * (self.P0 + eo + ei), eo, ei)
         s_root = self._get_strat(path, "R", C, True)
         s_ipc = self._get_strat(path, "P", C, False)
         s_ovb = self._get_strat(path, "V", C, True)

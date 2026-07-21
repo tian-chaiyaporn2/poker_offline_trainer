@@ -82,7 +82,14 @@ python -m pokertrainer.content_yield --solver cpu --n 8 --iters 25 --roots 0 \
     --raise-x 3 --scenario btn_vs_bb_srp --out /tmp/raise_smoke   # vs_bet -> fold/call/raise
 ```
 
-*Same pass for the other two scenarios that are still Fold/Call on vs-bet:*
+**3-bet pot (low SPR).** The solver now takes an `eff_stack` (a bet/raise can't exceed the
+remaining stack → all-in cap). Scenario `btn_bb_3bet` sets pot 20bb + `eff_stack` 88bb
+(SPR ~4.4) so stacks get in by the river — the real commitment dynamic, unlike a deep SRP.
+Run `colab/kaggle_content_3bet.ipynb` (content_yield `--scenario btn_bb_3bet --raise-x 3`,
+2-part). `eff_stack=None` (all SRP scenarios) is a no-op, so existing packs are unchanged.
+More positions (`co_vs_bb_srp`, `btn_vs_sb_srp`) reuse the SRP machinery — new ranges only.
+
+*Same raise pass for the two scenarios still Fold/Call on vs-bet:*
 - **SB-vs-BB raise pass** — `colab/kaggle_content_raise_sb.ipynb` (identical 2-part flow,
   `--scenario sb_vs_bb_srp`). Download `records_raise_sb_<PART>.json`, merge, build/sign a
   raise-enabled `sb_vs_bb` pack → replaces `flop_pack_sb_vs_bb.db`.
