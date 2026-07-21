@@ -76,7 +76,7 @@ def _suitdefs():
 
 DB = "output/packs/flop_pack_v1_fullrange.db"
 RAISE_DB = "output/packs/flop_pack_v1_raise_demo.db"   # reduced-range, but HAS fold/call/raise
-TR_DB = "output/packs/flop_pack_turnriver_demo.db"     # turn/river decisions (later-street demo)
+TR_DB = "output/packs/flop_pack_turnriver_fullrange.db"  # turn/river decisions (full range; still unconditioned)
 SB_DB = "output/packs/flop_pack_sb_vs_bb.db"           # 2nd scenario: SB vs BB (full range)
 PER_REASON = 6          # cap questions per reason for variety
 MAX_Q = 60
@@ -232,7 +232,8 @@ def load_raise(n=RAISE_Q, required=True):
 
 
 def load_turnriver(n=TR_Q, required=True):
-    """Turn + river decisions from the reduced-range later-street demo pack."""
+    """Turn + river decisions from the full-range later-street pack (still unconditioned —
+    ranges are card-removal only, not filtered by a prior check/check line)."""
     if not os.path.exists(TR_DB):
         msg = f"optional turn/river pack missing ({TR_DB})"
         if required:
@@ -254,7 +255,7 @@ def load_turnriver(n=TR_Q, required=True):
     oop = _oop_pos(picked)
     out = []
     for q in (_to_q(d, oop) for d in picked):
-        q["badge"] = q["street"] + " · demo"
+        q["badge"] = q["street"]
         out.append(q)
     streets = {q["street"] for q in out}
     if required and not ({"turn", "river"} <= streets):
@@ -702,10 +703,10 @@ __SUITDEFS__
     Real solver output — pack <code>__VERSION__</code>, <b>__RECORDS__</b> signed records, build <code>__COMMIT__</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
-    Spots marked <span class="demo">turn / river</span> (later-street boards, reduced range,
-    unconditioned — not check-check filtered) are real solver output from a demo pack; the
-    full-range turn/river pass is the next depth work. Pre-flop spots are calibrated ranges
-    (solver-approximate, tuned to standard frequencies).<br>
+    <span class="demo">Turn / river</span> spots are now full-range solver output too, but
+    <b>unconditioned</b> (ranges are card-removal only, not filtered by a prior check/check line),
+    and facing-a-bet there is Fold/Call — the raise pass on those streets is the next depth work.
+    Pre-flop spots are calibrated ranges (solver-approximate, tuned to standard frequencies).<br>
     Prefer to review the answers at a glance? See the <a href="preview.html">content gallery</a>.
   </div>
   <div class="s-sec">Poker terms</div>
