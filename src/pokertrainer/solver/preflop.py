@@ -100,8 +100,36 @@ def push_fold_game(stack: float = 10.0, bb: float = 1.0, sb: float = 0.5) -> Dic
 
 # ---- terminal utility matrices ---------------------------------------------------
 
-def _terminal_util(node: Dict, E: np.ndarray, ip_player: int, realize: float):
-    """Return (U0, U1): 169x169 net-chip utilities (final - initial) for each (h0,h1)."""
+def type_bonus(classes: List[str]) -> np.ndarray:
+    """Per-class realization bonus: how much better/worse a hand plays postflop than its
+    raw equity suggests. Suited + connected realize MORE (disguised straights/flushes);
+    disconnected offsuit realizes LESS (dominated, hard to continue). Modeled, tunable."""
+    order = "23456789TJQKA"
+    ri = {r: i for i, r in enumerate(order)}
+    tb = np.zeros(len(classes))
+    for i, c in enumerate(classes):
+        if len(c) == 2:                         # pocket pair — set mining, modest bump
+            tb[i] = 0.02
+            continue
+        hi, lo, suit = c[0], c[1], c[2]
+        gap = abs(ri[hi] - ri[lo])
+        b = 0.05 if suit == "s" else 0.0        # suitedness
+        if gap == 1:
+            b += 0.04                            # connected
+        elif gap == 2:
+            b += 0.02
+        elif gap >= 5:
+            b -= 0.03                            # disconnected
+        if suit == "o" and gap >= 4:
+            b -= 0.02
+        tb[i] = b
+    return tb
+
+
+def _terminal_util(node: Dict, E: np.ndarray, ip_player: int, realize: float,
+                   tb: np.ndarray = None):
+    """Return (U0, U1): 169x169 net-chip utilities (final - initial) for each (h0,h1).
+    U0 + U1 == dead money everywhere, so the game stays (near) zero-sum."""
     n = E.shape[0]
     kind = node["term"]
     pot = node["pot"]
@@ -113,12 +141,13 @@ def _terminal_util(node: Dict, E: np.ndarray, ip_player: int, realize: float):
         U0 = np.full((n, n), pot - invO)
         U1 = np.full((n, n), -invD)
     else:                                       # allin or flop -> equity-based
-        share0 = E.copy()                       # player 0's share of the pot
-        if kind == "flop":
-            bump = realize if ip_player == 0 else -realize
-            share0 = np.clip(E + bump, 0.0, 1.0)
+        share0 = E                              # player 0's realized share of the pot
+        if kind == "flop":                      # not all-in: realization applies
+            pos0 = realize if ip_player == 0 else -realize
+            diff = 0.0 if tb is None else (tb[:, None] - tb[None, :])  # O plays better if tb[i]>tb[j]
+            share0 = np.clip(E + pos0 + diff, 0.0, 1.0)
         U0 = share0 * pot - invO
-        U1 = (1.0 - share0) * pot - invD
+        U1 = (1.0 - share0) * pot - invD        # conserves: U0+U1 == dead
     return U0, U1
 
 
@@ -126,10 +155,10 @@ def _terminal_util(node: Dict, E: np.ndarray, ip_player: int, realize: float):
 
 class PreflopCFR:
     def __init__(self, root: Dict, E: np.ndarray, w: np.ndarray,
-                 ip_player: int = 0, realize: float = 0.0):
+                 ip_player: int = 0, realize: float = 0.0, tb: np.ndarray = None):
         self.root, self.E, self.w = root, E, w
         self.n = E.shape[0]
-        self.ip_player, self.realize = ip_player, realize
+        self.ip_player, self.realize, self.tb = ip_player, realize, tb
         self.regret: Dict[int, np.ndarray] = {}
         self.strat_sum: Dict[int, np.ndarray] = {}
         self._id = {}
@@ -156,7 +185,7 @@ class PreflopCFR:
     def _walk(self, node, reach0, reach1, update=True):
         """Return (v0, v1): counterfactual value vectors (len n) for each player."""
         if "term" in node:
-            U0, U1 = _terminal_util(node, self.E, self.ip_player, self.realize)
+            U0, U1 = _terminal_util(node, self.E, self.ip_player, self.realize, self.tb)
             # v0[h] = sum_h' (w[h']*reach1[h']) * U0[h,h'] ; v1 symmetric.
             v0 = U0 @ (self.w * reach1)
             v1 = U1.T @ (self.w * reach0)
@@ -207,7 +236,7 @@ class PreflopCFR:
         """Player's per-hand value vector: reach_opp is the OPPONENT's (normalized)
         reach to this node. `best`=True -> player best-responds; else plays `avg`."""
         if "term" in node:
-            U0, U1 = _terminal_util(node, self.E, self.ip_player, self.realize)
+            U0, U1 = _terminal_util(node, self.E, self.ip_player, self.realize, self.tb)
             Up = U0 if player == 0 else U1.T
             return Up @ reach_opp              # reach_opp already carries the combo prior (wn)
         nid = self._id[id(node)]
