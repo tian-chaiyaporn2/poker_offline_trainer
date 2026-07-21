@@ -567,6 +567,14 @@ function handRead(hero,board){
   const sflush=flush&&hasStraight(allV.filter((_,i)=>allS[i]===flushSuit));
   const bCnt={};bv.forEach(v=>bCnt[v]=(bCnt[v]||0)+1);
   const boardPaired=Object.keys(bCnt).some(v=>bCnt[v]>=2);
+  // Board coordination: how likely the SHARED cards make a straight/flush for anyone.
+  // 0 = dry, 1 = possible, 2 = very live (four to a straight / four-flush board).
+  const bvu=[...new Set(bv)];if(bvu.includes(14))bvu.push(1);
+  let strun=0;for(let lo=1;lo<=10;lo++){let k=0;for(const v of bvu)if(v>=lo&&v<lo+5)k++;if(k>strun)strun=k;}
+  const boardStraighty=strun>=4?2:(strun>=3?1:0);
+  const bsuit={};bs.forEach(s=>bsuit[s]=(bsuit[s]||0)+1);
+  const bmax=Math.max(0,...Object.values(bsuit));
+  const boardFlushy=bmax>=4?2:(bmax>=3?1:0);
   const top=cnt[groups[0]],second=cnt[groups[1]]||0;
   let made,strength=null,cat="high",pairKind=null,overs=[];
   // A pair/trips the hero doesn't contribute to is the shared board, not their hand —
@@ -602,7 +610,7 @@ function handRead(hero,board){
     // Only the hero's draw — if the board alone already forms the straight draw, it's shared, not yours.
     const sd=straightDraw(allV);if(sd&&!straightDraw(bv))parts.push(sd);
     if(parts.length)draw=parts.join(" and ");}
-  return {made,strength,draw,cat,pairKind,overs};
+  return {made,strength,draw,cat,pairKind,overs,boardStraighty,boardFlushy};
 }
 // "Where you stand" — plain relative strength: what you beat and what beats you.
 // The single most important read for a beginner; hedged so it stays true regardless
@@ -613,13 +621,29 @@ function orList(vals){const a=vals.map(nm);
   if(a.length===2)return a[0]+" or "+a[1];
   return a.slice(0,-1).join(", ")+", or "+a[a.length-1];}
 function standingText(rd){
+  // What the coordinated shared cards let opponents have (straights/flushes).
+  const dg=[];
+  if(rd.boardStraighty>=2)dg.push("the shared cards are four to a straight, so a straight is very much in play");
+  else if(rd.boardStraighty===1)dg.push("a straight is possible");
+  if(rd.boardFlushy>=2)dg.push("four to a flush is out there");
+  else if(rd.boardFlushy===1)dg.push("a flush is possible");
+  const danger=dg.length===1?dg[0]:dg.length?dg.slice(0,-1).join(", ")+" and "+dg[dg.length-1]:"";
+  const high=rd.boardStraighty>=2||rd.boardFlushy>=2;
+  // A very coordinated board turns even a big made hand into a bluff-catcher — this
+  // dominates the read (the old logic wrongly called any overpair near-nuts).
+  if(high&&(rd.cat==="pair"||rd.cat==="twopair"||rd.cat==="trips")){
+    const nm=rd.cat==="trips"?"three of a kind":rd.cat==="twopair"?"two pair":"a pair";
+    return "Careful — even with "+nm+", "+danger+", so here you're mostly bluff-catching, not value-betting.";
+  }
+  let base;
   switch(rd.cat){
     case "pair":
-      if(rd.pairKind==="over")return "You're ahead of every worse pair and all the bluffs — mostly only two pair or three of a kind beats you now.";
-      if(rd.pairKind==="top")return "You beat worse pairs and the hands still chasing — a bigger side card, two pair, or three of a kind has you beat.";
-      return "You beat high cards and bluffs, but "+orList(rd.overs)+" makes a better pair, and two pair or three of a kind is ahead too.";
-    case "twopair":return "You're ahead of every one-pair hand — mainly three of a kind or better beats you.";
-    case "trips":return "Very strong — only a straight, flush, or full house could beat you, and only if the shared cards line up for it.";
+      base=rd.pairKind==="over"?"You're ahead of every worse pair and all the bluffs — mostly only two pair or three of a kind beats you now."
+        :rd.pairKind==="top"?"You beat worse pairs and the hands still chasing — a bigger side card, two pair, or three of a kind has you beat."
+        :"You beat high cards and bluffs, but "+orList(rd.overs)+" makes a better pair, and two pair or three of a kind is ahead too.";
+      break;
+    case "twopair":base="You're ahead of every one-pair hand — mainly three of a kind or better beats you.";break;
+    case "trips":base="Very strong — only a straight, flush, or full house could beat you, and only if the shared cards line up for it.";break;
     case "straight":return "A big hand — only a flush or a full house beats you here.";
     case "flush":return "A big hand — only a full house or better beats you.";
     case "full":case "quads":case "sflush":return "You've got a monster — just about nothing beats this.";
@@ -627,6 +651,8 @@ function standingText(rd){
       ? "Nothing made yet, but your hand can still improve — for now you're behind any pair."
       : "No pair yet — you're behind almost any hand that's already made a pair or better; you'd need to improve or get them to fold.";
   }
+  if(danger)base+=" Note "+danger+", so play it a touch cautiously.";   // moderate board danger
+  return base;
 }
 
 // Plain (no jargon) vs Poker (real terminology) — the same data, two vocabularies.
@@ -721,6 +747,12 @@ const RIVER_PLAIN={
   protection:"The board is complete — bet to get paid by worse hands; nothing can catch up now."
 };
 function plainHead(q){
+  // A "trap"/"value" framing overclaims on a very coordinated board — the made hand is
+  // really a bluff-catcher there, so betting bloats the pot into likely straights/flushes.
+  const rd=handRead(q.hero,q.board);
+  if((q.reason==="trap"||q.reason==="value")&&(rd.boardStraighty>=2||rd.boardFlushy>=2)
+     &&(rd.cat==="pair"||rd.cat==="twopair"||rd.cat==="trips"))
+    return "The board is coordinated — a straight or flush is very possible — so your hand is more of a bluff-catcher than a monster. Check to keep the pot small and take a cheap showdown rather than bet into the hands that beat you.";
   if(q.street==="river"&&RIVER_PLAIN[q.reason])return RIVER_PLAIN[q.reason];
   return PLAIN_HEAD[q.reason]||TERMS.plain.reason[q.reason]||q.headline;
 }
@@ -893,9 +925,16 @@ function renderFeedback(q,a,gained){
   // The portable takeaway, also inside the collapsible block.
   const ruleEl=document.getElementById("rule");
   ruleEl.innerHTML="";
-  if(RULES[q.reason]){ruleEl.hidden=false;
+  // On a coordinated board a one-pair-ish hand is a bluff-catcher, so the trap/value
+  // takeaway is replaced by a pot-control one.
+  const bcRule=(q.reason==="trap"||q.reason==="value")&&(rd.boardStraighty>=2||rd.boardFlushy>=2)
+    &&(rd.cat==="pair"||rd.cat==="twopair"||rd.cat==="trips");
+  const ruleText=bcRule
+    ? "On a coordinated board, a one-pair-type hand is a bluff-catcher, not a monster — keep the pot small and don't bet into the likely straights and flushes."
+    : RULES[q.reason];
+  if(ruleText){ruleEl.hidden=false;
     const lab=document.createElement("b");lab.textContent="Rule of thumb";ruleEl.appendChild(lab);
-    ruleEl.appendChild(document.createTextNode(RULES[q.reason]));}
+    ruleEl.appendChild(document.createTextNode(ruleText));}
   else{ruleEl.hidden=true;}
   // Depth (where-you-stand + rule) lives behind "Explain more" so the default view is
   // just verdict -> held -> why -> cost -> payoffs. Hidden entirely in Pro (which
