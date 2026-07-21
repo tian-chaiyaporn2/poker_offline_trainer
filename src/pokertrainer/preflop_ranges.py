@@ -39,6 +39,30 @@ def _top_pct(classes, w, order, pct) -> List[str]:
     return out
 
 
+# BB defending vs a single open: (total defend %, value-3bet %) by opener seat. BB defends
+# tighter vs early opens (stronger ranges) and wide vs the SB (where BB is in position).
+# Linear 3-bet (value the top of the defense) — the clearest lesson for a trainer.
+BB_DEFENSE: Dict[str, tuple] = {
+    "UTG": (28.0, 7.0), "HJ": (33.0, 8.0), "CO": (40.0, 9.0),
+    "BTN": (55.0, 11.0), "SB": (66.0, 13.0),
+}
+
+
+def bb_defense_ranges() -> Dict[str, Dict[str, str]]:
+    """Per opener seat -> {hand_class: '3bet'|'call'|'fold'} for the Big Blind."""
+    classes, E = load_equity_table()
+    w = combo_weights(classes)
+    tb = type_bonus(classes)
+    order = strength_order(classes, E, tb)
+    out: Dict[str, Dict[str, str]] = {}
+    for opener, (dfd, tb3) in BB_DEFENSE.items():
+        threebet = set(_top_pct(classes, w, order, tb3))
+        defend = set(_top_pct(classes, w, order, dfd))
+        out[opener] = {c: ("3bet" if c in threebet else "call" if c in defend else "fold")
+                       for c in classes}
+    return out
+
+
 def rfi_ranges() -> Dict[str, Dict[str, str]]:
     """Per opening position -> {hand_class: 'open'|'fold'}. BB has no RFI (it defends)."""
     classes, E = load_equity_table()

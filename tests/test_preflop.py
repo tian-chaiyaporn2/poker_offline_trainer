@@ -104,3 +104,22 @@ def test_rfi_ranges_are_nested_and_sensible():
     for pos in RFI_FREQ:
         assert "AA" in opens(pos) and "72o" not in opens(pos)
     assert "76s" in opens("BTN") and "76s" not in opens("UTG")
+
+
+def test_bb_defense_ranges():
+    from pokertrainer.preflop_ranges import bb_defense_ranges, BB_DEFENSE
+    from pokertrainer.solver.preflop import combo_weights
+    from pokertrainer.preflop_equity import hand_classes
+    r = bb_defense_ranges()
+    classes = hand_classes()
+    w = dict(zip(classes, combo_weights(classes)))
+    def pct(pos, *acts):
+        return 100 * sum(w[c] for c, a in r[pos].items() if a in acts) / sum(w.values())
+    # defends tighter vs early opens, wider vs the SB; frequencies near target
+    for opener, (dfd, tb3) in BB_DEFENSE.items():
+        assert abs(pct(opener, "3bet", "call") - dfd) < 2.5
+        assert abs(pct(opener, "3bet") - tb3) < 2.0
+    assert pct("UTG", "3bet", "call") < pct("BTN", "3bet", "call") < pct("SB", "3bet", "call")
+    # premiums 3bet, trash folds, suited connectors defend
+    assert r["BTN"]["AA"] == "3bet" and r["BTN"]["72o"] == "fold"
+    assert r["BTN"]["76s"] in ("call", "3bet")
