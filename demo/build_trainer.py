@@ -424,6 +424,13 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
       </div>
       <span class="vocab" id="vocab" hidden></span>
     </div>
+    <div class="level" style="margin-top:9px">
+      <span class="lvl-cap">Train</span>
+      <div class="lang" id="cats" role="group" aria-label="Which part to train">
+        <button data-c="all" type="button">All</button><button data-c="preflop" type="button">Pre-flop</button><button data-c="flop" type="button">Flop</button><button data-c="turn" type="button">Turn</button><button data-c="river" type="button">River</button>
+      </div>
+      <span class="vocab" id="catcount"></span>
+    </div>
     <p class="lvl-hint" id="levelhint"></p>
   </div>
   <div class="bar-top"><i id="prog" style="width:0"></i></div>
@@ -654,6 +661,8 @@ const TERMS = {
 };
 let order=[], pos=0, answered=false, cur=null, chosen=null, stats={n:0,solid:0,ok:0,leak:0};
 let mode=(function(){try{const m=localStorage.getItem("lang");return (m==="poker"||m==="learning"||m==="plain"||m==="progressive")?m:"progressive";}catch(e){return "progressive";}})();
+// Which part to train (pre-flop / flop / turn / river / all).
+let cat=(function(){try{const c=localStorage.getItem("cat");return ["all","preflop","flop","turn","river"].includes(c)?c:"all";}catch(e){return "all";}})();
 // Adaptive mode: each concept shows in plain words until you've EARNED it (played a
 // spot that uses it well); then it graduates to the poker term + its meaning.
 let learned=(function(){try{return new Set(JSON.parse(localStorage.getItem("learned")||"[]"));}catch(e){return new Set();}})();
@@ -779,7 +788,7 @@ function renderPreflop(q){
   q.actions.forEach((a,i)=>{const b=document.createElement("button");b.className="act";b.dataset.a=a;
     const l=document.createElement("span");l.textContent=pfActLabel(a);const k=document.createElement("span");k.className="k";k.textContent=String(i+1);
     b.appendChild(l);b.appendChild(k);b.onclick=()=>answer(a);box.appendChild(b);});
-  document.getElementById("prog").style.width=(100*pos/Q.length)+"%";
+  document.getElementById("prog").style.width=(100*pos/Math.max(1,order.length))+"%";
 }
 function renderQuestion(q){
   if(q.preflop)return renderPreflop(q);
@@ -799,7 +808,7 @@ function renderQuestion(q){
     b.appendChild(lab);b.appendChild(k);
     b.onclick=()=>answer(a);box.appendChild(b);
   });
-  document.getElementById("prog").style.width=(100*pos/Q.length)+"%";
+  document.getElementById("prog").style.width=(100*pos/Math.max(1,order.length))+"%";
 }
 function deal(){answered=false;chosen=null;cur=Q[order[pos]];document.getElementById("fb").className="fb";renderQuestion(cur);}
 
@@ -975,7 +984,7 @@ function answer(a){
   // preventScroll: focusing Next must not yank the viewport to the bottom of the card.
   document.getElementById("next").focus({preventScroll:true});
 }
-function next(){pos=(pos+1)%Q.length;if(pos===0)order=shuffle(order.slice());deal();}
+function next(){pos=(pos+1)%order.length;if(pos===0)order=shuffle(order.slice());deal();}
 
 // Adaptive unlock: play a spot well (best/good) and its concept graduates into
 // your vocabulary. The 'basics' (positions + streets) unlock on your first good
@@ -1008,6 +1017,16 @@ function applyModeUI(){document.querySelectorAll("#lang button").forEach(b=>b.cl
 function setMode(m){mode=m;try{localStorage.setItem("lang",m);}catch(e){}applyModeUI();updateVocab();updateLevelHint();
   if(cur){renderQuestion(cur);if(answered)renderFeedback(cur,chosen,[]);}}
 document.querySelectorAll("#lang button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+// --- train-category selector: filter the deck to one street (or all) ---
+function qcat(q){return q.preflop?"preflop":(q.street||"flop");}
+function catCounts(){const c={all:Q.length,preflop:0,flop:0,turn:0,river:0};Q.forEach(q=>{const k=qcat(q);c[k]=(c[k]||0)+1;});return c;}
+function buildOrder(){order=shuffle([...Q.keys()].filter(i=>cat==="all"||qcat(Q[i])===cat));pos=0;
+  const cc=catCounts();document.getElementById("catcount").textContent=(cat==="all"?Q.length:(cc[cat]||0))+" spots";}
+function applyCatUI(){const cc=catCounts();
+  document.querySelectorAll("#cats button").forEach(b=>{b.classList.toggle("on",b.dataset.c===cat);
+    const n=b.dataset.c==="all"?Q.length:(cc[b.dataset.c]||0);b.disabled=n===0;b.style.opacity=n===0?"0.4":"";});}
+function setCat(c){cat=c;try{localStorage.setItem("cat",c);}catch(e){}applyCatUI();buildOrder();deal();}
+document.querySelectorAll("#cats button").forEach(b=>b.onclick=()=>setCat(b.dataset.c));
 // intro: open by default, remember if the reader dismisses it
 const intro=document.getElementById("intro");
 // Collapsed by default so the game sits at the top; remember if the reader opens it.
@@ -1024,7 +1043,7 @@ document.addEventListener("keydown",e=>{
   if(!answered){const i=parseInt(e.key);if(cur&&i>=1&&i<=cur.actions.length)answer(cur.actions[i-1]);}
   else if(e.key==="Enter"||e.key===" "){e.preventDefault();next();}
 });
-applyModeUI();updateVocab();updateLevelHint();order=shuffle([...Q.keys()]);deal();
+applyModeUI();updateVocab();updateLevelHint();applyCatUI();buildOrder();deal();
 </script>'''
 
 if __name__ == "__main__":
