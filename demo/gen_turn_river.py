@@ -35,10 +35,11 @@ POT, BET = 5.5, 0.66
 
 
 def run(solver="cpu", dtype="float64", n=90, iters=200, version="turnriver_demo",
-        note="turn/river demo (reduced range; NOT check-check filtered)"):
+        note="turn/river demo (reduced range; NOT check-check filtered)", raise_x=None):
     """Solve the curated turn/river runouts. Demo defaults (cpu, n=90) run locally;
-    pass --solver gpu --n 400 --iters 300 (Kaggle) for the full-range pack."""
-    make = _make_solver(solver, dtype)
+    pass --solver gpu --n 400 --iters 300 (Kaggle) for the full-range pack. Pass
+    --raise-x 3 to add Fold/Call/Raise on the facing-a-bet nodes (the raise pass)."""
+    make = _make_solver(solver, dtype, raise_x=raise_x)
     recs = []
     for i, (board, streets) in enumerate(RUNOUTS, 1):
         flop = parse_cards(board)
@@ -68,5 +69,7 @@ if __name__ == "__main__":
     ap.add_argument("--iters", type=int, default=200)
     ap.add_argument("--version", default="turnriver_demo")
     ap.add_argument("--note", default="turn/river demo (reduced range; NOT check-check filtered)")
+    ap.add_argument("--raise-x", dest="raise_x", type=float, default=None,
+                    help="raise-to multiple of the bet (e.g. 3) — adds Fold/Call/Raise on vs-bet nodes")
     a = ap.parse_args()
-    run(a.solver, a.dtype, a.n, a.iters, a.version, a.note)
+    run(a.solver, a.dtype, a.n, a.iters, a.version, a.note, raise_x=a.raise_x)

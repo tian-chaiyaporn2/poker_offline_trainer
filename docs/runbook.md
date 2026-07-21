@@ -82,13 +82,22 @@ python -m pokertrainer.content_yield --solver cpu --n 8 --iters 25 --roots 0 \
     --raise-x 3 --scenario btn_vs_bb_srp --out /tmp/raise_smoke   # vs_bet -> fold/call/raise
 ```
 
-**Full-range TURN / RIVER pass.** The turn/river pack ships as a reduced-range (N=90)
-prototype. To upgrade it to full range, run `colab/kaggle_content_turnriver.ipynb` (GPU,
-one commit ~20–40 min): it runs `demo/gen_turn_river.py --solver gpu --n 400 --iters 300
---version turnriver_fullrange` over the 16 curated runouts. Download the pack and drop it
-in as `flop_pack_turnriver_fullrange.db`. Local reduced-range default:
+*Same pass for the other two scenarios that are still Fold/Call on vs-bet:*
+- **SB-vs-BB raise pass** — `colab/kaggle_content_raise_sb.ipynb` (identical 2-part flow,
+  `--scenario sb_vs_bb_srp`). Download `records_raise_sb_<PART>.json`, merge, build/sign a
+  raise-enabled `sb_vs_bb` pack → replaces `flop_pack_sb_vs_bb.db`.
+- **Turn/river raise pass** — `colab/kaggle_content_turnriver_raise.ipynb` (one commit,
+  ~1–3 h — the raise tree is bigger): `demo/gen_turn_river.py … --raise-x 3`. Produces
+  `flop_pack_turnriver_fullrange.db` (now a raise superset), drops straight in.
+
+**Full-range TURN / RIVER pass (range only).** `colab/kaggle_content_turnriver.ipynb` (GPU,
+one commit ~20–40 min) runs `demo/gen_turn_river.py --solver gpu --n 400 --iters 300
+--version turnriver_fullrange` over the 16 curated runouts (Check/Bet + Fold/Call, no raise
+— use the raise notebook above to add raises). **Shipped:** the full-range pack is live.
+Local reduced-range default:
 ```bash
-python demo/gen_turn_river.py            # cpu, N=90 -> turnriver_demo (the shipped prototype)
+python demo/gen_turn_river.py            # cpu, N=90 -> turnriver_demo
+python demo/gen_turn_river.py --raise-x 3 --n 6 --iters 15 --version tr_raise_smoke  # local raise smoke
 ```
 
 ## 4. Build + sign + verify the pack
