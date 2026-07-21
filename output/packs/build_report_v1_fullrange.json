@@ -13,7 +13,7 @@
     "solver_model": "full_street_cfr_plus"
   },
   "provenance": {
-    "git_commit": "6579ffa23a105c2180377b3274e2c344d1aaf236",
+    "git_commit": "c62ae72af7f45d0abf639d2beb4f9eab910de651",
     "solver_model": "full_street_cfr_plus"
   },
   "grade_thresholds_pct_pot": {
@@ -22,12 +22,13 @@
     "acceptable": 3.0,
     "costly": 10.0
   },
-  "record_count": "8253",
-  "content_hash": "57d661b3e04060f89bc4f7363ff8efca8b8108b07d7bac362ac08df7c3a7eb16",
-  "signature": "ad466ef8a9c35beca2e78fd55cb8bc174f94841f55ed81cca8bdc0775581c8a2",
+  "record_count": "8275",
   "signing_scheme": "hmac-sha256-dev",
-  "db_bytes": 5992448,
-  "gz_bytes": 1082440,
-  "records_accepted": 10412,
-  "records_after_dedup": 8253
+  "default_pot_bb": "5.5",
+  "content_hash": "3a31c85a86a09812a242e6a6b0b1368f37fe10fe26ce46608b1018686bf8f380",
+  "signature": "10144a47bff04abaf5dad3dba20bf0dcfc65384ba94f94291ff03b829e76bf5a",
+  "db_bytes": 6823936,
+  "gz_bytes": 1291641,
+  "records_accepted": 14554,
+  "records_after_dedup": 8275
 }

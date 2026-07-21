@@ -252,16 +252,17 @@ def load_preflop(n=PF_Q):
 
 
 def build(allow_missing_demo_packs=False):
+    # The full-range pack now includes Fold/Call/Raise on facing-a-bet nodes (FR-011
+    # landed), so the reduced-range raise-demo blend is retired.
     meta, qs = load_questions()
-    raise_qs = load_raise(required=not allow_missing_demo_packs)
     tr_qs = load_turnriver(required=not allow_missing_demo_packs)
     sb_qs = load_sb()
     pf_qs = load_preflop()
-    qs = qs + raise_qs + tr_qs + sb_qs + pf_qs
+    qs = qs + tr_qs + sb_qs + pf_qs
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
                             capture_output=True, text=True).stdout.strip() or "local"
-    print(f"  ({len(raise_qs)} raise + {len(tr_qs)} turn/river + {len(sb_qs)} SB-vs-BB "
-          f"+ {len(pf_qs)} pre-flop spots blended in)")
+    print(f"  ({len(tr_qs)} turn/river + {len(sb_qs)} SB-vs-BB + {len(pf_qs)} pre-flop "
+          f"spots blended in; full-range raise now in the main pack)")
     # Escape </script> so pack strings cannot break out of the inline script.
     data = json.dumps(qs, separators=(",", ":")).replace("<", "\\u003c")
     body = TEMPLATE.replace("__DATA__", data).replace("__VERSION__", html.escape(meta.get("version", ""))) \
@@ -483,10 +484,11 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
   <div class="foot">
     Real solver output — pack <code>__VERSION__</code>, <b>__RECORDS__</b> signed records, build <code>__COMMIT__</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
-    Flop spots come from the full-range launch pack. Spots marked <span class="demo">raise demo</span>
-    (Fold/Call/Raise) and <span class="demo">turn / river</span> (later-street boards, reduced range,
-    unconditioned — not check-check filtered) are real solver output from demo packs — the full-range
-    raise + turn/river passes are the next depth work.<br>
+    Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
+    Spots marked <span class="demo">turn / river</span> (later-street boards, reduced range,
+    unconditioned — not check-check filtered) are real solver output from a demo pack; the
+    full-range turn/river pass is the next depth work. Pre-flop spots are calibrated ranges
+    (solver-approximate, tuned to standard frequencies).<br>
     Prefer to review the answers at a glance? See the <a href="preview.html">content gallery</a>.
   </div>
   <details class="glossary">
