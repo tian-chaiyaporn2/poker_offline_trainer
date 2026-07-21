@@ -138,7 +138,7 @@ def build_questions():
                 why += (f" You'd open it from {POS_FULL[eo]}." if eo
                         else " It's a fold from every seat.")
             qs.append({
-                "kind": "rfi", "pos": pos, "hand": combo_for(cls, rng), "cls": cls,
+                "kind": "rfi", "ctx": "rfi", "pos": pos, "hand": combo_for(cls, rng), "cls": cls,
                 "actions": ["fold", "open"], "answer": act,
                 "mixed": close, "alt": ("open" if act == "fold" else "fold"),
                 "read": hand_read(cls),
@@ -161,7 +161,7 @@ def build_questions():
                 elif nearD:
                     alt = "fold" if act == "call" else "call"
                 qs.append({
-                    "kind": "def", "pos": "BB", "opener": opener,
+                    "kind": "def", "ctx": "def", "pos": "BB", "opener": opener,
                     "hand": combo_for(cls, rng), "cls": cls,
                     "actions": ["fold", "call", "3bet"], "answer": act,
                     "mixed": bool(alt), "alt": alt,
@@ -182,7 +182,7 @@ def build_questions():
                 alt = ("call" if act == "3bet" else "3bet") if near3 else \
                       ("fold" if act == "call" else "call") if nearD else None
                 qs.append({
-                    "kind": "sbdef", "pos": "SB", "opener": opener,
+                    "kind": "sbdef", "ctx": "def", "pos": "SB", "opener": opener,
                     "hand": combo_for(cls, rng), "cls": cls,
                     "actions": ["fold", "call", "3bet"], "answer": act,
                     "mixed": bool(alt), "alt": alt, "read": hand_read(cls),
@@ -192,8 +192,8 @@ def build_questions():
 
     # Facing a 3-bet: you opened, a blind 3-bets — 4-bet / call / fold (over your opens)
     cont, fb = VS_3BET
-    for (seat, seat_full, tbettor) in [("CO", "the Cutoff", "the Big Blind"),
-                                       ("BTN", "the Button", "the Small Blind")]:
+    for (seat, seat_full, tbettor, tb_seat) in [("CO", "the Cutoff", "the Big Blind", "BB"),
+                                                ("BTN", "the Button", "the Small Blind", "SB")]:
         opens = [c for c in classes if rfi[seat][c] == "open"]
         for act in ("4bet", "call", "fold"):
             pool = [c for c in opens if v3[c] == act]
@@ -203,7 +203,8 @@ def build_questions():
                 alt = ("call" if act == "4bet" else "4bet") if near4 else \
                       ("fold" if act == "call" else "call") if nearC else None
                 qs.append({
-                    "kind": "vs3bet", "pos": seat, "hand": combo_for(cls, rng), "cls": cls,
+                    "kind": "vs3bet", "ctx": "vs3bet", "pos": seat, "tbettor": tb_seat,
+                    "hand": combo_for(cls, rng), "cls": cls,
                     "actions": ["fold", "call", "4bet"], "answer": act,
                     "mixed": bool(alt), "alt": alt, "read": hand_read(cls),
                     "why": VS3BET_WHY[act], "rule": RULES_3BET,

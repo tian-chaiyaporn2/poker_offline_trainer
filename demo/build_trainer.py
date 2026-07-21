@@ -243,7 +243,8 @@ def load_preflop(n=PF_Q):
     for q in build_questions()[:n]:
         out.append({
             "preflop": True, "badge": "Preflop", "pos": q["pos"],
-            "situation": q["situation"], "hand": q["hand"], "actions": q["actions"],
+            "ctx": q.get("ctx"), "opener": q.get("opener"), "tbettor": q.get("tbettor"),
+            "hand": q["hand"], "actions": q["actions"],
             "answer": q["answer"], "mixed": q.get("mixed", False), "alt": q.get("alt"),
             "read": q["read"], "why": q["why"], "rule": q["rule"],
         })
@@ -758,9 +759,18 @@ function render(cs,el){el.innerHTML="";cs.forEach(c=>el.appendChild(card(c)));}
 const PF_ACT={plain:{fold:"Fold",open:"Raise (open)",call:"Call","3bet":"Re-raise","4bet":"4-bet"},
   poker:{fold:"Fold",open:"Open 2.5bb",call:"Call","3bet":"3-bet","4bet":"4-bet"}};
 function pfActLabel(a){return (eff("positions")==="plain"?PF_ACT.plain:PF_ACT.poker)[a]||a;}
+// Position terms ladder: full names in Beginner/Learning; abbreviations in Pro.
+const PF_POS_FULL={UTG:"UTG (first to act)",HJ:"the Hijack",CO:"the Cutoff",BTN:"the Button",SB:"the Small Blind",BB:"the Big Blind"};
+const PF_POS_ABBR={UTG:"UTG",HJ:"the HJ",CO:"the CO",BTN:"the BTN",SB:"the SB",BB:"the BB"};
+function pfPos(p){return (eff("positions")==="poker"?PF_POS_ABBR:PF_POS_FULL)[p]||p;}
+function pfSituation(q){
+  if(q.ctx==="def")return "You're in "+pfPos(q.pos)+", and "+pfPos(q.opener)+" opens. It's on you.";
+  if(q.ctx==="vs3bet")return "You opened from "+pfPos(q.pos)+", and "+pfPos(q.tbettor)+" 3-bets. Back on you.";
+  return "You're on "+pfPos(q.pos)+". It folds to you.";   // rfi
+}
 function renderPreflop(q){
   const posEl=document.getElementById("pos");posEl.textContent=q.pos;posEl.className="pos "+q.pos;
-  document.getElementById("sit").textContent=q.situation;
+  document.getElementById("sit").textContent=pfSituation(q);
   const bd=document.getElementById("demotag");bd.hidden=false;bd.textContent="Preflop";
   document.getElementById("boardcap").style.display="none";document.getElementById("board").style.display="none";
   document.getElementById("herocap").textContent="Your hand";

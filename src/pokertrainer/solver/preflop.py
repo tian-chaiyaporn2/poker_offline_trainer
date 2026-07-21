@@ -113,15 +113,22 @@ def type_bonus(classes: List[str]) -> np.ndarray:
             continue
         hi, lo, suit = c[0], c[1], c[2]
         gap = abs(ri[hi] - ri[lo])
-        b = 0.05 if suit == "s" else 0.0        # suitedness
-        if gap == 1:
-            b += 0.04                            # connected
-        elif gap == 2:
-            b += 0.02
-        elif gap >= 5:
-            b -= 0.03                            # disconnected
-        if suit == "o" and gap >= 4:
-            b -= 0.02
+        if suit == "s":                          # suited: flush + straight potential
+            b = 0.05
+            if gap == 1:
+                b += 0.04                         # suited connector
+            elif gap == 2:
+                b += 0.02
+            elif gap >= 5:
+                b -= 0.02
+        else:                                    # offsuit: plays for high-card/pair, not draws
+            b = 0.0
+            if gap == 1:
+                b += 0.01                         # a little connectedness value only
+            if gap >= 4:
+                b -= 0.03                         # disconnected offsuit is hard to play
+            if gap >= 6:
+                b -= 0.02
         tb[i] = b
     return tb
 
