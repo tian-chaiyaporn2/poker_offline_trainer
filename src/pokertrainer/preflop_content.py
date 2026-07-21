@@ -87,7 +87,7 @@ VS3BET_WHY = {
     "call": "Strong enough to call the 3-bet and see a flop — but not to 4-bet.",
     "fold": "Good enough to open, but not to continue against a 3-bet — fold.",
 }
-RULES_RFI = "The later your seat, the wider you open — fewer players left to wake up with a hand."
+RULES_RFI = "Position is everything here: the SAME hand can be a raise on the Button and a fold from UTG. You open wider the later you sit — fewer players left behind to wake up with a hand."
 RULES_DEF = "Defend wider in the Big Blind (you get a price), but 3-bet only your strongest — and fold the junk."
 RULES_SB = "In the Small Blind you're out of position with the BB still behind — defend tighter than the BB, leaning toward 3-bet-or-fold."
 RULES_3BET = "Against a 3-bet, continue only with your strongest: 4-bet the premiums, call a few, fold the rest of your opens."
@@ -133,10 +133,12 @@ def build_questions():
             act = rfi[pos][cls]
             close = bool(abs(cum[cls] - RFI_FREQ[pos]) < MARGIN)
             why = RFI_WHY[act][_hand_cat(cls)]
-            if act == "fold":                                # teach the positional nuance
-                eo = _earliest_open(cls, rfi)
-                why += (f" You'd open it from {POS_FULL[eo]}." if eo
-                        else " It's a fold from every seat.")
+            eo = _earliest_open(cls, rfi)                    # teach the positional nuance
+            if act == "fold":
+                why += (f" You'd open it from {POS_FULL[eo]} — but it's too weak from {POS_FULL[pos]}."
+                        if eo else " It's a fold from every seat.")
+            elif eo and eo != "UTG":                         # opens here, but not from earlier
+                why += " From an earlier seat this same hand is a fold — position is what makes it playable."
             qs.append({
                 "kind": "rfi", "ctx": "rfi", "pos": pos, "hand": combo_for(cls, rng), "cls": cls,
                 "actions": ["fold", "open"], "answer": act,

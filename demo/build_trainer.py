@@ -506,8 +506,14 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
       <dd>Pass (no bet) · put chips in · match a bet · bet even more · give up the hand.</dd>
       <dt>Position — Button (BTN), Big Blind (BB), Small Blind (SB)</dt>
       <dd>Where you sit. After the flop, the player in position (usually the Button) acts last — an advantage; out of position acts first. In blind-vs-blind, the BB is in position.</dd>
+      <dt>The seats, first to last — UTG, Hijack (HJ), Cutoff (CO), Button (BTN), then the blinds (SB, BB)</dt>
+      <dd>UTG acts first pre-flop (tightest, most players still behind); the Button acts last (widest). "The Hijack" and "the Cutoff" are the two seats just before the Button.</dd>
       <dt>In / out of position</dt>
       <dd>Whether you act last (in position) or first (out of position) on each street.</dd>
+      <dt>Open (raise first-in / RFI)</dt>
+      <dd>The first player to enter the pot by raising, pre-flop, when everyone before folded.</dd>
+      <dt>3-bet / 4-bet</dt>
+      <dd>A re-raise. The blind's raise is the "1st bet"; the open is the 2nd; re-raising the open is the <b>3-bet</b>; re-raising that is the <b>4-bet</b>.</dd>
       <dt>C-bet (continuation bet)</dt>
       <dd>Betting the flop after you were the one who raised before it.</dd>
       <dt>Value bet</dt>
@@ -765,9 +771,11 @@ function card(t){const r=t[0],s=(t[1]||"").toLowerCase(),su=SUIT[s]||[s,0];
 function render(cs,el){el.innerHTML="";cs.forEach(c=>el.appendChild(card(c)));}
 
 // --- pre-flop ("Chapter 0"): a distinct question kind, its own render/feedback path ---
-const PF_ACT={plain:{fold:"Fold",open:"Raise (open)",call:"Call","3bet":"Re-raise","4bet":"4-bet"},
+const PF_ACT={
+  plain:{fold:"Fold",open:"Raise (open)",call:"Call","3bet":"Re-raise","4bet":"4-bet"},
+  learning:{fold:"Fold",open:"Open (raise first-in)",call:"Call","3bet":"3-bet (re-raise)","4bet":"4-bet (re-raise a 3-bet)"},
   poker:{fold:"Fold",open:"Open 2.5bb",call:"Call","3bet":"3-bet","4bet":"4-bet"}};
-function pfActLabel(a){return (eff("positions")==="plain"?PF_ACT.plain:PF_ACT.poker)[a]||a;}
+function pfActLabel(a){return (PF_ACT[eff("positions")]||PF_ACT.poker)[a]||a;}
 // Position terms ladder: full names in Beginner/Learning; abbreviations in Pro.
 const PF_POS_FULL={UTG:"UTG (first to act)",HJ:"the Hijack",CO:"the Cutoff",BTN:"the Button",SB:"the Small Blind",BB:"the Big Blind"};
 const PF_POS_ABBR={UTG:"UTG",HJ:"the HJ",CO:"the CO",BTN:"the BTN",SB:"the SB",BB:"the BB"};
