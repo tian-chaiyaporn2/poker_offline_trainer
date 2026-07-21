@@ -807,12 +807,20 @@ const RIVER_PLAIN={
   raise_semibluff:"Nothing left to draw to — this raise is a bluff to pressure them into folding.",
   protection:"The board is complete — bet to get paid by worse hands; nothing can catch up now."
 };
+// True when a "trap"/"value" made hand should be reframed as a bluff-catcher: a very
+// coordinated board AND this is actually a check-or-bet decision (so "check to keep the pot
+// small" is a real option — never fire on a facing-a-bet fold/call/raise node).
+function bcReframe(q,rd){
+  return (q.reason==="trap"||q.reason==="value")
+    &&(rd.boardStraighty>=2||rd.boardFlushy>=2)
+    &&(rd.cat==="pair"||rd.cat==="twopair"||rd.cat==="trips")
+    &&q.actions.indexOf("check")>=0&&q.actions.indexOf("bet")>=0;
+}
 function plainHead(q){
   // A "trap"/"value" framing overclaims on a very coordinated board — the made hand is
   // really a bluff-catcher there, so betting bloats the pot into likely straights/flushes.
   const rd=handRead(q.hero,q.board);
-  if((q.reason==="trap"||q.reason==="value")&&(rd.boardStraighty>=2||rd.boardFlushy>=2)
-     &&(rd.cat==="pair"||rd.cat==="twopair"||rd.cat==="trips")){
+  if(bcReframe(q,rd)){
     let s="The board is coordinated — a straight or flush is very possible — so your hand is more of a bluff-catcher than a monster. Check to keep the pot small and take a cheap showdown rather than bet into the hands that beat you.";
     // If it was checked to you, name the trap: a check does NOT rule out the straight here.
     if(!q.acts_first)s+=" It was checked to you, but on a board this connected a check doesn't rule out a straight — strong hands often check to trap — so betting mostly folds out the hands you beat and gets called by the ones that beat you.";
@@ -991,8 +999,7 @@ function renderFeedback(q,a,gained){
   ruleEl.innerHTML="";
   // On a coordinated board a one-pair-ish hand is a bluff-catcher, so the trap/value
   // takeaway is replaced by a pot-control one.
-  const bcRule=(q.reason==="trap"||q.reason==="value")&&(rd.boardStraighty>=2||rd.boardFlushy>=2)
-    &&(rd.cat==="pair"||rd.cat==="twopair"||rd.cat==="trips");
+  const bcRule=bcReframe(q,rd);
   const ruleText=bcRule
     ? "On a coordinated board, a one-pair-type hand is a bluff-catcher, not a monster — keep the pot small and don't bet into the likely straights and flushes."
     : RULES[q.reason];
@@ -1153,7 +1160,8 @@ document.getElementById("moretoggle").onclick=function(){
   this.textContent=moreOpen?"Show less ▾":"Explain more ▸";};
 document.addEventListener("keydown",e=>{
   if(e.target.tagName==="SUMMARY"||e.target.id==="moretoggle")return;   // let the toggle handle its own Enter/Space
-  if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;         // don't hijack typing in the coach panel
+  if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;         // don't hijack typing in inputs
+  if(e.target.closest&&e.target.closest("#coach"))return;              // coach panel owns its own keys (chips/send/input)
   if(!answered){const i=parseInt(e.key);if(cur&&i>=1&&i<=cur.actions.length)answer(cur.actions[i-1]);}
   else if(e.key==="Enter"||e.key===" "){e.preventDefault();next();}
 });
@@ -1172,7 +1180,7 @@ const PROVIDERS={
     parse(j){return ((j&&j.content)||[]).map(b=>b.text||"").join("").trim();},
     emsg(j){return j&&j.error&&j.error.message;}},
   openai:{label:"OpenAI",dflt:"gpt-4o-mini",
-    models:["gpt-4o-mini","gpt-4o","o4-mini"],keyhint:"sk-…",
+    models:["gpt-4o-mini","gpt-4o"],keyhint:"sk-…",
     req(k,sys,ms,model){return{url:"https://api.openai.com/v1/chat/completions",
       headers:{"content-type":"application/json","authorization":"Bearer "+k},
       body:{model:model,messages:[{role:"system",content:sys}].concat(ms)}};},
@@ -1181,7 +1189,7 @@ const PROVIDERS={
 };
 function coachCfg(){try{return JSON.parse(localStorage.getItem("coach")||"{}");}catch(e){return {};}}
 function coachSaveCfg(c){try{localStorage.setItem("coach",JSON.stringify(c));}catch(e){}}
-let coachMsgs=[],coachBusy=false,coachErr=null;
+let coachMsgs=[],coachBusy=false,coachErr=null,coachGen=0;
 
 // Serialize the current spot's real solver data so the model explains THIS hand, not
 // generic theory. Everything here already drives the on-screen feedback.
@@ -1245,16 +1253,18 @@ async function coachAsk(text){
   const cfg=coachCfg();
   if(!cfg.key){coachSettings(true);coachErr="Add your API key above to start.";coachRender();return;}
   const P=PROVIDERS[cfg.provider]||PROVIDERS.claude;
+  const gen=coachGen;   // if the hand changes mid-flight, drop the stale reply (see coachReset)
   coachErr=null;coachMsgs.push({role:"user",content:text});coachBusy=true;coachRender();coachToggleSend();
   try{
     const r0=P.req(cfg.key,coachSystem(cur),coachMsgs,cfg.model||P.dflt);
     const r=await coachTransport(r0.url,r0.headers,r0.body);
+    if(gen!==coachGen)return;   // user moved to a new hand while waiting — this reply is stale
     coachBusy=false;
     if(!r.ok){coachMsgs.pop();coachErr=coachHttpHelp(r.status,r.json&&P.emsg(r.json));}
     else{const t=P.parse(r.json);
       if(t)coachMsgs.push({role:"assistant",content:t});
       else{coachMsgs.pop();coachErr="The provider returned an empty reply — try again.";}}
-  }catch(e){coachBusy=false;coachMsgs.pop();coachErr=coachNetHelp();}
+  }catch(e){if(gen!==coachGen)return;coachBusy=false;coachMsgs.pop();coachErr=coachNetHelp();}
   coachRender();coachToggleSend();
 }
 function coachHttpHelp(status,msg){
@@ -1311,7 +1321,7 @@ function coachInit(){
   inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();fire();}});
   coachSettings(false);
 }
-function coachReset(){coachMsgs=[];coachErr=null;coachBusy=false;coachRender();coachToggleSend();}
+function coachReset(){coachGen++;coachMsgs=[];coachErr=null;coachBusy=false;coachRender();coachToggleSend();}
 
 coachInit();applyModeUI();updateVocab();updateLevelHint();applyCatUI();buildOrder();deal();
 </script>'''
