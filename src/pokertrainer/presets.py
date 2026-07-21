@@ -60,9 +60,38 @@ BB_vs_SB: Dict[str, float] = {c: 1.0 for c in [
     "AJo", "ATo", "A9o", "KQo", "KJo", "KTo", "QJo", "QTo", "JTo", "T9o", "98o", "87o",
 ]}
 
+# --- CO-vs-BB single-raised pot. CO opens, folds to BB, BB calls. Postflop the BB
+#     acts first (OOP) and the CO acts last (IP) — same shape as BTN-vs-BB but the CO
+#     opens a touch tighter (more players still behind). v1 estimates to validate.
+CO_SRP: Dict[str, float] = {c: 1.0 for c in [  # CO open (~26%)
+    "AA", "KK", "QQ", "JJ", "TT", "99", "88", "77", "66", "55", "44", "33", "22",
+    "AKs", "AQs", "AJs", "ATs", "A9s", "A8s", "A7s", "A6s", "A5s", "A4s", "A3s", "A2s",
+    "KQs", "KJs", "KTs", "K9s", "QJs", "QTs", "Q9s", "JTs", "J9s", "T9s", "T8s",
+    "98s", "87s", "76s", "65s", "54s",
+    "AKo", "AQo", "AJo", "KQo", "KJo", "QJo",
+]}
+BB_vs_CO: Dict[str, float] = {c: 1.0 for c in [  # BB defends vs CO open (a touch tighter than vs BTN)
+    "JJ", "TT", "99", "88", "77", "66", "55", "44", "33", "22",
+    "AJs", "ATs", "A9s", "A8s", "A7s", "A6s", "A5s", "A4s", "A3s", "A2s",
+    "KJs", "KTs", "K9s", "QJs", "QTs", "Q9s", "JTs", "J9s", "T9s", "T8s",
+    "98s", "87s", "76s", "65s", "54s",
+    "AJo", "ATo", "KQo", "KJo", "KTo", "QJo", "QTo", "JTo",
+]}
+
+# --- BTN-vs-SB single-raised pot. BTN opens, BB folds, SB flat-calls. Postflop the
+#     SB acts first (OOP caller) and the BTN acts last (IP) — the SB flats a medium
+#     range (strong hands 3-bet instead). v1 estimates to validate.
+SB_vs_BTN: Dict[str, float] = {c: 1.0 for c in [  # SB flat-call vs BTN open (OOP)
+    "99", "88", "77", "66", "55", "44", "33", "22",
+    "ATs", "A9s", "A8s", "A7s", "A6s", "A5s", "A4s", "A3s", "A2s",
+    "KTs", "KJs", "QTs", "QJs", "JTs", "T9s", "98s", "87s", "76s", "65s", "54s",
+    "AJo", "KQo", "KJo", "QJo",
+]}
+
 # Scenario registry — parameterizes the content pipeline (--scenario). Each entry
 # names the OOP (first-to-act) and IP (last-to-act) ranges + position labels; the
-# solver is scenario-agnostic (it just takes the two ranges).
+# solver is scenario-agnostic (it just takes the two ranges). All are single-raised
+# pots (same pot/SPR); 3-bet pots and multi-size trees need solver changes, not a range.
 SCENARIOS: Dict[str, Dict] = {
     "btn_vs_bb_srp": {"oop_range": BB_SRP, "ip_range": BTN_SRP,
                       "oop_pos": "BB", "ip_pos": "BTN", "pot": 5.5, "bet_frac": 0.66,
@@ -70,6 +99,12 @@ SCENARIOS: Dict[str, Dict] = {
     "sb_vs_bb_srp": {"oop_range": SB_SRP, "ip_range": BB_vs_SB,
                      "oop_pos": "SB", "ip_pos": "BB", "pot": 6.0, "bet_frac": 0.66,
                      "label": "SB opens, BB calls (blind vs blind, single-raised pot)"},
+    "co_vs_bb_srp": {"oop_range": BB_vs_CO, "ip_range": CO_SRP,
+                     "oop_pos": "BB", "ip_pos": "CO", "pot": 5.5, "bet_frac": 0.66,
+                     "label": "CO opens, BB calls (single-raised pot)"},
+    "btn_vs_sb_srp": {"oop_range": SB_vs_BTN, "ip_range": BTN_SRP,
+                      "oop_pos": "SB", "ip_pos": "BTN", "pot": 5.5, "bet_frac": 0.66,
+                      "label": "BTN opens, SB calls (single-raised pot)"},
 }
 
 
