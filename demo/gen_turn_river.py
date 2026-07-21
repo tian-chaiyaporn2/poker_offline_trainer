@@ -31,31 +31,42 @@ RUNOUTS = [
     ("As7h2dKs9c", 1), ("As7h2dKsQh", 1),                    # river: blanks
     ("Qh8h3h2hAh", 1), ("Kd9c4hQs2s", 1),                    # river: nut-flush card / blank
 ]
-N, ITERS, POT, BET = 90, 200, 5.5, 0.66
+POT, BET = 5.5, 0.66
 
 
-def run():
-    make = _make_solver("cpu", "float64")
+def run(solver="cpu", dtype="float64", n=90, iters=200, version="turnriver_demo",
+        note="turn/river demo (reduced range; NOT check-check filtered)"):
+    """Solve the curated turn/river runouts. Demo defaults (cpu, n=90) run locally;
+    pass --solver gpu --n 400 --iters 300 (Kaggle) for the full-range pack."""
+    make = _make_solver(solver, dtype)
     recs = []
     for i, (board, streets) in enumerate(RUNOUTS, 1):
         flop = parse_cards(board)
-        oop = subsample([c for c, _ in expand_range(BB_SRP, flop)], N)
-        ip = subsample([c for c, _ in expand_range(BTN_SRP, flop)], N)
-        r = [x for x in extract_records(board, oop, ip, ITERS, make, POT, BET, streets=streets)
+        oop = subsample([c for c, _ in expand_range(BB_SRP, flop)], n)
+        ip = subsample([c for c, _ in expand_range(BTN_SRP, flop)], n)
+        r = [x for x in extract_records(board, oop, ip, iters, make, POT, BET, streets=streets)
              if x.get("accepted")]
         recs.extend(r)
         street = {2: "turn", 1: "river"}[streets]
-        print(f"[{i}/{len(RUNOUTS)}] {board} ({street}): {len(r)} records")
+        print(f"[{i}/{len(RUNOUTS)}] {board} ({street}): {len(r)} records", flush=True)
     config = {"positions": {"ip": "BTN", "oop": "BB"}, "stack_bb": 100, "pot_bb": POT,
               "bet_pct_pot": 66, "line": "unconditioned_later_street",
-              "note": "turn/river demo (reduced range; NOT check-check filtered)",
-              "solver_model": "full_street_cfr_plus"}
-    build_pack(recs, config, "output/packs", "turnriver_demo")
-    verdict = verify_pack("output/packs/flop_pack_turnriver_demo.db")
+              "note": note, "solver_model": "full_street_cfr_plus"}
+    build_pack(recs, config, "output/packs", version)
+    verdict = verify_pack(f"output/packs/flop_pack_{version}.db")
     print("VERIFY:", verdict)
     if not (verdict.get("hash_ok") and verdict.get("signature_ok")):
         raise SystemExit("turn/river pack failed integrity verification")
 
 
 if __name__ == "__main__":
-    run()
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--solver", default="cpu", choices=["cpu", "gpu"])
+    ap.add_argument("--dtype", default="float64")
+    ap.add_argument("--n", type=int, default=90, help="combos per range (400 ~ full-range)")
+    ap.add_argument("--iters", type=int, default=200)
+    ap.add_argument("--version", default="turnriver_demo")
+    ap.add_argument("--note", default="turn/river demo (reduced range; NOT check-check filtered)")
+    a = ap.parse_args()
+    run(a.solver, a.dtype, a.n, a.iters, a.version, a.note)

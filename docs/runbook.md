@@ -82,6 +82,15 @@ python -m pokertrainer.content_yield --solver cpu --n 8 --iters 25 --roots 0 \
     --raise-x 3 --scenario btn_vs_bb_srp --out /tmp/raise_smoke   # vs_bet -> fold/call/raise
 ```
 
+**Full-range TURN / RIVER pass.** The turn/river pack ships as a reduced-range (N=90)
+prototype. To upgrade it to full range, run `colab/kaggle_content_turnriver.ipynb` (GPU,
+one commit ~20–40 min): it runs `demo/gen_turn_river.py --solver gpu --n 400 --iters 300
+--version turnriver_fullrange` over the 16 curated runouts. Download the pack and drop it
+in as `flop_pack_turnriver_fullrange.db`. Local reduced-range default:
+```bash
+python demo/gen_turn_river.py            # cpu, N=90 -> turnriver_demo (the shipped prototype)
+```
+
 ## 4. Build + sign + verify the pack
 
 ```bash
