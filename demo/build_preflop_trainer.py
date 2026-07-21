@@ -13,8 +13,11 @@ import random
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-from pokertrainer.preflop_ranges import rfi_ranges, bb_defense_ranges, RFI_FREQ  # noqa: E402
+from pokertrainer.preflop_ranges import (  # noqa: E402
+    rfi_ranges, bb_defense_ranges, RFI_FREQ, BB_DEFENSE, strength_cumulative)
 from pokertrainer.preflop_equity import hand_classes  # noqa: E402
+
+MARGIN = 3.5  # a hand within this % of a range cutoff is a "close"/mixed spot
 
 RANK = "AKQJT98765432"
 RI = {r: i for i, r in enumerate("23456789TJQKA")}
@@ -41,7 +44,7 @@ def hand_read(cls):
     both_broadway = RI[hi] >= RI["T"] and RI[lo] >= RI["T"]
     kind = "suited" if suited else "offsuit"
     if hi == "A":
-        return f"{hi}{lo}{suit} — a {'suited' if suited else 'offsuit'} ace"
+        return f"{hi}{lo}{suit} — {'a suited' if suited else 'an offsuit'} ace"
     if both_broadway:
         return f"{hi}{lo}{suit} — {kind} broadway cards"
     if suited and gap <= 1:
@@ -103,11 +106,19 @@ def combo_for(cls, rng):
     return [hi + s[0], lo + s[1]]
 
 
+def _earliest_open(cls, rfi):
+    for p in ["UTG", "HJ", "CO", "BTN", "SB"]:
+        if rfi[p][cls] == "open":
+            return p
+    return None
+
+
 def build_questions():
     rng = random.Random(11)
     rfi = rfi_ranges()
     dfn = bb_defense_ranges()
     classes = hand_classes()
+    cum = strength_cumulative()
     qs = []
 
     # RFI: for each position, pick instructive opens + folds (favour boundary hands)
@@ -117,24 +128,40 @@ def build_questions():
         pick = rng.sample(opens, min(4, len(opens))) + rng.sample(folds, min(3, len(folds)))
         for cls in pick:
             act = rfi[pos][cls]
+            close = bool(abs(cum[cls] - RFI_FREQ[pos]) < MARGIN)
+            why = RFI_WHY[act][_hand_cat(cls)]
+            if act == "fold":                                # teach the positional nuance
+                eo = _earliest_open(cls, rfi)
+                why += (f" You'd open it from {POS_FULL[eo]}." if eo
+                        else " It's a fold from every seat.")
             qs.append({
                 "kind": "rfi", "pos": pos, "hand": combo_for(cls, rng), "cls": cls,
                 "actions": ["fold", "open"], "answer": act,
+                "mixed": close, "alt": ("open" if act == "fold" else "fold"),
                 "read": hand_read(cls),
-                "why": RFI_WHY[act][_hand_cat(cls)], "rule": RULES_RFI,
+                "why": why, "rule": RULES_RFI,
                 "situation": f"You're on {POS_FULL[pos]}. It folds to you.",
             })
 
     # BB defense: for each opener, pick 3bet / call / fold hands
     for opener in ["UTG", "CO", "BTN", "SB"]:
         d = dfn[opener]
+        dfd, tb3 = BB_DEFENSE[opener]
         for act in ("3bet", "call", "fold"):
             pool = [c for c in classes if d[c] == act]
             for cls in rng.sample(pool, min(2, len(pool))):
+                near3 = abs(cum[cls] - tb3) < MARGIN         # 3bet/call boundary
+                nearD = abs(cum[cls] - dfd) < MARGIN         # call/fold boundary
+                alt = None
+                if near3:
+                    alt = "call" if act == "3bet" else "3bet"
+                elif nearD:
+                    alt = "fold" if act == "call" else "call"
                 qs.append({
                     "kind": "def", "pos": "BB", "opener": opener,
                     "hand": combo_for(cls, rng), "cls": cls,
                     "actions": ["fold", "call", "3bet"], "answer": act,
+                    "mixed": bool(alt), "alt": alt,
                     "read": hand_read(cls),
                     "why": DEF_WHY[act], "rule": RULES_DEF,
                     "situation": f"You're in the Big Blind, and {POS_FULL[opener]} opens. It's on you.",
@@ -170,7 +197,7 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .act .k{font-family:var(--mono);font-size:10px;color:var(--muted);font-weight:400}
 .act:hover:not(:disabled){border-color:var(--brass);background:color-mix(in srgb,var(--brass) 8%,var(--panel2));transform:translateY(-1px)}
 .act:focus-visible{outline:2px solid var(--brass);outline-offset:2px}.act:disabled{cursor:default;opacity:.95}
-.act.right{box-shadow:inset 0 0 0 2px var(--best)}.act.wrong{box-shadow:inset 0 0 0 2px var(--costly)}
+.act.right{box-shadow:inset 0 0 0 2px var(--best)}.act.wrong{box-shadow:inset 0 0 0 2px var(--costly)}.act.ok{box-shadow:inset 0 0 0 2px var(--good)}
 .fb{display:none;border-top:1px solid var(--line)}.fb.on{display:block;animation:f .2s ease}@keyframes f{from{opacity:0}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){.fb.on{animation:none}.act:hover:not(:disabled){transform:none}}
 .verdict{padding:13px 18px;font-weight:700;font-size:15px;color:var(--vc)}
@@ -230,17 +257,23 @@ function render(q){
 }
 function deal(){answered=false;cur=Q[order[pos]];document.getElementById("fb").className="fb";render(cur);}
 function answer(a){
- if(answered)return;answered=true;const correct=a===cur.answer;
- stats.n++;if(correct)stats.ok++;
+ if(answered)return;answered=true;
+ const correct=a===cur.answer;
+ const closeOk=!correct&&cur.mixed&&a===cur.alt;   // picked the acceptable close alternative
+ stats.n++;if(correct||closeOk)stats.ok++;
  document.getElementById("n").textContent=stats.n;document.getElementById("ok").textContent=stats.ok;
  document.getElementById("acc").textContent=Math.round(100*stats.ok/stats.n)+"%";
  document.querySelectorAll("#acts .act").forEach(b=>{b.disabled=true;
   if(b.dataset.a===cur.answer)b.classList.add("right");
+  else if(cur.mixed&&b.dataset.a===cur.alt)b.classList.add("ok");   // also acceptable on a close spot
   else if(b.dataset.a===a)b.classList.add("wrong");});
  const v=document.getElementById("verdict");
- v.className="verdict "+(correct?"v-ok":"v-no");
- v.textContent=correct?("✓ Correct — "+ALAB[a].toLowerCase()+".")
-   :("✗ Not quite — the play is "+ALAB[cur.answer]+".");
+ if(correct){v.className="verdict v-ok";
+  v.textContent=cur.mixed?("✓ "+ALAB[a]+" — right, and it's close ("+ALAB[cur.alt].toLowerCase()+" is fine too).")
+   :("✓ Correct — "+ALAB[a].toLowerCase()+".");}
+ else if(closeOk){v.className="verdict v-ok";
+  v.textContent="≈ Close — "+ALAB[a].toLowerCase()+" is fine here; "+ALAB[cur.answer].toLowerCase()+" is the small favourite.";}
+ else{v.className="verdict v-no";v.textContent="✗ Not quite — the play is "+ALAB[cur.answer]+".";}
  const rd=document.getElementById("read");rd.innerHTML="";rd.appendChild(document.createTextNode("You held "));
  const bcls=document.createElement("b");bcls.textContent=cur.read;rd.appendChild(bcls);rd.appendChild(document.createTextNode("."));
  document.getElementById("head").textContent=cur.why;

@@ -28,6 +28,19 @@ def strength_order(classes: List[str], E: np.ndarray, tb: np.ndarray) -> List[in
     return sorted(range(len(classes)), key=lambda i: -score[i])
 
 
+def strength_cumulative() -> Dict[str, float]:
+    """{hand_class: cumulative combo-% when hands are added strongest-first}. Used to tell
+    how close a hand sits to a frequency threshold (near a cutoff => a mixed/close spot)."""
+    classes, E = load_equity_table()
+    w = combo_weights(classes)
+    order = strength_order(classes, E, type_bonus(classes))
+    tot, acc, cum = w.sum(), 0.0, {}
+    for i in order:
+        acc += w[i]
+        cum[classes[i]] = float(100.0 * acc / tot)
+    return cum
+
+
 def _top_pct(classes, w, order, pct) -> List[str]:
     target = pct / 100.0 * w.sum()
     acc, out = 0.0, []
