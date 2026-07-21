@@ -212,6 +212,34 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .s-reset{appearance:none;width:100%;background:none;border:1px solid var(--line);color:var(--costly);font-family:var(--label);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:13px;border-radius:12px;cursor:pointer;margin-top:16px}
 .view .foot{text-align:left;margin-top:6px}
 .view .intro,.view .glossary{margin-top:8px}
+/* ===== position / situation graphic ===== */
+.seats{padding:12px 16px 2px}
+.hu{display:flex;flex-direction:column;align-items:center}
+.hu .seat{display:flex;align-items:center;gap:8px;width:100%;max-width:290px;justify-content:center;padding:6px 0}
+.pgrp{display:inline-flex;align-items:center;gap:5px}
+.dbtn{width:17px;height:17px;border-radius:50%;background:#f5f0e7;color:#15171e;font-family:var(--mono);font-weight:700;font-size:9px;display:grid;place-items:center;box-shadow:0 1px 3px rgba(0,0,0,.5)}
+.ppos{font-family:var(--label);font-size:11px;font-weight:700;letter-spacing:.04em;padding:3px 9px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
+.ppos.p-BTN{color:var(--best);border-color:color-mix(in srgb,var(--best) 45%,var(--line))}
+.ppos.p-SB,.ppos.p-BB{color:var(--brass);border-color:color-mix(in srgb,var(--brass) 45%,var(--line))}
+.ppos.cur{background:var(--brass);color:#0b0c10;border-color:var(--brass)}
+.pwho{font-size:12px;color:var(--muted)}
+.hu .seat.me .pwho{color:var(--ink);font-weight:700}
+.fd{display:inline-flex;gap:3px}
+.fd i{width:13px;height:18px;border-radius:3px;background:linear-gradient(150deg,#2a2f52,#15172b);border:1px solid rgba(138,160,255,.3)}
+.mid{display:flex;align-items:center;gap:8px;width:100%;max-width:290px}
+.mid .line{flex:1;height:1px;background:var(--line)}
+.flag{font-family:var(--label);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:4px 10px;border-radius:999px;white-space:nowrap}
+.flag.f-bet{background:color-mix(in srgb,var(--costly) 18%,transparent);color:var(--costly);border:1px solid color-mix(in srgb,var(--costly) 40%,var(--line))}
+.flag.f-check{background:color-mix(in srgb,var(--accept) 16%,transparent);color:var(--accept);border:1px solid color-mix(in srgb,var(--accept) 40%,var(--line))}
+.flag.f-first{background:color-mix(in srgb,var(--brass) 16%,transparent);color:var(--brass);border:1px solid color-mix(in srgb,var(--brass) 40%,var(--line))}
+.tag-turn{font-family:var(--label);font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--best);font-weight:700}
+.pfstrip{padding:2px 0}
+.pfrow{display:flex;gap:5px;justify-content:center;flex-wrap:wrap}
+.pf-seat{font-family:var(--label);font-size:10px;font-weight:700;letter-spacing:.03em;padding:5px 8px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
+.pf-seat.blind{border-style:dashed}
+.pf-seat.villain{color:var(--costly);border-color:color-mix(in srgb,var(--costly) 45%,var(--line))}
+.pf-seat.cur{background:var(--brass);color:#0b0c10;border-color:var(--brass)}
+.pfctx{text-align:center;font-family:var(--label);font-size:10px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);margin-top:8px}
 </style>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.6"/></filter><filter id="soft2" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="1.4"/></filter><radialGradient id="sheen" cx="0.34" cy="0.26" r="0.62"><stop offset="0" stop-color="#fff" stop-opacity="0.17"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><clipPath id="cl-spade"><path d="M50 9 C 61 32, 90 46, 90 64 C 90 78, 79 85, 68 82.5 C 62 81, 57 77, 54.5 72 C 55 79, 58 87, 65 92 L 35 92 C 42 87, 45 79, 45.5 72 C 43 77, 38 81, 32 82.5 C 21 85, 10 78, 10 64 C 10 46, 39 32, 50 9 Z"/></clipPath><clipPath id="lr-spade"><path d="M50 11 C 39 30 12 46 12 64 C 12 79 27 85 39 79 C 51 73 58 56 57 42 C 56 30 54 19 50 11 Z"/></clipPath><linearGradient id="gl-spade" x1="0.3" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#454951"/><stop offset="1" stop-color="#34373d"/></linearGradient><linearGradient id="gd-spade" x1="0.4" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#141519"/><stop offset="1" stop-color="#0c0d11"/></linearGradient><clipPath id="cl-heart"><path d="M50 86 C 22 63, 8 48, 8 32 C 8 18, 19 10, 31 10 C 40 10, 47 15, 50 23 C 53 15, 60 10, 69 10 C 81 10, 92 18, 92 32 C 92 48, 78 63, 50 86 Z"/></clipPath><clipPath id="lr-heart"><path d="M50 22 C 45 14 38 10 30 10 C 18 10 8 18 8 32 C 8 47 24 63 50 82 C 61 62 61 36 50 22 Z"/></clipPath><linearGradient id="gl-heart" x1="0.3" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#f6454f"/><stop offset="1" stop-color="#e8232f"/></linearGradient><linearGradient id="gd-heart" x1="0.4" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#a8121d"/><stop offset="1" stop-color="#880c15"/></linearGradient><clipPath id="cl-diam"><path d="M50 8 C 58 24, 76 42, 92 50 C 76 58, 58 76, 50 92 C 42 76, 24 58, 8 50 C 24 42, 42 24, 50 8 Z"/></clipPath><clipPath id="lr-diam"><path d="M50 8 C 41 26 22 44 8 50 C 24 57 43 75 50 92 C 61 66 61 34 50 8 Z"/></clipPath><linearGradient id="gl-diam" x1="0.3" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#ff7134"/><stop offset="1" stop-color="#f4551b"/></linearGradient><linearGradient id="gd-diam" x1="0.4" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#c31f12"/><stop offset="1" stop-color="#9f170c"/></linearGradient><clipPath id="cl-club"><circle cx="50" cy="31" r="19"/><circle cx="30" cy="56" r="19"/><circle cx="70" cy="56" r="19"/><path d="M50 48 C 47 68, 41 83, 30 92 L 70 92 C 59 83, 53 68, 50 48 Z"/></clipPath><clipPath id="lr-club"><path d="M48 10 C 40 14 34 22 32 30 C 20 33 10 44 12 56 C 14 70 28 80 42 75 C 52 71 58 58 57 42 C 56 28 54 18 48 10 Z"/></clipPath><linearGradient id="gl-club" x1="0.3" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#415448"/><stop offset="1" stop-color="#334339"/></linearGradient><linearGradient id="gd-club" x1="0.4" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#15231c"/><stop offset="1" stop-color="#0d1712"/></linearGradient><symbol id="sym-spade" viewBox="0 0 100 100"><g clip-path="url(#cl-spade)"><rect width="100" height="100" fill="url(#gd-spade)"/><path d="M50 11 C 54 19 56 30 57 42 C 58 56 51 73 39 79" fill="none" stroke="#000" stroke-width="8" opacity="0.42" filter="url(#soft)" transform="translate(2.6 1)"/><g clip-path="url(#lr-spade)"><rect width="100" height="100" fill="url(#gl-spade)"/><path d="M50 11 C 54 19 56 30 57 42 C 58 56 51 73 39 79" fill="none" stroke="#000" stroke-width="4" opacity="0.16" filter="url(#soft2)" transform="translate(-0.6 0)"/></g><ellipse cx="31" cy="24" rx="34" ry="26" fill="url(#sheen)"/></g></symbol><symbol id="so-spade" viewBox="0 0 100 100"><g fill="currentColor"><path d="M50 9 C 61 32, 90 46, 90 64 C 90 78, 79 85, 68 82.5 C 62 81, 57 77, 54.5 72 C 55 79, 58 87, 65 92 L 35 92 C 42 87, 45 79, 45.5 72 C 43 77, 38 81, 32 82.5 C 21 85, 10 78, 10 64 C 10 46, 39 32, 50 9 Z"/></g></symbol><symbol id="sym-heart" viewBox="0 0 100 100"><g clip-path="url(#cl-heart)"><rect width="100" height="100" fill="url(#gd-heart)"/><path d="M50 22 C 61 36 61 62 50 82" fill="none" stroke="#000" stroke-width="8" opacity="0.42" filter="url(#soft)" transform="translate(2.6 1)"/><g clip-path="url(#lr-heart)"><rect width="100" height="100" fill="url(#gl-heart)"/><path d="M50 22 C 61 36 61 62 50 82" fill="none" stroke="#000" stroke-width="4" opacity="0.16" filter="url(#soft2)" transform="translate(-0.6 0)"/></g><ellipse cx="31" cy="24" rx="34" ry="26" fill="url(#sheen)"/></g></symbol><symbol id="so-heart" viewBox="0 0 100 100"><g fill="currentColor"><path d="M50 86 C 22 63, 8 48, 8 32 C 8 18, 19 10, 31 10 C 40 10, 47 15, 50 23 C 53 15, 60 10, 69 10 C 81 10, 92 18, 92 32 C 92 48, 78 63, 50 86 Z"/></g></symbol><symbol id="sym-diam" viewBox="0 0 100 100"><g clip-path="url(#cl-diam)"><rect width="100" height="100" fill="url(#gd-diam)"/><path d="M50 8 C 61 34 61 66 50 92" fill="none" stroke="#000" stroke-width="8" opacity="0.42" filter="url(#soft)" transform="translate(2.6 1)"/><g clip-path="url(#lr-diam)"><rect width="100" height="100" fill="url(#gl-diam)"/><path d="M50 8 C 61 34 61 66 50 92" fill="none" stroke="#000" stroke-width="4" opacity="0.16" filter="url(#soft2)" transform="translate(-0.6 0)"/></g><ellipse cx="31" cy="24" rx="34" ry="26" fill="url(#sheen)"/></g></symbol><symbol id="so-diam" viewBox="0 0 100 100"><g fill="currentColor"><path d="M50 8 C 58 24, 76 42, 92 50 C 76 58, 58 76, 50 92 C 42 76, 24 58, 8 50 C 24 42, 42 24, 50 8 Z"/></g></symbol><symbol id="sym-club" viewBox="0 0 100 100"><g clip-path="url(#cl-club)"><rect width="100" height="100" fill="url(#gd-club)"/><path d="M48 10 C 54 18 56 28 57 42 C 58 58 52 71 42 75" fill="none" stroke="#000" stroke-width="8" opacity="0.42" filter="url(#soft)" transform="translate(2.6 1)"/><g clip-path="url(#lr-club)"><rect width="100" height="100" fill="url(#gl-club)"/><path d="M48 10 C 54 18 56 28 57 42 C 58 58 52 71 42 75" fill="none" stroke="#000" stroke-width="4" opacity="0.16" filter="url(#soft2)" transform="translate(-0.6 0)"/></g><ellipse cx="31" cy="24" rx="34" ry="26" fill="url(#sheen)"/></g></symbol><symbol id="so-club" viewBox="0 0 100 100"><g fill="currentColor"><circle cx="50" cy="31" r="19"/><circle cx="30" cy="56" r="19"/><circle cx="70" cy="56" r="19"/><path d="M50 48 C 47 68, 41 83, 30 92 L 70 92 C 59 83, 53 68, 50 48 Z"/></g></symbol></defs></svg>
 <div class="app">
@@ -229,6 +257,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 
   <div class="card">
     <div class="sit"><span class="pos" id="pos"></span><span id="sit"></span><span class="demo" id="demotag" hidden>raise demo</span></div>
+    <div class="seats" id="seats" hidden></div>
     <div class="felt">
       <div class="cap" id="boardcap">Flop</div>
       <div class="cards" id="board"></div>
@@ -323,7 +352,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
     </details>
     <div class="s-sec">About</div>
     <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>a5e8917</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>1320b05</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
     Spots marked <span class="demo">turn / river</span> (later-street boards, reduced range,
@@ -700,7 +729,7 @@ function renderPreflop(q){
   q.actions.forEach((a,i)=>{const b=document.createElement("button");b.className="act";b.dataset.a=a;
     const l=document.createElement("span");l.textContent=pfActLabel(a);const k=document.createElement("span");k.className="k";k.textContent=String(i+1);
     b.appendChild(l);b.appendChild(k);b.onclick=()=>answer(a);box.appendChild(b);});
-  setHint(q.actions.length);
+  setHint(q.actions.length);renderSeats(q);
   document.getElementById("prog").style.width=(100*pos/Math.max(1,order.length))+"%";
 }
 function renderQuestion(q){
@@ -721,12 +750,55 @@ function renderQuestion(q){
     b.appendChild(lab);b.appendChild(k);
     b.onclick=()=>answer(a);box.appendChild(b);
   });
-  setHint(q.actions.length);
+  setHint(q.actions.length);renderSeats(q);
   document.getElementById("prog").style.width=(100*pos/Math.max(1,order.length))+"%";
 }
 function setHint(n){const el=document.getElementById("hint");if(!el)return;
   let ks="";for(let i=1;i<=n;i++)ks+="<kbd>"+i+"</kbd>";
   el.innerHTML="Pick with "+ks+" &middot; next hand with <kbd>Enter</kbd>";}
+// ---- position / situation graphic: a small table diagram so who-you-are, where the
+// button is, and what just happened read at a glance (not only from text). ----
+const SEATS6=["UTG","HJ","CO","BTN","SB","BB"];
+function renderSeats(q){
+  const el=document.getElementById("seats");if(!el)return;
+  el.innerHTML="";el.hidden=false;
+  el.appendChild(q.preflop?preflopStrip(q):headsupTable(q));
+}
+function headsupTable(q){
+  const sbbb=String(q.badge||"").indexOf("SB vs BB")>=0;
+  const hero=q.acting_player||"BB";
+  const villain=sbbb?(hero==="SB"?"BB":"SB"):(hero==="BTN"?"BB":"BTN");
+  const heroIP=!q.is_oop;                         // in position = has the button, acts last
+  const node=q.node||"";
+  let flag="Your move",fk="first";
+  if(node.endsWith("_vs_check")){flag="Opponent checked to you";fk="check";}
+  else if(node.endsWith("_vs_bet")){flag=q.is_oop?"You checked · opponent bet":"Opponent bet into you";fk="bet";}
+  else if(node.endsWith("_first")){flag="You're first to act";fk="first";}
+  const st=(q.street||"flop");
+  const w=document.createElement("div");w.className="hu";
+  const db='<span class="dbtn" title="Dealer button">D</span>';
+  w.innerHTML=
+    '<div class="seat opp"><span class="pgrp">'+(heroIP?"":db)+'<span class="ppos p-'+villain+'">'+villain+'</span></span>'
+    +'<span class="pwho">Opponent</span><span class="fd"><i></i><i></i></span></div>'
+    +'<div class="mid"><span class="line"></span><span class="flag f-'+fk+'">'+flag+'</span><span class="line"></span></div>'
+    +'<div class="seat me"><span class="pgrp">'+(heroIP?db:"")+'<span class="ppos p-'+hero+' cur">'+hero+'</span></span>'
+    +'<span class="pwho">You</span><span class="tag-turn">● your turn on the '+st+'</span></div>';
+  return w;
+}
+function preflopStrip(q){
+  const opener=q.opener||null,tb=q.tbettor||null;
+  const ctx=q.ctx==="rfi"?"Folded to you — first to enter"
+    :q.ctx==="def"?("Facing "+(opener||"an")+" open — your call")
+    :q.ctx==="sbdef"?"You're the small blind, folded to you"
+    :q.ctx==="vs3bet"?("You opened — "+(tb||"a blind")+" 3-bet you"):"Pre-flop";
+  let seats="";
+  SEATS6.forEach(function(s){var c="pf-seat";if(s===q.pos)c+=" cur";
+    if(s===opener||s===tb)c+=" villain";if(s==="SB"||s==="BB")c+=" blind";
+    seats+='<span class="'+c+'">'+s+'</span>';});
+  const w=document.createElement("div");w.className="pfstrip";
+  w.innerHTML='<div class="pfrow">'+seats+'</div><div class="pfctx">'+ctx+'</div>';
+  return w;
+}
 function deal(){answered=false;chosen=null;cur=Q[order[pos]];document.getElementById("fb").className="fb";renderQuestion(cur);coachReset();}
 
 function renderPreflopFeedback(q,a){

@@ -551,6 +551,34 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .s-reset{appearance:none;width:100%;background:none;border:1px solid var(--line);color:var(--costly);font-family:var(--label);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:13px;border-radius:12px;cursor:pointer;margin-top:16px}
 .view .foot{text-align:left;margin-top:6px}
 .view .intro,.view .glossary{margin-top:8px}
+/* ===== position / situation graphic ===== */
+.seats{padding:12px 16px 2px}
+.hu{display:flex;flex-direction:column;align-items:center}
+.hu .seat{display:flex;align-items:center;gap:8px;width:100%;max-width:290px;justify-content:center;padding:6px 0}
+.pgrp{display:inline-flex;align-items:center;gap:5px}
+.dbtn{width:17px;height:17px;border-radius:50%;background:#f5f0e7;color:#15171e;font-family:var(--mono);font-weight:700;font-size:9px;display:grid;place-items:center;box-shadow:0 1px 3px rgba(0,0,0,.5)}
+.ppos{font-family:var(--label);font-size:11px;font-weight:700;letter-spacing:.04em;padding:3px 9px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
+.ppos.p-BTN{color:var(--best);border-color:color-mix(in srgb,var(--best) 45%,var(--line))}
+.ppos.p-SB,.ppos.p-BB{color:var(--brass);border-color:color-mix(in srgb,var(--brass) 45%,var(--line))}
+.ppos.cur{background:var(--brass);color:#0b0c10;border-color:var(--brass)}
+.pwho{font-size:12px;color:var(--muted)}
+.hu .seat.me .pwho{color:var(--ink);font-weight:700}
+.fd{display:inline-flex;gap:3px}
+.fd i{width:13px;height:18px;border-radius:3px;background:linear-gradient(150deg,#2a2f52,#15172b);border:1px solid rgba(138,160,255,.3)}
+.mid{display:flex;align-items:center;gap:8px;width:100%;max-width:290px}
+.mid .line{flex:1;height:1px;background:var(--line)}
+.flag{font-family:var(--label);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:4px 10px;border-radius:999px;white-space:nowrap}
+.flag.f-bet{background:color-mix(in srgb,var(--costly) 18%,transparent);color:var(--costly);border:1px solid color-mix(in srgb,var(--costly) 40%,var(--line))}
+.flag.f-check{background:color-mix(in srgb,var(--accept) 16%,transparent);color:var(--accept);border:1px solid color-mix(in srgb,var(--accept) 40%,var(--line))}
+.flag.f-first{background:color-mix(in srgb,var(--brass) 16%,transparent);color:var(--brass);border:1px solid color-mix(in srgb,var(--brass) 40%,var(--line))}
+.tag-turn{font-family:var(--label);font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--best);font-weight:700}
+.pfstrip{padding:2px 0}
+.pfrow{display:flex;gap:5px;justify-content:center;flex-wrap:wrap}
+.pf-seat{font-family:var(--label);font-size:10px;font-weight:700;letter-spacing:.03em;padding:5px 8px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
+.pf-seat.blind{border-style:dashed}
+.pf-seat.villain{color:var(--costly);border-color:color-mix(in srgb,var(--costly) 45%,var(--line))}
+.pf-seat.cur{background:var(--brass);color:#0b0c10;border-color:var(--brass)}
+.pfctx{text-align:center;font-family:var(--label);font-size:10px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);margin-top:8px}
 </style>
 __SUITDEFS__
 <div class="app">
@@ -568,6 +596,7 @@ __SUITDEFS__
 
   <div class="card">
     <div class="sit"><span class="pos" id="pos"></span><span id="sit"></span><span class="demo" id="demotag" hidden>raise demo</span></div>
+    <div class="seats" id="seats" hidden></div>
     <div class="felt">
       <div class="cap" id="boardcap">Flop</div>
       <div class="cards" id="board"></div>
@@ -1039,7 +1068,7 @@ function renderPreflop(q){
   q.actions.forEach((a,i)=>{const b=document.createElement("button");b.className="act";b.dataset.a=a;
     const l=document.createElement("span");l.textContent=pfActLabel(a);const k=document.createElement("span");k.className="k";k.textContent=String(i+1);
     b.appendChild(l);b.appendChild(k);b.onclick=()=>answer(a);box.appendChild(b);});
-  setHint(q.actions.length);
+  setHint(q.actions.length);renderSeats(q);
   document.getElementById("prog").style.width=(100*pos/Math.max(1,order.length))+"%";
 }
 function renderQuestion(q){
@@ -1060,12 +1089,55 @@ function renderQuestion(q){
     b.appendChild(lab);b.appendChild(k);
     b.onclick=()=>answer(a);box.appendChild(b);
   });
-  setHint(q.actions.length);
+  setHint(q.actions.length);renderSeats(q);
   document.getElementById("prog").style.width=(100*pos/Math.max(1,order.length))+"%";
 }
 function setHint(n){const el=document.getElementById("hint");if(!el)return;
   let ks="";for(let i=1;i<=n;i++)ks+="<kbd>"+i+"</kbd>";
   el.innerHTML="Pick with "+ks+" &middot; next hand with <kbd>Enter</kbd>";}
+// ---- position / situation graphic: a small table diagram so who-you-are, where the
+// button is, and what just happened read at a glance (not only from text). ----
+const SEATS6=["UTG","HJ","CO","BTN","SB","BB"];
+function renderSeats(q){
+  const el=document.getElementById("seats");if(!el)return;
+  el.innerHTML="";el.hidden=false;
+  el.appendChild(q.preflop?preflopStrip(q):headsupTable(q));
+}
+function headsupTable(q){
+  const sbbb=String(q.badge||"").indexOf("SB vs BB")>=0;
+  const hero=q.acting_player||"BB";
+  const villain=sbbb?(hero==="SB"?"BB":"SB"):(hero==="BTN"?"BB":"BTN");
+  const heroIP=!q.is_oop;                         // in position = has the button, acts last
+  const node=q.node||"";
+  let flag="Your move",fk="first";
+  if(node.endsWith("_vs_check")){flag="Opponent checked to you";fk="check";}
+  else if(node.endsWith("_vs_bet")){flag=q.is_oop?"You checked · opponent bet":"Opponent bet into you";fk="bet";}
+  else if(node.endsWith("_first")){flag="You're first to act";fk="first";}
+  const st=(q.street||"flop");
+  const w=document.createElement("div");w.className="hu";
+  const db='<span class="dbtn" title="Dealer button">D</span>';
+  w.innerHTML=
+    '<div class="seat opp"><span class="pgrp">'+(heroIP?"":db)+'<span class="ppos p-'+villain+'">'+villain+'</span></span>'
+    +'<span class="pwho">Opponent</span><span class="fd"><i></i><i></i></span></div>'
+    +'<div class="mid"><span class="line"></span><span class="flag f-'+fk+'">'+flag+'</span><span class="line"></span></div>'
+    +'<div class="seat me"><span class="pgrp">'+(heroIP?db:"")+'<span class="ppos p-'+hero+' cur">'+hero+'</span></span>'
+    +'<span class="pwho">You</span><span class="tag-turn">● your turn on the '+st+'</span></div>';
+  return w;
+}
+function preflopStrip(q){
+  const opener=q.opener||null,tb=q.tbettor||null;
+  const ctx=q.ctx==="rfi"?"Folded to you — first to enter"
+    :q.ctx==="def"?("Facing "+(opener||"an")+" open — your call")
+    :q.ctx==="sbdef"?"You're the small blind, folded to you"
+    :q.ctx==="vs3bet"?("You opened — "+(tb||"a blind")+" 3-bet you"):"Pre-flop";
+  let seats="";
+  SEATS6.forEach(function(s){var c="pf-seat";if(s===q.pos)c+=" cur";
+    if(s===opener||s===tb)c+=" villain";if(s==="SB"||s==="BB")c+=" blind";
+    seats+='<span class="'+c+'">'+s+'</span>';});
+  const w=document.createElement("div");w.className="pfstrip";
+  w.innerHTML='<div class="pfrow">'+seats+'</div><div class="pfctx">'+ctx+'</div>';
+  return w;
+}
 function deal(){answered=false;chosen=null;cur=Q[order[pos]];document.getElementById("fb").className="fb";renderQuestion(cur);coachReset();}
 
 function renderPreflopFeedback(q,a){
