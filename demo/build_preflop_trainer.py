@@ -63,7 +63,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
   <div class="score" id="score"><span class="acc" id="acc">&mdash;</span>
    <span class="sbits"><b id="n">0</b> played &middot; <b id="ok">0</b> right</span></div>
  </header>
- <div class="tag">Should you play this hand before the flop? Open when it folds to you, or defend your Big Blind. Calibrated 6-max ranges.</div>
+ <div class="tag">Should you play this hand before the flop? Open, defend the blinds, or handle a 3-bet — the core pre-flop decisions. Calibrated 6-max ranges.</div>
  <div class="card">
   <div class="sit"><span class="pos" id="pos"></span><span id="sit"></span></div>
   <div class="felt"><div class="cap">Your hand</div><div class="cards" id="hand"></div></div>
@@ -84,7 +84,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 <script>
 const Q=__DATA__;
 const SUIT={s:["♠",0],h:["♥",1],d:["♦",1],c:["♣",0]};
-const ALAB={fold:"Fold",open:"Raise (open)",call:"Call","3bet":"Re-raise (3-bet)"};
+const ALAB={fold:"Fold",open:"Raise (open)",call:"Call","3bet":"Re-raise (3-bet)","4bet":"4-bet"};
 let order=[],pos=0,answered=false,cur=null,stats={n:0,ok:0};
 function card(t){const r=t[0],s=(t[1]||"").toLowerCase(),su=SUIT[s]||[s,0];
  const e=document.createElement("div");e.className="pc"+(su[1]?" red":"");

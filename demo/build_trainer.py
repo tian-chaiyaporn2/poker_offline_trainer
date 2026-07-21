@@ -755,8 +755,8 @@ function card(t){const r=t[0],s=(t[1]||"").toLowerCase(),su=SUIT[s]||[s,0];
 function render(cs,el){el.innerHTML="";cs.forEach(c=>el.appendChild(card(c)));}
 
 // --- pre-flop ("Chapter 0"): a distinct question kind, its own render/feedback path ---
-const PF_ACT={plain:{fold:"Fold",open:"Raise (open)",call:"Call","3bet":"Re-raise"},
-  poker:{fold:"Fold",open:"Open 2.5bb",call:"Call","3bet":"3-bet"}};
+const PF_ACT={plain:{fold:"Fold",open:"Raise (open)",call:"Call","3bet":"Re-raise","4bet":"4-bet"},
+  poker:{fold:"Fold",open:"Open 2.5bb",call:"Call","3bet":"3-bet","4bet":"4-bet"}};
 function pfActLabel(a){return (eff("positions")==="plain"?PF_ACT.plain:PF_ACT.poker)[a]||a;}
 function renderPreflop(q){
   const posEl=document.getElementById("pos");posEl.textContent=q.pos;posEl.className="pos "+q.pos;

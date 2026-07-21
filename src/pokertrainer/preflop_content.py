@@ -7,7 +7,8 @@ Shared by the standalone pre-flop trainer and the integrated main trainer.
 import random
 
 from .preflop_ranges import (
-    rfi_ranges, bb_defense_ranges, RFI_FREQ, BB_DEFENSE, strength_cumulative)
+    rfi_ranges, bb_defense_ranges, sb_defense_ranges, vs_3bet_ranges,
+    RFI_FREQ, BB_DEFENSE, SB_DEFENSE, VS_3BET, strength_cumulative)
 from .preflop_equity import hand_classes
 
 MARGIN = 3.5  # a hand within this % of a range cutoff is a "close"/mixed spot
@@ -81,8 +82,15 @@ DEF_WHY = {
     "call": "Good enough to call and see a flop — but not strong enough to 3-bet.",
     "fold": "Too weak to continue against this open — fold and save your chips.",
 }
+VS3BET_WHY = {
+    "4bet": "A premium — 4-bet (re-raise the 3-bet) for value; you want the money in.",
+    "call": "Strong enough to call the 3-bet and see a flop — but not to 4-bet.",
+    "fold": "Good enough to open, but not to continue against a 3-bet — fold.",
+}
 RULES_RFI = "The later your seat, the wider you open — fewer players left to wake up with a hand."
 RULES_DEF = "Defend wider in the Big Blind (you get a price), but 3-bet only your strongest — and fold the junk."
+RULES_SB = "In the Small Blind you're out of position with the BB still behind — defend tighter than the BB, leaning toward 3-bet-or-fold."
+RULES_3BET = "Against a 3-bet, continue only with your strongest: 4-bet the premiums, call a few, fold the rest of your opens."
 
 
 def combo_for(cls, rng):
@@ -110,6 +118,8 @@ def build_questions():
     rng = random.Random(11)
     rfi = rfi_ranges()
     dfn = bb_defense_ranges()
+    sbd = sb_defense_ranges()
+    v3 = vs_3bet_ranges()
     classes = hand_classes()
     cum = strength_cumulative()
     qs = []
@@ -158,6 +168,46 @@ def build_questions():
                     "read": hand_read(cls),
                     "why": DEF_WHY[act], "rule": RULES_DEF,
                     "situation": f"You're in the Big Blind, and {POS_FULL[opener]} opens. It's on you.",
+                })
+
+    # SB defense: out of position with the BB behind (tighter than the BB)
+    for opener in ["CO", "BTN"]:
+        d = sbd[opener]
+        dfd, tb3 = SB_DEFENSE[opener]
+        for act in ("3bet", "call", "fold"):
+            pool = [c for c in classes if d[c] == act]
+            for cls in rng.sample(pool, min(2, len(pool))):
+                near3 = abs(cum[cls] - tb3) < MARGIN
+                nearD = abs(cum[cls] - dfd) < MARGIN
+                alt = ("call" if act == "3bet" else "3bet") if near3 else \
+                      ("fold" if act == "call" else "call") if nearD else None
+                qs.append({
+                    "kind": "sbdef", "pos": "SB", "opener": opener,
+                    "hand": combo_for(cls, rng), "cls": cls,
+                    "actions": ["fold", "call", "3bet"], "answer": act,
+                    "mixed": bool(alt), "alt": alt, "read": hand_read(cls),
+                    "why": DEF_WHY[act], "rule": RULES_SB,
+                    "situation": f"You're in the Small Blind, and {POS_FULL[opener]} opens. It's on you.",
+                })
+
+    # Facing a 3-bet: you opened, a blind 3-bets — 4-bet / call / fold (over your opens)
+    cont, fb = VS_3BET
+    for (seat, seat_full, tbettor) in [("CO", "the Cutoff", "the Big Blind"),
+                                       ("BTN", "the Button", "the Small Blind")]:
+        opens = [c for c in classes if rfi[seat][c] == "open"]
+        for act in ("4bet", "call", "fold"):
+            pool = [c for c in opens if v3[c] == act]
+            for cls in rng.sample(pool, min(2, len(pool))):
+                near4 = abs(cum[cls] - fb) < MARGIN
+                nearC = abs(cum[cls] - cont) < MARGIN
+                alt = ("call" if act == "4bet" else "4bet") if near4 else \
+                      ("fold" if act == "call" else "call") if nearC else None
+                qs.append({
+                    "kind": "vs3bet", "pos": seat, "hand": combo_for(cls, rng), "cls": cls,
+                    "actions": ["fold", "call", "4bet"], "answer": act,
+                    "mixed": bool(alt), "alt": alt, "read": hand_read(cls),
+                    "why": VS3BET_WHY[act], "rule": RULES_3BET,
+                    "situation": f"You opened from {seat_full}, and {tbettor} 3-bets. It's back on you.",
                 })
     rng.shuffle(qs)
     return qs

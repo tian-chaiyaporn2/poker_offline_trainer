@@ -61,19 +61,50 @@ BB_DEFENSE: Dict[str, tuple] = {
 }
 
 
-def bb_defense_ranges() -> Dict[str, Dict[str, str]]:
-    """Per opener seat -> {hand_class: '3bet'|'call'|'fold'} for the Big Blind."""
+# SB defending vs an open — narrower than the BB (out of position, with the BB still to
+# act behind), so more 3-bet-or-fold and less flatting.
+SB_DEFENSE: Dict[str, tuple] = {
+    "UTG": (15.0, 8.0), "HJ": (18.0, 9.0), "CO": (26.0, 11.0), "BTN": (42.0, 15.0),
+}
+# Opener facing a 3-bet: fold / call / 4-bet, as a partition of hands (a generic
+# approximation across position pairs). (continue%, value-4bet%).
+VS_3BET: tuple = (22.0, 5.0)
+
+
+def _defense_ranges(table) -> Dict[str, Dict[str, str]]:
     classes, E = load_equity_table()
     w = combo_weights(classes)
-    tb = type_bonus(classes)
-    order = strength_order(classes, E, tb)
+    order = strength_order(classes, E, type_bonus(classes))
     out: Dict[str, Dict[str, str]] = {}
-    for opener, (dfd, tb3) in BB_DEFENSE.items():
+    for opener, (dfd, tb3) in table.items():
         threebet = set(_top_pct(classes, w, order, tb3))
         defend = set(_top_pct(classes, w, order, dfd))
         out[opener] = {c: ("3bet" if c in threebet else "call" if c in defend else "fold")
                        for c in classes}
     return out
+
+
+def bb_defense_ranges() -> Dict[str, Dict[str, str]]:
+    """Per opener seat -> {hand_class: '3bet'|'call'|'fold'} for the Big Blind."""
+    return _defense_ranges(BB_DEFENSE)
+
+
+def sb_defense_ranges() -> Dict[str, Dict[str, str]]:
+    """Per opener seat -> {hand_class: '3bet'|'call'|'fold'} for the Small Blind."""
+    return _defense_ranges(SB_DEFENSE)
+
+
+def vs_3bet_ranges() -> Dict[str, str]:
+    """Opener facing a 3-bet -> {hand_class: '4bet'|'call'|'fold'} (only meaningful for
+    hands that opened). Generic across position pairs."""
+    classes, E = load_equity_table()
+    w = combo_weights(classes)
+    order = strength_order(classes, E, type_bonus(classes))
+    cont, fb = VS_3BET
+    fourbet = set(_top_pct(classes, w, order, fb))
+    cont_set = set(_top_pct(classes, w, order, cont))
+    return {c: ("4bet" if c in fourbet else "call" if c in cont_set else "fold")
+            for c in classes}
 
 
 def rfi_ranges() -> Dict[str, Dict[str, str]]:
