@@ -402,10 +402,17 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .act.g-best{--gc:var(--best)}.act.g-good{--gc:var(--good)}.act.g-acceptable{--gc:var(--accept)}
 .act.g-costly{--gc:var(--costly)}.act.g-major_error{--gc:var(--major)}
 /* feedback */
-.fb{display:none;border-top:1px solid var(--line)}
-.fb.on{display:block;animation:rise .25s ease}
+.fb{display:none}
+/* result = slide-up bottom sheet over the hand */
+.fb.on{display:block;position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:100%;max-width:440px;z-index:50;
+  background:var(--panel);border:1px solid var(--line);border-bottom:none;border-radius:22px 22px 0 0;
+  box-shadow:0 -16px 44px -10px rgba(0,0,0,.75);max-height:86vh;overflow-y:auto;overscroll-behavior:contain;
+  animation:sheetup .3s cubic-bezier(.2,.85,.25,1);padding-bottom:10px}
+.fb .grab{width:38px;height:4px;border-radius:3px;background:var(--line);margin:9px auto 2px}
+.fb-scrim{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.55);backdrop-filter:blur(1.5px);animation:rise .25s ease}
+@keyframes sheetup{from{transform:translate(-50%,100%)}to{transform:translate(-50%,0)}}
 @keyframes rise{from{opacity:0}to{opacity:1}}
-@media (prefers-reduced-motion:reduce){.fb.on{animation:none}.act:hover:not(:disabled){transform:none}}
+@media (prefers-reduced-motion:reduce){.fb.on,.fb-scrim{animation:none}.act:hover:not(:disabled){transform:none}}
 .verdict{padding:13px 18px;font-weight:700;font-size:15px;display:flex;align-items:center;gap:9px}
 .verdict .dot{width:10px;height:10px;border-radius:50%;background:var(--vc)}
 .v-best{--vc:var(--best)}.v-good{--vc:var(--good)}.v-acceptable{--vc:var(--accept)}.v-costly{--vc:var(--costly)}.v-major_error{--vc:var(--major)}
@@ -604,6 +611,7 @@ __SUITDEFS__
     </div>
     <div class="acts" id="acts"></div>
     <div class="fb" id="fb">
+      <div class="grab" aria-hidden="true"></div>
       <div class="verdict" id="verdict"></div>
       <div class="unlock" id="unlock" hidden></div>
       <div class="why">
@@ -749,6 +757,7 @@ __SUITDEFS__
     <button class="s-reset" id="reset-btn" type="button">Reset progress</button>
   </section>
   </div>
+  <div class="fb-scrim" id="fb-scrim" hidden></div>
   <nav class="tabbar" id="tabbar">
     <button data-v="train" class="on"><svg class="ti"><use href="#so-spade"/></svg>Train</button>
     <button data-v="progress"><span class="ti">&#9636;</span>Progress</button>
@@ -1138,7 +1147,7 @@ function preflopStrip(q){
   w.innerHTML='<div class="pfrow">'+seats+'</div><div class="pfctx">'+ctx+'</div>';
   return w;
 }
-function deal(){answered=false;chosen=null;cur=Q[order[pos]];document.getElementById("fb").className="fb";renderQuestion(cur);coachReset();}
+function deal(){answered=false;chosen=null;cur=Q[order[pos]];document.getElementById("fb").className="fb";sheetOpen(false);renderQuestion(cur);coachReset();}
 
 function renderPreflopFeedback(q,a){
   const correct=a===q.answer, closeOk=q.mixed&&a===q.alt;
@@ -1163,7 +1172,7 @@ function renderPreflopFeedback(q,a){
   const ruleEl=document.getElementById("rule");ruleEl.hidden=false;ruleEl.innerHTML="";
   const lb=document.createElement("b");lb.textContent="Rule of thumb";ruleEl.appendChild(lb);ruleEl.appendChild(document.createTextNode(q.rule));
   document.querySelector(".mix").style.display="none";
-  document.getElementById("fb").className="fb on";
+  document.getElementById("fb").className="fb on";sheetOpen(true);
 }
 function renderFeedback(q,a,gained){
   if(q.preflop)return renderPreflopFeedback(q,a);
@@ -1290,7 +1299,7 @@ function renderFeedback(q,a,gained){
     i.style.width=Math.max(3,payoffView?(GW[ga]||50):Math.round(100*q.freq[x]/maxf))+"%";
     track.appendChild(i);row.appendChild(rlab);row.appendChild(track);bars.appendChild(row);
   });
-  document.getElementById("fb").className="fb on";
+  document.getElementById("fb").className="fb on";sheetOpen(true);
 }
 function answer(a){
   if(answered)return;answered=true;chosen=a;
@@ -1321,6 +1330,19 @@ function answer(a){
   document.getElementById("next").focus({preventScroll:true});
 }
 function next(){pos=(pos+1)%order.length;if(pos===0)order=shuffle(order.slice());deal();}
+// ---- result as a slide-up bottom sheet: verdict + why rise over the hand; swipe down,
+// tap the dimmer, or hit Next to deal the next one. ----
+function sheetOpen(b){const s=document.getElementById("fb-scrim");if(s)s.hidden=!b;
+  document.documentElement.classList.toggle("sheet-open",b);}
+(function(){const scrim=document.getElementById("fb-scrim"),fb=document.getElementById("fb");
+  if(scrim)scrim.onclick=function(){next();};
+  if(!fb)return;let y0=null;
+  fb.addEventListener("touchstart",function(e){y0=fb.scrollTop<=0?e.touches[0].clientY:null;},{passive:true});
+  fb.addEventListener("touchmove",function(e){if(y0==null)return;const dy=e.touches[0].clientY-y0;
+    if(dy>0)fb.style.transform="translate(-50%,"+Math.min(dy,140)+"px)";},{passive:true});
+  fb.addEventListener("touchend",function(e){if(y0==null)return;const dy=e.changedTouches[0].clientY-y0;y0=null;
+    fb.style.transform="";if(dy>90)next();},{passive:true});
+})();
 
 // Adaptive unlock: play a spot well (best/good) and its concept graduates into
 // your vocabulary. The 'basics' (positions + streets) unlock on your first good
