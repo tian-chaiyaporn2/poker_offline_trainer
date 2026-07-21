@@ -83,3 +83,24 @@ def test_multiway_equity():
     # 2-way case must agree with the pairwise engine
     eq2 = multiway_equity(combos("AA", "KK"), samples=15000)
     assert abs(eq2[0] - 0.82) < 0.02
+
+
+def test_rfi_ranges_are_nested_and_sensible():
+    from pokertrainer.preflop_ranges import rfi_ranges, RFI_FREQ
+    from pokertrainer.solver.preflop import combo_weights
+    from pokertrainer.preflop_equity import hand_classes
+    r = rfi_ranges()
+    classes = hand_classes()
+    w = dict(zip(classes, combo_weights(classes)))
+    def opens(pos): return {c for c, a in r[pos].items() if a == "open"}
+    # frequency roughly matches the target (within one class of combos)
+    for pos, pct in RFI_FREQ.items():
+        got = 100 * sum(w[c] for c in opens(pos)) / sum(w.values())
+        assert abs(got - pct) < 2.0, f"{pos}: {got:.0f}% vs target {pct}%"
+    # nested: each later seat opens a superset
+    for a, b in [("UTG", "HJ"), ("HJ", "CO"), ("CO", "BTN")]:
+        assert opens(a) <= opens(b), f"{a} not subset of {b}"
+    # premiums always open, trash never; playability: 76s opens at BTN, not UTG
+    for pos in RFI_FREQ:
+        assert "AA" in opens(pos) and "72o" not in opens(pos)
+    assert "76s" in opens("BTN") and "76s" not in opens("UTG")
