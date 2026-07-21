@@ -63,3 +63,23 @@ def test_pushfold_cfr_converges_and_is_monotone():
     assert jam[0] > 0.99 and jam[-1] < 0.01             # strongest jams, weakest folds
     # monotone-ish: the jam frequency should broadly decrease with weakness
     assert (w * jam).sum() / w.sum() > 0.2              # a non-trivial jamming range
+
+
+def test_multiway_equity():
+    from pokertrainer.preflop_equity import multiway_equity
+    from pokertrainer.ranges import class_to_combos
+
+    def combos(*names):
+        out, used = [], set()
+        for nm in names:
+            c = next(c for c in class_to_combos(nm) if not set(c) & used)
+            out.append(c); used |= set(c)
+        return out
+
+    eq3 = multiway_equity(combos("AA", "KK", "QQ"), samples=15000)
+    assert abs(sum(eq3) - 1.0) < 1e-9            # shares partition the pot
+    assert eq3[0] > eq3[1] > eq3[2]              # AA > KK > QQ
+    assert eq3[0] > 0.6                          # AA dominates 3-way
+    # 2-way case must agree with the pairwise engine
+    eq2 = multiway_equity(combos("AA", "KK"), samples=15000)
+    assert abs(eq2[0] - 0.82) < 0.02

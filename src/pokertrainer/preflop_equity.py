@@ -50,6 +50,30 @@ def preflop_equity(hero: Combo, villain: Combo,
     return wins / samples
 
 
+def multiway_equity(hands: List[Combo], samples: int = 10000, seed: int = 7) -> List[float]:
+    """N-way all-in equity: each hand's P(win) + its split share on ties, over a random
+    5-card board. The foundation for multiway (3+ player) pre-flop terminals. Returns a
+    list parallel to `hands`; the values sum to 1.0."""
+    used: set = set()
+    for h in hands:
+        used |= set(h)
+    if len(used) != 2 * len(hands):
+        raise ValueError("card collision among hands")
+    deck = [c for c in range(52) if c not in used]
+    rng = random.Random(seed)
+    N = len(hands)
+    eq = [0.0] * N
+    for _ in range(samples):
+        board = rng.sample(deck, 5)
+        ranks = [evaluate([h[0], h[1], *board]) for h in hands]
+        best = max(ranks)
+        winners = [i for i, r in enumerate(ranks) if r == best]
+        share = 1.0 / len(winners)
+        for i in winners:
+            eq[i] += share
+    return [e / samples for e in eq]
+
+
 def build_class_equity_table(samples: int = 2000, seed: int = 7):
     """Precompute a 169x169 class-vs-class equity matrix for the solver's inner loop.
 
