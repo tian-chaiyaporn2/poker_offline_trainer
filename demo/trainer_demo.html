@@ -116,8 +116,9 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .cmp-go:hover{border-color:var(--brass)}
 .fb-scrim{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.55);backdrop-filter:blur(1.5px);animation:rise .25s ease}
 /* on-demand "hand strength & odds" panel — slides up over everything, dismiss with Back */
-.hd-open{display:block;margin:12px auto 0;appearance:none;font-family:var(--label);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--brass);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:8px 15px;cursor:pointer;transition:.12s}
-.hd-open:hover{border-color:var(--brass);background:color-mix(in srgb,var(--brass) 10%,var(--panel2))}
+.fac-odds{display:flex;justify-content:space-between;align-items:center;width:100%;margin-top:2px;padding:11px 0 3px;border:none;border-top:1px solid var(--line);background:none;cursor:pointer;font-family:var(--label);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--brass)}
+.fac-odds:hover{color:var(--ink)}
+.fac-odds-arr{font-size:17px;line-height:1}
 .hd{display:none}
 .hd.on{display:block;position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:100%;max-width:440px;z-index:60;background:var(--panel);border:1px solid var(--line);border-bottom:none;border-radius:22px 22px 0 0;max-height:92vh;overflow-y:auto;overscroll-behavior:contain;animation:sheetup .3s cubic-bezier(.2,.85,.25,1);box-shadow:0 -16px 44px -10px rgba(0,0,0,.75)}
 .hd-scrim{position:fixed;inset:0;z-index:55;background:rgba(0,0,0,.6);backdrop-filter:blur(1.5px);animation:rise .25s ease}
@@ -361,7 +362,6 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
         <span class="reason" id="reason"></span>
         <p class="head" id="head"></p>
         <div class="factors" id="factors" hidden></div>
-        <button class="hd-open" id="hd-open" type="button" hidden>&#128202; Hand strength &amp; odds</button>
         <button class="more" id="moretoggle" type="button" hidden>Explain more ▸</button>
         <div class="morebody" id="morebody" hidden>
           <p class="stand" id="stand"></p>
@@ -447,7 +447,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
     </details>
     <div class="s-sec">About</div>
     <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>8aa23cd</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>b525474</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
     <span class="demo">Turn / river</span> spots are now full-range solver output too, but
@@ -1112,6 +1112,10 @@ function renderFactors(q){
     const why=document.createElement("div");why.className="fac-why";why.textContent=f.why;
     row.appendChild(top);row.appendChild(why);el.appendChild(row);
   });
+  // the deep-dive on "Your hand" lives right here in the analytics — outs + real odds.
+  const od=document.createElement("button");od.type="button";od.className="fac-odds";
+  od.innerHTML='<span>&#128202; Hand strength &amp; full odds</span><span class="fac-odds-arr">&rsaquo;</span>';
+  od.onclick=openHandDetail;el.appendChild(od);
 }
 // ===== Detailed hand-strength & odds panel: what you hold now, the exact outs to improve,
 // and the real probability by the river — computed by enumerating every unseen card. =====
@@ -1290,7 +1294,6 @@ function renderContrast(q){
 }
 function renderFeedback(q,a,gained){
   renderContrast(q);renderFactors(q);
-  const hdBtn=document.getElementById("hd-open");if(hdBtn)hdBtn.hidden=!!q.preflop;   // odds need a board
   if(q.preflop)return renderPreflopFeedback(q,a);
   document.querySelector(".mix").style.display="";document.getElementById("stand").hidden=false;
   document.querySelectorAll("#acts .act").forEach(b=>{
@@ -1532,7 +1535,6 @@ intro.addEventListener("toggle",()=>{try{localStorage.setItem("introOpen",intro.
 document.getElementById("next").onclick=next;
 document.getElementById("prev").onclick=prev;
 document.getElementById("fwd").onclick=next;
-document.getElementById("hd-open").onclick=openHandDetail;
 document.getElementById("hd-back").onclick=closeHandDetail;
 document.getElementById("hd-scrim").onclick=closeHandDetail;
 document.getElementById("moretoggle").onclick=function(){
