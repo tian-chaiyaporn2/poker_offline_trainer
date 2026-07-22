@@ -80,6 +80,8 @@ TR_DB = "output/packs/flop_pack_turnriver_fullrange.db"  # turn/river decisions 
 SB_DB = "output/packs/flop_pack_sb_vs_bb.db"           # 2nd scenario: SB vs BB (full range)
 BTNSB_DB = "output/packs/flop_pack_btn_vs_sb.db"       # BTN vs SB single-raised pot
 CO_DB = "output/packs/flop_pack_co_vs_bb.db"           # CO vs BB single-raised pot (pending)
+UTG_DB = "output/packs/flop_pack_utg_vs_bb.db"         # UTG vs BB single-raised pot (pending)
+HJ_DB = "output/packs/flop_pack_hj_vs_bb.db"           # HJ vs BB single-raised pot (pending)
 PER_REASON = 6          # cap questions per reason for variety
 MAX_Q = 60
 RAISE_Q = 12            # extra 3-action spots blended in to show the raise UX
@@ -342,7 +344,7 @@ def load_contrast_pool(per_bucket=2):
     from pokertrainer.cards import parse_cards, card_rank
     from pokertrainer.evaluator import evaluate, category_name
     specs = [(DB, None), (SB_DB, "SB vs BB"), (BTNSB_DB, "BTN vs SB"),
-             (CO_DB, "CO vs BB"), (TR_DB, "street")]
+             (CO_DB, "CO vs BB"), (UTG_DB, "UTG vs BB"), (HJ_DB, "HJ vs BB"), (TR_DB, "street")]
     buckets, seen, out = defaultdict(int), set(), []
     for db, badge in specs:
         if not os.path.exists(db):
@@ -391,14 +393,16 @@ def build(allow_missing_demo_packs=False):
     sb_qs = load_sb()
     btnsb_qs = load_scenario(BTNSB_DB, "BTN vs SB", BTNSB_Q)
     co_qs = load_scenario(CO_DB, "CO vs BB", CO_Q)
+    utg_qs = load_scenario(UTG_DB, "UTG vs BB", CO_Q)
+    hj_qs = load_scenario(HJ_DB, "HJ vs BB", CO_Q)
     pf_qs = load_preflop()
-    qs = qs + tr_qs + sb_qs + btnsb_qs + co_qs + pf_qs
+    qs = qs + tr_qs + sb_qs + btnsb_qs + co_qs + utg_qs + hj_qs + pf_qs
     cpool = load_contrast_pool()
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
                             capture_output=True, text=True).stdout.strip() or "local"
     print(f"  ({len(tr_qs)} turn/river + {len(sb_qs)} SB-vs-BB + {len(btnsb_qs)} BTN-vs-SB + "
-          f"{len(co_qs)} CO-vs-BB + {len(pf_qs)} pre-flop spots blended in; "
-          f"{len(cpool)} contrast-pool spots; full-range raise in the main pack)")
+          f"{len(co_qs)} CO-vs-BB + {len(utg_qs)} UTG-vs-BB + {len(hj_qs)} HJ-vs-BB + "
+          f"{len(pf_qs)} pre-flop spots blended in; {len(cpool)} contrast-pool spots)")
     # Escape </script> so pack strings cannot break out of the inline script.
     data = json.dumps(qs, separators=(",", ":")).replace("<", "\\u003c")
     cdata = json.dumps(cpool, separators=(",", ":")).replace("<", "\\u003c")

@@ -88,6 +88,37 @@ SB_vs_BTN: Dict[str, float] = {c: 1.0 for c in [  # SB flat-call vs BTN open (OO
     "AJo", "KQo", "KJo", "QJo",
 ]}
 
+# --- UTG-vs-BB and HJ-vs-BB single-raised pots. Completes the "any position opens, BB
+#     defends" family (UTG tightest -> BTN widest). Same shape as CO/BTN-vs-BB (BB is OOP,
+#     opener is IP); the opener tightens and BB defends a touch tighter for earlier seats.
+#     v1 engineering estimates for a reviewer to validate.
+UTG_SRP: Dict[str, float] = {c: 1.0 for c in [  # UTG open (~15%, tightest)
+    "AA", "KK", "QQ", "JJ", "TT", "99", "88", "77", "66", "55", "44", "33", "22",
+    "AKs", "AQs", "AJs", "ATs", "A5s", "A4s",
+    "KQs", "KJs", "KTs", "QJs", "QTs", "JTs", "T9s", "98s", "87s", "76s",
+    "AKo", "AQo", "AJo", "KQo",
+]}
+BB_vs_UTG: Dict[str, float] = {c: 1.0 for c in [  # BB defends vs UTG (tightest defense)
+    "TT", "99", "88", "77", "66", "55", "44", "33", "22",
+    "AJs", "ATs", "A9s", "A8s", "A7s", "A6s", "A5s", "A4s", "A3s", "A2s",
+    "KJs", "KTs", "K9s", "QJs", "QTs", "Q9s", "JTs", "J9s", "T9s", "98s", "87s", "76s", "65s",
+    "AJo", "ATo", "KQo", "KJo", "QJo", "JTo",
+]}
+HJ_SRP: Dict[str, float] = {c: 1.0 for c in [  # HJ open (~18%, between UTG and CO)
+    "AA", "KK", "QQ", "JJ", "TT", "99", "88", "77", "66", "55", "44", "33", "22",
+    "AKs", "AQs", "AJs", "ATs", "A9s", "A8s", "A7s", "A5s", "A4s", "A3s", "A2s",
+    "KQs", "KJs", "KTs", "K9s", "QJs", "QTs", "Q9s", "JTs", "J9s", "T9s",
+    "98s", "87s", "76s", "65s",
+    "AKo", "AQo", "AJo", "KQo", "KJo", "QJo",
+]}
+BB_vs_HJ: Dict[str, float] = {c: 1.0 for c in [  # BB defends vs HJ (between vs-UTG and vs-CO)
+    "JJ", "TT", "99", "88", "77", "66", "55", "44", "33", "22",
+    "AJs", "ATs", "A9s", "A8s", "A7s", "A6s", "A5s", "A4s", "A3s", "A2s",
+    "KJs", "KTs", "K9s", "QJs", "QTs", "Q9s", "JTs", "J9s", "T9s", "T8s",
+    "98s", "87s", "76s", "65s",
+    "AJo", "ATo", "KQo", "KJo", "QJo", "JTo",
+]}
+
 # --- BTN-vs-BB 3-BET pot. BTN opens, BB 3-bets, BTN calls. Postflop the BB is OOP
 #     (the 3-bettor / aggressor, acts first) and the BTN is IP (caller). The whole
 #     point is the LOW SPR: pot ~20bb with ~88bb behind (SPR ~4.4) vs the deep ~18
@@ -119,6 +150,12 @@ SCENARIOS: Dict[str, Dict] = {
     "co_vs_bb_srp": {"oop_range": BB_vs_CO, "ip_range": CO_SRP,
                      "oop_pos": "BB", "ip_pos": "CO", "pot": 5.5, "bet_frac": 0.66,
                      "label": "CO opens, BB calls (single-raised pot)"},
+    "utg_vs_bb_srp": {"oop_range": BB_vs_UTG, "ip_range": UTG_SRP,
+                      "oop_pos": "BB", "ip_pos": "UTG", "pot": 5.5, "bet_frac": 0.66,
+                      "label": "UTG opens, BB calls (single-raised pot)"},
+    "hj_vs_bb_srp": {"oop_range": BB_vs_HJ, "ip_range": HJ_SRP,
+                     "oop_pos": "BB", "ip_pos": "HJ", "pot": 5.5, "bet_frac": 0.66,
+                     "label": "HJ opens, BB calls (single-raised pot)"},
     "btn_vs_sb_srp": {"oop_range": SB_vs_BTN, "ip_range": BTN_SRP,
                       "oop_pos": "SB", "ip_pos": "BTN", "pot": 5.5, "bet_frac": 0.66,
                       "label": "BTN opens, SB calls (single-raised pot)"},
