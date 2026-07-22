@@ -221,23 +221,36 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .view .intro,.view .glossary{margin-top:8px}
 /* ===== position / situation graphic ===== */
 .seats{padding:12px 15px 4px}
-.tbl{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:color-mix(in srgb,var(--panel2) 55%,transparent)}
-.prow{display:flex;align-items:center;gap:10px;padding:10px 13px}
-.prow.me{background:color-mix(in srgb,var(--brass) 11%,transparent)}
-.pdot{width:9px;height:9px;border-radius:50%;flex:none}
-.pdot.opp{background:var(--muted)}
-.pdot.you{background:var(--best);box-shadow:0 0 0 3px color-mix(in srgb,var(--best) 26%,transparent)}
-.pinfo{flex:1;display:flex;flex-direction:column;line-height:1.25;min-width:0}
-.pinfo b{font-size:13px;font-weight:700}
-.psub{font-size:11px;color:var(--muted)}
-.pact{font-family:var(--label);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:4px 10px;border-radius:999px;white-space:nowrap;flex:none;border:1px solid transparent}
-.a-check{background:color-mix(in srgb,var(--accept) 16%,transparent);color:var(--accept);border-color:color-mix(in srgb,var(--accept) 40%,var(--line))}
-.a-bet{background:color-mix(in srgb,var(--costly) 16%,transparent);color:var(--costly);border-color:color-mix(in srgb,var(--costly) 40%,var(--line))}
-.a-wait{color:var(--muted);border-color:var(--line)}
-.a-you{background:var(--brass);color:#0b0c10}
-.pdiv{display:flex;align-items:center;gap:8px;padding:2px 13px}
-.pdiv::before,.pdiv::after{content:"";flex:1;height:1px;background:var(--line)}
-.pdiv span{font-family:var(--label);font-size:8.5px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted)}
+/* top-down felt table: two seats, dealer button, pot in the middle */
+.tv{position:relative;height:244px;max-width:308px;margin:0 auto;
+  background:
+    radial-gradient(120% 130% at 50% 46%, color-mix(in srgb,var(--best) 15%,var(--panel2)) 0%, color-mix(in srgb,var(--best) 4%,var(--panel)) 62%, var(--panel) 100%);
+  border:1px solid color-mix(in srgb,var(--best) 22%,var(--line));border-radius:120px/70px;
+  box-shadow:inset 0 2px 16px rgba(0,0,0,.35), inset 0 0 0 6px color-mix(in srgb,var(--best) 6%,transparent)}
+.tvseat{position:absolute;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:5px;width:180px}
+.tvseat.top{top:16px}
+.tvseat.bot{bottom:14px;flex-direction:column-reverse}
+.av{width:34px;height:34px;border-radius:50%;position:relative;
+  background:radial-gradient(70% 70% at 50% 35%, var(--panel2), var(--panel));border:1.5px solid var(--line)}
+.av.me{border-color:var(--best);box-shadow:0 0 0 4px color-mix(in srgb,var(--best) 20%,transparent)}
+.av::after{content:"";position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);width:15px;height:15px;border-radius:50%;
+  background:color-mix(in srgb,var(--muted) 55%,transparent)}
+.av.me::after{background:color-mix(in srgb,var(--best) 75%,transparent)}
+.dbtn{position:absolute;right:-6px;bottom:-4px;width:16px;height:16px;border-radius:50%;
+  background:#f5f0e7;color:#15171e;font-family:var(--mono);font-weight:700;font-size:9px;
+  display:grid;place-items:center;border:1px solid rgba(0,0,0,.4);box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.tvlab{text-align:center;line-height:1.25}
+.tvlab b{font-size:13px;font-weight:700;display:block;color:var(--muted)}
+.tvseat.bot .tvlab b{color:var(--ink)}
+.tvlab span{font-size:11px;color:var(--muted)}
+.tvmid{position:absolute;top:48%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:7px}
+.potlab{font-family:var(--label);font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
+  border:1px dashed color-mix(in srgb,var(--muted) 40%,transparent);border-radius:999px;padding:3px 13px}
+.oppchip{font-family:var(--label);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;
+  padding:4px 11px;border-radius:999px;border:1px solid transparent}
+.oppchip.a-check{background:color-mix(in srgb,var(--accept) 16%,transparent);color:var(--accept);border-color:color-mix(in srgb,var(--accept) 40%,var(--line))}
+.oppchip.a-bet{background:color-mix(in srgb,var(--costly) 16%,transparent);color:var(--costly);border-color:color-mix(in srgb,var(--costly) 40%,var(--line))}
+.yourturn{font-family:var(--label);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--best)}
 .pfstrip{padding:2px 0}
 .pfrow{display:flex;gap:5px;justify-content:center;flex-wrap:wrap}
 .pf-seat{font-family:var(--label);font-size:10px;font-weight:700;letter-spacing:.03em;padding:5px 8px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
@@ -358,7 +371,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
     </details>
     <div class="s-sec">About</div>
     <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>2aa8d30</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>8146efc</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
     <span class="demo">Turn / river</span> spots are now full-range solver output too, but
@@ -778,18 +791,19 @@ function headsupTable(q){
   const villain=sbbb?(hero==="SB"?"BB":"SB"):(hero==="BTN"?"BB":"BTN");
   const heroLast=!q.is_oop;                        // in position = acts last
   const node=q.node||"";
-  let oppAct="waiting…",ok="wait";
+  let oppAct="",ok="wait";
   if(node.endsWith("_vs_check")){oppAct="checked";ok="check";}
-  else if(node.endsWith("_vs_bet")){oppAct=q.is_oop?"bet after your check":"bet";ok="bet";}
-  const w=document.createElement("div");w.className="tbl";
+  else if(node.endsWith("_vs_bet")){oppAct="bet";ok="bet";}
+  // the dealer button belongs to whoever is literally the BTN (folded away in blind-vs-blind)
+  const D='<span class="dbtn" title="dealer button">D</span>';
+  const w=document.createElement("div");w.className="tv";
   w.innerHTML=
-    '<div class="prow"><span class="pdot opp"></span>'
-    +'<span class="pinfo"><b>Opponent</b><span class="psub">'+(POS_PLAIN[villain]||villain)+' &middot; '+(heroLast?"acts first":"acts last")+'</span></span>'
-    +'<span class="pact a-'+ok+'">'+oppAct+'</span></div>'
-    +'<div class="pdiv"><span>the pot</span></div>'
-    +'<div class="prow me"><span class="pdot you"></span>'
-    +'<span class="pinfo"><b>You</b><span class="psub">'+(POS_PLAIN[hero]||hero)+' &middot; '+(heroLast?"you act last":"you act first")+'</span></span>'
-    +'<span class="pact a-you">your move &rarr;</span></div>';
+    '<div class="tvseat top"><div class="av opp">'+(villain==="BTN"?D:'')+'</div>'
+    +'<div class="tvlab"><b>Opponent</b><span>'+(POS_PLAIN[villain]||villain)+' &middot; '+(heroLast?"acts first":"acts last")+'</span></div></div>'
+    +'<div class="tvmid">'+(ok!=="wait"?'<span class="oppchip a-'+ok+'">'+oppAct+'</span>':'')+'<span class="potlab">pot</span></div>'
+    +'<div class="tvseat bot me"><div class="av me">'+(hero==="BTN"?D:'')+'</div>'
+    +'<div class="tvlab"><b>You</b><span>'+(POS_PLAIN[hero]||hero)+' &middot; '+(heroLast?"you act last":"you act first")+'</span></div>'
+    +'<div class="yourturn">&#9679; your move</div></div>';
   return w;
 }
 function preflopStrip(q){
