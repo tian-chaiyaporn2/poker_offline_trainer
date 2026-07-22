@@ -250,7 +250,13 @@ def load_turnriver(n=TR_Q, required=True):
         street = STREET.get(len(d["board"]), "flop")
         by_key[(street, d["node"], d["reason"])].append(d)
     from itertools import zip_longest
-    groups = [g[:2] for g in by_key.values()]
+    # Interleave facing-a-bet (Fold/Call/Raise) groups with first-to-act/checked-to
+    # (Check/Bet) groups, so the turn/river sample shows a MIX — otherwise one node type
+    # fills the whole cap and the raise content (or the check/bet content) never appears.
+    items = sorted(by_key.items(), key=lambda kv: kv[0])
+    vb = [g[:2] for k, g in items if "vs_bet" in k[1]]
+    nb = [g[:2] for k, g in items if "vs_bet" not in k[1]]
+    groups = [g for pair in zip_longest(vb, nb) for g in pair if g is not None]
     picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
     oop = _oop_pos(picked)
     out = []
