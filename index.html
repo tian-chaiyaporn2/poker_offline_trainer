@@ -79,6 +79,32 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
   box-shadow:0 -16px 44px -10px rgba(0,0,0,.75);max-height:86vh;overflow-y:auto;overscroll-behavior:contain;
   animation:sheetup .3s cubic-bezier(.2,.85,.25,1);padding-bottom:10px}
 .fb .grab{width:38px;height:4px;border-radius:3px;background:var(--line);margin:9px auto 2px}
+/* "similar hand, opposite rule" — teach the deciding factor by contrast */
+.compare{margin:8px 18px 2px;border:1px solid color-mix(in srgb,var(--brass) 30%,var(--line));border-radius:12px;background:color-mix(in srgb,var(--brass) 6%,transparent);overflow:hidden}
+.compare>summary{cursor:pointer;padding:11px 14px;font-family:var(--label);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--brass);list-style:none;display:flex;align-items:center;gap:7px}
+.compare>summary::-webkit-details-marker{display:none}
+.compare>summary span{font-size:14px}
+.compare[open]>summary{border-bottom:1px solid color-mix(in srgb,var(--brass) 22%,var(--line))}
+.compare-body{padding:13px 14px;display:flex;flex-direction:column;gap:11px}
+.cmp-line{font-size:13.5px;line-height:1.4}
+.cmp-line .cw{display:block;font-family:var(--label);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px}
+.cmp-play{font-weight:700}
+.cmp-play.a-bet,.cmp-play.a-raise{color:var(--best)}
+.cmp-play.a-check,.cmp-play.a-call{color:var(--brass)}
+.cmp-play.a-fold{color:var(--muted)}
+.cmp-hand{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cmp-cards{display:flex;gap:4px;align-items:center}
+.cmp-cards .pc{width:29px;height:40px;border-radius:5px;animation:none;box-shadow:0 3px 7px -3px rgba(0,0,0,.6)}
+.cmp-cards .pc::after{inset:2px;border-radius:3px}
+.cmp-cards .pc .ix{top:2px;left:2px}
+.cmp-cards .pc .ix b{font-size:9px}
+.cmp-cards .pc .ix .mini{width:6px;height:6px}
+.cmp-cards .pc .center .psuit{width:14px;height:14px}
+.cmp-cards .plus{color:var(--muted);font-size:11px}
+.cmp-why{font-size:13px;line-height:1.45;background:color-mix(in srgb,var(--panel2) 60%,transparent);border-radius:9px;padding:10px 12px}
+.cmp-why b{color:var(--ink)}
+.cmp-go{align-self:flex-start;appearance:none;font-family:var(--label);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--brass);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:8px 14px;cursor:pointer}
+.cmp-go:hover{border-color:var(--brass)}
 .fb-scrim{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.55);backdrop-filter:blur(1.5px);animation:rise .25s ease}
 @keyframes sheetup{from{transform:translate(-50%,100%)}to{transform:translate(-50%,0)}}
 @keyframes rise{from{opacity:0}to{opacity:1}}
@@ -311,6 +337,10 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
         <ul class="det" id="det"></ul>
       </div>
       <div class="mix"><h4 id="mixhead"></h4><div id="bars"></div></div>
+      <details class="compare" id="compare" hidden>
+        <summary><span>&#8646;</span> A similar hand plays the opposite way &mdash; see why</summary>
+        <div class="compare-body" id="compare-body"></div>
+      </details>
       <button class="next" id="next">Next hand &nbsp;&#8629;</button>
     </div>
   </div>
@@ -383,7 +413,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
     </details>
     <div class="s-sec">About</div>
     <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>ccccc97</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>d041b82</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
     <span class="demo">Turn / river</span> spots are now full-range solver output too, but
@@ -915,7 +945,93 @@ function renderPreflopFeedback(q,a){
   document.querySelector(".mix").style.display="none";
   document.getElementById("fb").className="fb on";sheetOpen(true);
 }
+// ===== "A similar hand plays the opposite way" — the same hand strength can call for
+// opposite plays (bet-for-value vs check-to-trap, bluff vs give-up, call vs fold, ...). Each
+// reason IS the rule of thumb, so a confusing twin = same hand tier + the paired opposite
+// reason. We surface the closest twin and name the deciding factor that flips it. =====
+const CONTRAST={
+  value:{vs:["trap","pot_control"],axis:"strong"},
+  trap:{vs:["value","protection"],axis:"strong"},
+  protection:{vs:["pot_control","trap"],axis:"medium"},
+  pot_control:{vs:["protection","value"],axis:"medium"},
+  bluff:{vs:["realization"],axis:"weak"},
+  semi_bluff:{vs:["realization","call_odds"],axis:"draw"},
+  realization:{vs:["bluff","semi_bluff"],axis:"weak"},
+  bluff_catch:{vs:["fold"],axis:"face"},
+  value_call:{vs:["fold"],axis:"face"},
+  call_odds:{vs:["fold"],axis:"draw2"},
+  fold:{vs:["bluff_catch","value_call"],axis:"face"},
+  raise_value:{vs:["value_call","call_odds"],axis:"raise"},
+  raise_bluff:{vs:["fold","call_odds"],axis:"raise"},
+  raise_semibluff:{vs:["call_odds"],axis:"raise"}
+};
+const SHORT_RULE={value:"bet for value",protection:"bet to protect",trap:"check to trap",
+  pot_control:"check for pot control",bluff:"bet as a bluff",semi_bluff:"bet as a semi-bluff",
+  realization:"check and give up",value_call:"call — you're ahead",bluff_catch:"call to catch a bluff",
+  call_odds:"call on the odds",fold:"fold",raise_value:"raise for value",raise_bluff:"raise as a bluff",
+  raise_semibluff:"raise as a semi-bluff"};
+const AXIS_WHY={
+  strong:"whether a bet gets <b>called by worse hands</b>. Bet to build the pot when weaker hands will pay you off; check to trap when a bet would fold out everything worse — so you keep their bluffs and weak hands in.",
+  medium:"how exposed your hand is and how many worse hands call. Bet to charge draws and get value when a later card could beat you; check to keep the pot small when the board is safe and betting only folds out worse.",
+  weak:"whether betting can win a pot you'd otherwise lose. Bet as a bluff when you can't win by checking but can make better hands fold; check (give up) when a free card or keeping their bluffs in is worth more.",
+  draw:"whether pressing now beats waiting. Bet/raise the draw as a semi-bluff to fold them out or build a pot you'll often win; just call to keep it cheap and see the next card.",
+  draw2:"the price versus your chance to improve. Call when the pot lays you enough to chase; fold when it's too expensive for how often you get there.",
+  face:"how many <b>bluffs</b> are in their betting range versus real hands. Call when they'd bet worse (or bluff) often enough that you beat those; fold when their bet is mostly hands that already beat you.",
+  raise:"whether raising wins more than flat-calling. Raise to build the pot / deny equity when worse hands pay or draws must fold; just call to keep their bluffs and weaker hands in."
+};
+function cap1(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
+function findContrast(q){
+  if(q.preflop||!CONTRAST[q.reason])return null;
+  const rd=handRead(q.hero,q.board),vs=CONTRAST[q.reason].vs;
+  let best=null,bs=-1;
+  for(let i=0;i<Q.length;i++){const o=Q[i];
+    if(o===q||o.preflop||vs.indexOf(o.reason)<0)continue;
+    const ord=handRead(o.hero,o.board);
+    let sc=0;
+    if(ord.cat===rd.cat)sc+=3; else if((ord.cat==="high")===(rd.cat==="high"))sc+=1;
+    if(o.street===q.street)sc+=2;
+    if(o.is_oop!==q.is_oop)sc+=1;               // a flip in position is instructive
+    if(sc>bs){bs=sc;best={qi:i,q:o,rd:ord};}
+  }
+  return best;
+}
+function contrastWhy(q,rd,o,ord){
+  let s=AXIS_WHY[CONTRAST[q.reason].axis]||AXIS_WHY.strong;
+  const d=[];
+  if(q.is_oop!==o.is_oop)d.push("here you "+(q.is_oop?"act first (out of position)":"act last (in position)")+", there you "+(o.is_oop?"act first":"act last"));
+  const wa=rd.boardStraighty>=2||rd.boardFlushy>=2, wb=ord.boardStraighty>=2||ord.boardFlushy>=2;
+  if(wa!==wb)d.push("this board is "+(wa?"wet — straights/flushes live":"dry and safe")+", the other the reverse");
+  if(d.length)s+=" <b>In this pair it comes down to:</b> "+d.join("; ")+".";
+  return s;
+}
+function renderContrast(q){
+  const wrap=document.getElementById("compare");if(!wrap)return;
+  const body=document.getElementById("compare-body");
+  const c=findContrast(q);
+  if(!c){wrap.hidden=true;wrap.open=false;return;}
+  wrap.hidden=false;wrap.open=false;body.innerHTML="";
+  const rd=handRead(q.hero,q.board);
+  const mine=SHORT_RULE[q.reason]||shortAct(q.preferred), theirs=SHORT_RULE[c.q.reason]||shortAct(c.q.preferred);
+  const l1=document.createElement("div");l1.className="cmp-line";
+  l1.innerHTML='<span class="cw">This hand</span><b>'+cap1(rd.made)+'</b> &rarr; the play is <span class="cmp-play a-'+q.preferred+'">'+mine+'</span>.';
+  const l2=document.createElement("div");l2.className="cmp-line";
+  l2.innerHTML='<span class="cw">A look-alike hand</span>';
+  const hand=document.createElement("div");hand.className="cmp-hand";
+  const bc=document.createElement("div");bc.className="cmp-cards";c.q.board.forEach(function(x){bc.appendChild(card(x));});
+  const plus=document.createElement("span");plus.className="plus";plus.textContent="+ you";
+  const hc=document.createElement("div");hc.className="cmp-cards";c.q.hero.forEach(function(x){hc.appendChild(card(x));});
+  hand.appendChild(bc);hand.appendChild(plus);hand.appendChild(hc);
+  const play=document.createElement("div");play.className="cmp-line";play.style.marginTop="8px";
+  play.innerHTML='<b>'+cap1(c.rd.made)+'</b> &rarr; the play is <span class="cmp-play a-'+c.q.preferred+'">'+theirs+'</span>.';
+  l2.appendChild(hand);l2.appendChild(play);
+  const why=document.createElement("div");why.className="cmp-why";
+  why.innerHTML="<b>What flips it:</b> "+contrastWhy(q,rd,c.q,c.rd);
+  const go=document.createElement("button");go.type="button";go.className="cmp-go";go.textContent="Play this hand →";
+  go.onclick=function(){hist.push({qi:c.qi,pick:null});hidx=hist.length-1;renderHand();};
+  body.appendChild(l1);body.appendChild(l2);body.appendChild(why);body.appendChild(go);
+}
 function renderFeedback(q,a,gained){
+  renderContrast(q);
   if(q.preflop)return renderPreflopFeedback(q,a);
   document.querySelector(".mix").style.display="";document.getElementById("stand").hidden=false;
   document.querySelectorAll("#acts .act").forEach(b=>{
