@@ -1445,12 +1445,23 @@ function handTier(rd){
   const c=rd.cat;
   if(["straight","flush","full","quads","sflush","trips","twopair"].indexOf(c)>=0)return 5;
   if(c==="pair")return (rd.pairKind==="over"||rd.pairKind==="top")?4:(rd.pairKind==="mid"?3:2);
-  return rd.draw?2:1;   // air (with/without a draw)
+  // air: a strong draw (open-ended straight / flush draw ~8-9 outs) is a real drawing hand,
+  // not "nothing" — rate it above a weak/gutshot draw so the meter reflects the equity.
+  if(rd.draw)return /open-ended|flush draw/.test(rd.draw)?3:2;
+  return 1;
 }
 function decisionFactors(q,rd){
   const items=[];
   // relative-strength read (what you beat / what beats you) — the real "how strong is this".
-  items.push({label:"Your hand",meter:handTier(rd),read:cap1(rd.made),why:standingText(rd)});
+  // Surface the DRAW in the read — a hand like K-high with an open-ended straight draw is a
+  // strong drawing hand, not "just King high" (the thing that makes a raise a semi-bluff, not
+  // a pure bluff). Keep it concise (strip the parenthetical detail from the read).
+  const drawShort=rd.draw?rd.draw.replace(/ \([^)]*\)/,""):"";
+  const handReadTxt=rd.draw?cap1(rd.made).replace(" (no pair)","")+" + "+drawShort:cap1(rd.made);
+  const handWhy=(rd.cat==="high"&&rd.draw)
+    ? "No pair yet — but "+rd.draw+" is real equity: several cards complete a strong hand, so this plays like a draw, not air. That's why betting or raising it is a semi-bluff — you can win now, or hit."
+    : standingText(rd);
+  items.push({label:"Your hand",meter:handTier(rd),read:handReadTxt,why:handWhy});
   const bd=rd.boardStraighty>=2||rd.boardFlushy>=2?2:(rd.boardStraighty>=1||rd.boardFlushy>=1?1:0);
   const river=q.street==="river";
   items.push({label:"Board",meter:null,
