@@ -229,6 +229,17 @@ def explain(rec: Dict, board_favored: Optional[str] = None) -> Dict:
     note = _board_plays_note(rec, street)
     if note:
         detail.append(note)
+        # Soften value/raise_value headlines — "ahead of callers" overclaims when
+        # everyone already shares the board-made hand.
+        if reason == "value":
+            headline = ("Bet — the board is already a made hand; this is thin value / "
+                        "fold equity, not a nut advantage.")
+        elif reason == "raise_value":
+            headline = ("Raise — the board is already a made hand; pressure for fold "
+                        "equity / thin value, not because you nutted it.")
+        elif reason == "trap":
+            headline = ("Check to trap — the board is already a made hand; induce action "
+                        "rather than betting a shared strength.")
     tex = rec.get("board_texture", [])
     tex_words = [ _TEXTURE[t] for t in tex if t in _TEXTURE ]
     if tex_words:

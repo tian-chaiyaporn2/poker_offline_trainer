@@ -170,11 +170,11 @@ def _to_q(d, oop_pos="BB", ip_pos=None):
     board = [d["board"][i:i+2] for i in range(0, len(d["board"]), 2)]
     street = STREET.get(len(d["board"]), "flop")
     node = d["node"]
-    # Act order is a ROLE (OOP acts first, IP acts last), not tied to the position
-    # code — in SB-vs-BB the BB is IP (acts last), the opposite of BTN-vs-BB. (This
-    # stays role-based: the situation copy below clarifies "checked, now facing a bet".)
-    acts_first = node.endswith("_first") or (
-        not node.endswith("_vs_check") and d["acting_player"] == oop_pos)
+    # First-to-act on THIS decision only — facing a check/bet is never "act first",
+    # even when hero is OOP (they already checked and now face a bet). Seat role
+    # (OOP/IP) lives in is_oop; plain "You act first/last" badges use is_oop so
+    # SB-vs-BB still flips correctly (BB is IP there).
+    acts_first = node.endswith("_first")
     freq_raw = {k: float(v) for k, v in json.loads(d["freq"]).items()}
     return {
         "board": board, "hero": [d["hand"][0:2], d["hand"][2:4]], "street": street,
@@ -1100,7 +1100,9 @@ const VOCAB_TOTAL=2+Object.keys(TERMS.poker.reason).length;
 function eff(term){return mode!=="progressive"?mode:(learned.has(term)?"learning":"plain");}
 function T(){return TERMS[eff("streets")];}
 function posLabel(q){const m=eff("positions");
-  if(m==="plain")return q.acts_first?"You act first":"You act last";
+  // Seat role (OOP/IP), not this decision's acts_first — facing a bet you still
+  // "act first" as a role when out of position.
+  if(m==="plain")return q.is_oop?"You act first":"You act last";
   return (TERMS[m].pos[q.acting_player]||q.acting_player);}
 function actLabel(a){const m=eff("positions");
   if(m!=="plain"&&cur&&cur.labels&&cur.labels[a])return cur.labels[a];  // per-pack bet/raise sizing
@@ -1187,12 +1189,16 @@ function bcReframe(q,rd){
 }
 function plainHead(q){
   // A "trap"/"value" framing overclaims on a very coordinated board — the made hand is
-  // really a bluff-catcher there, so betting bloats the pot into likely straights/flushes.
+  // really a bluff-catcher there. Prefer check-language only when check is the play;
+  // if the solver bets, warn about vulnerability without contradicting the recommendation.
   const rd=handRead(q.hero,q.board);
   if(bcReframe(q,rd)){
+    if(q.preferred==="bet"){
+      return "The board is coordinated — a straight or flush is very possible — so your made hand is vulnerable. Betting here is thin: you often get called by the hands that beat you and fold out the ones you beat.";
+    }
     let s="The board is coordinated — a straight or flush is very possible — so your hand is more of a bluff-catcher than a monster. Check to keep the pot small and take a cheap showdown rather than bet into the hands that beat you.";
-    // If it was checked to you, name the trap: a check does NOT rule out the straight here.
-    if(!q.acts_first)s+=" It was checked to you, but on a board this connected a check doesn't rule out a straight — strong hands often check to trap — so betting mostly folds out the hands you beat and gets called by the ones that beat you.";
+    // vs_check only — do not key off !acts_first (that also matches facing-a-bet).
+    if((q.node||"").indexOf("_vs_check")>=0)s+=" It was checked to you, but on a board this connected a check doesn't rule out a straight — strong hands often check to trap — so betting mostly folds out the hands you beat and gets called by the ones that beat you.";
     return s;}
   if(q.street==="river"&&RIVER_PLAIN[q.reason])return RIVER_PLAIN[q.reason];
   return PLAIN_HEAD[q.reason]||TERMS.plain.reason[q.reason]||q.headline;
@@ -1244,7 +1250,8 @@ function situation(q){
   // lead — not their own c-bet. (Same distinction the pack server already makes.)
   const betRole=q.is_oop?" — you checked and now face a bet.":" — they led into you.";
   if(sm==="learning"){
-    const who="you're the "+q.acting_player+" (you act "+(q.acts_first?"first":"last")+")";
+    // Seat role from is_oop (SB-vs-BB flips BB to IP); node suffix carries the line.
+    const who="you're the "+q.acting_player+" (you act "+(q.is_oop?"first":"last")+")";
     const role=first?", first to act.":vscheck?" — it's checked to you.":betRole;
     return pre+who+role;
   }
@@ -1447,13 +1454,18 @@ function decisionFactors(q,rd){
         :"Some cards can still come that shift who's ahead — worth keeping in mind.")
       :(river?"Straights and flushes are live on this board, so big made hands are vulnerable."
         :"Straights and flushes are live, so big made hands and big draws are both in play.")});
+  const node=q.node||"";
+  const facing=node.indexOf("_vs_bet")>=0;
   items.push({label:"Position",meter:null,
     read:q.is_oop?"Out of position":"In position",
-    why:q.is_oop?"You act first — you have to decide before seeing what they do, which is harder."
-      :"You act last — you decide with the most information, which is the easier seat."});
-  const node=q.node||""; let lr,lw;
+    // On vs_bet you already saw their bet — don't claim you decide blind.
+    why:facing?(q.is_oop?"You're out of position — you checked and now have to answer their bet without knowing later streets' action yet."
+        :"You're in position — they led into you, and you still act with the most information.")
+      :(q.is_oop?"You act first — you have to decide before seeing what they do, which is harder."
+        :"You act last — you decide with the most information, which is the easier seat.")});
+  let lr,lw;
   if(node.indexOf("_vs_check")>=0){lr="They checked to you";lw="Their range is capped toward weak — most strong hands would have bet, so a monster is unlikely.";}
-  else if(node.indexOf("_vs_bet")>=0){lr="They bet into you";lw="They're representing strength — but a betting range still holds bluffs and worse hands you beat.";}
+  else if(facing){lr="They bet into you";lw="They're representing strength — but a betting range still holds bluffs and worse hands you beat.";}
   else{lr="You're first to act";lw="No information yet — you set the price and take the lead.";}
   items.push({label:"Their move",meter:null,read:lr,why:lw});
   return items;
@@ -1625,7 +1637,9 @@ function renderFeedback(q,a,gained){
   // takeaway is replaced by a pot-control one.
   const bcRule=bcReframe(q,rd);
   const ruleText=bcRule
-    ? "On a coordinated board, a one-pair-type hand is a bluff-catcher, not a monster — keep the pot small and don't bet into the likely straights and flushes."
+    ? (q.preferred==="bet"
+      ? "On a coordinated board, a one-pair-type hand is vulnerable — bets are thin and often get called by better."
+      : "On a coordinated board, a one-pair-type hand is a bluff-catcher, not a monster — keep the pot small and don't bet into the likely straights and flushes.")
     : ruleFor(q);
   if(ruleText){ruleEl.hidden=false;
     const lab=document.createElement("b");lab.textContent="Rule of thumb";ruleEl.appendChild(lab);
@@ -1866,7 +1880,7 @@ function coachSpot(q){
   L.push("Street: "+(q.street||"flop")+".");
   L.push("Board (shared cards): "+cardsText(q.board)+".");
   L.push("Your hand: "+cardsText(q.hero)+".");
-  L.push("You "+(q.acts_first?"act first":"act last")+" ("+(q.is_oop?"out of position":"in position")+").");
+  L.push("You "+(q.is_oop?"act first":"act last")+" ("+(q.is_oop?"out of position":"in position")+").");
   try{L.push("Situation: "+situation(q)+".");}catch(e){}
   L.push("Your options — solver EV (in pot units, higher is better), how often the solver takes each, and its grade:");
   q.actions.forEach(a=>{const lab=(q.labels&&q.labels[a])||a;

@@ -103,6 +103,8 @@ def test_board_flush_detail_notes_shared_board():
     e = explain(r)
     assert e["reason"] == "value"
     assert any("board alone is a flush" in d for d in e["detail"])
+    assert "ahead of the hands that call" not in e["headline"]
+    assert "thin value" in e["headline"].lower() or "fold equity" in e["headline"].lower()
 
 
 def test_river_realization_headline_has_no_free_card():

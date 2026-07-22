@@ -45,7 +45,7 @@ Explanations remain **labels** (category × action × texture), not a second sol
 
 ---
 
-## Findings (this PR)
+## Findings — Pass 1 (this PR)
 
 ### H1. Board-flush standing claimed nut strength — **FIXED**
 - **Where:** demo `standingText` / `handRead`; pack `explain` detail
@@ -88,24 +88,56 @@ Explanations remain **labels** (category × action × texture), not a second sol
 
 ---
 
+## Pass 2 (2026-07-22)
+
+### H3. `acts_first` regression on OOP vs-bet — **FIXED**
+- **Where:** `demo/build_trainer._to_q`
+- **Bug:** SB-vs-BB wiring reintroduced
+  `acts_first = _first OR (OOP and not vs_check)`, undoing the
+  `solver_to_training` H3 fix. 32 live deck spots (`bb_vs_bet` / `sb_vs_bet`)
+  showed plain “You act first” while facing a bet.
+- **Fix:** `acts_first = node.endswith("_first")` only. Seat role uses `is_oop`
+  for plain badges, learning “you act first/last”, and the AI tutor line so
+  SB-vs-BB still flips BB to IP correctly.
+
+### H4. Board-flush value headline still said “ahead of callers” — **FIXED**
+- **Where:** `explanations.explain`
+- **Bug:** Pass-1 detail note was present, but the poker headline still claimed
+  value-ahead-of-callers on board-made flushes.
+- **Fix:** Soften `value` / `raise_value` / `trap` headlines when the board alone
+  is a made hand (thin value / fold equity / induce — not nuts).
+
+### M4. `bcReframe` “checked to you” keyed off `!acts_first` — **FIXED**
+- Would fire on facing-a-bet after H3. Now requires `_vs_check`. Also: when
+  preferred is bet, reframe warns thinness instead of prescribing check.
+
+### M5. Factor panel claimed “decide before seeing what they do” on vs-bet — **FIXED**
+- Position `why` is node-aware for facing-bet spots.
+
+---
+
 ## Design notes (not bugs)
 
 1. **Board-flush + `value` / `raise_value` reasons** — Heuristic still labels
-   improving flushes as value when the solver bets/raises. That can be thin / for
-   fold equity; the new detail + standing teach the shared-board caveat without
-   forcing every such row to `bluff`.
+   improving flushes as value when the solver bets/raises. Softened headlines +
+   standing/detail teach the shared-board caveat without forcing `bluff`.
 2. **`bcReframe` only covers pair / two pair / trips** — Flush/straight monsters
    on wet boards are handled by the board-alone standing path instead.
 3. **Air `bluff_catch` (“you beat their bluffs”)** — Ace-high can be a fine
    bluff-catcher; headline is intentionally coarse.
 4. **Folding overpairs on four-straight rivers** — Solver can correctly fold AA;
    standing now warns vulnerability without saying “you must call.”
+5. **`acts_first` vs `is_oop`** — Decision-first vs seat-role; do not merge them
+   again when adding scenarios.
 
 ---
 
 ## Tests / rebuild
 
-- `tests/test_explanations.py` — board-flush detail; river realization headline.
+- `tests/test_explanations.py` — board-flush detail + softened headline; river
+  realization headline.
+- `tests/test_solver_to_training.py` — `_to_q` acts_first / is_oop for BTN-vs-BB
+  and SB-vs-BB.
 - `python -m pokertrainer.content_pack --refresh-lessons` on turn/river packs.
 - `PYTHONPATH=src python demo/build_trainer.py` regenerates `index.html` /
   `demo/trainer_demo.html`.
