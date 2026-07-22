@@ -165,14 +165,9 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .g-best{--rc:var(--best)}.g-good{--rc:var(--good)}.g-acceptable{--rc:var(--accept)}.g-costly{--rc:var(--costly)}.g-major_error{--rc:var(--major)}
 .read{margin:0 0 5px;font-size:14.5px;font-weight:600;color:var(--ink)}
 .read b{color:var(--brass)}
-.stand{margin:0 0 10px;font-size:12.5px;color:var(--muted);line-height:1.45}
-.more{appearance:none;background:none;border:none;color:var(--brass);font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;padding:2px 0;margin:2px 0 8px}
-.more:hover{text-decoration:underline}
-.more:focus-visible{outline:2px solid var(--brass);outline-offset:2px;border-radius:3px}
-.morebody{margin:0 0 4px}
-.rule{margin:8px 0 4px;font-size:12.5px;color:var(--ink);line-height:1.5;padding:8px 11px;border-radius:8px;background:color-mix(in srgb,var(--best) 9%,transparent)}
+.rule{margin:11px 0 4px;font-size:12.5px;color:var(--ink);line-height:1.5;padding:9px 12px;border-radius:9px;background:color-mix(in srgb,var(--best) 9%,transparent)}
 .rule b{display:block;color:var(--best);text-transform:uppercase;font-size:10px;letter-spacing:.1em;margin-bottom:2px;font-weight:700}
-.cost{margin:-2px 0 8px;font-size:12.5px;color:var(--ink);background:color-mix(in srgb,var(--brass) 10%,transparent);border-left:3px solid var(--brass);padding:7px 11px;border-radius:0 7px 7px 0;font-variant-numeric:tabular-nums}
+.cost{margin:9px 0 2px;font-size:12.5px;color:var(--muted);line-height:1.45;font-variant-numeric:tabular-nums}
 .row.best-row,.row.you-row{padding:6px 9px;border-radius:9px;margin:6px -9px}
 .row.best-row{background:color-mix(in srgb,var(--rc) 12%,transparent)}
 .row.you-row{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--rc) 55%,var(--line))}
@@ -362,11 +357,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
         <span class="reason" id="reason"></span>
         <p class="head" id="head"></p>
         <div class="factors" id="factors" hidden></div>
-        <button class="more" id="moretoggle" type="button" hidden>Explain more ▸</button>
-        <div class="morebody" id="morebody" hidden>
-          <p class="stand" id="stand"></p>
-          <p class="rule" id="rule"></p>
-        </div>
+        <p class="rule" id="rule" hidden></p>
         <p class="cost" id="cost" hidden></p>
         <ul class="det" id="det"></ul>
       </div>
@@ -447,7 +438,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
     </details>
     <div class="s-sec">About</div>
     <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>b525474</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>328896e</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
     <span class="demo">Turn / river</span> spots are now full-range solver output too, but
@@ -709,9 +700,6 @@ let cat=(function(){try{const c=localStorage.getItem("cat");return ["all","prefl
 // Adaptive mode: each concept shows in plain words until you've EARNED it (played a
 // spot that uses it well); then it graduates to the poker term + its meaning.
 let learned=(function(){try{return new Set(JSON.parse(localStorage.getItem("learned")||"[]"));}catch(e){return new Set();}})();
-// "Explain more" (where-you-stand + rule of thumb) — default closed for a calm view,
-// remembered once a reader opens it so they don't re-tap every hand.
-let moreOpen=(function(){try{return localStorage.getItem("moreOpen")==="1";}catch(e){return false;}})();
 const VOCAB_TOTAL=2+Object.keys(TERMS.poker.reason).length;
 function eff(term){return mode!=="progressive"?mode:(learned.has(term)?"learning":"plain");}
 function T(){return TERMS[eff("streets")];}
@@ -1036,8 +1024,7 @@ function renderPreflopFeedback(q,a){
   document.getElementById("reason").style.display="none";
   document.getElementById("head").textContent=q.why;
   document.getElementById("cost").hidden=true;document.getElementById("det").innerHTML="";
-  document.getElementById("unlock").hidden=true;document.getElementById("moretoggle").hidden=true;
-  document.getElementById("stand").hidden=true;document.getElementById("morebody").hidden=false;
+  document.getElementById("unlock").hidden=true;
   const ruleEl=document.getElementById("rule");ruleEl.hidden=false;ruleEl.innerHTML="";
   const lb=document.createElement("b");lb.textContent="Rule of thumb";ruleEl.appendChild(lb);ruleEl.appendChild(document.createTextNode(q.rule));
   document.querySelector(".mix").style.display="none";
@@ -1295,7 +1282,7 @@ function renderContrast(q){
 function renderFeedback(q,a,gained){
   renderContrast(q);renderFactors(q);
   if(q.preflop)return renderPreflopFeedback(q,a);
-  document.querySelector(".mix").style.display="";document.getElementById("stand").hidden=false;
+  document.querySelector(".mix").style.display="";
   document.querySelectorAll("#acts .act").forEach(b=>{
     b.disabled=true;const ga=q.grades[b.dataset.a];b.className="act g-"+ga;
     if(b.dataset.a===a)b.classList.add("chosen");
@@ -1325,9 +1312,8 @@ function renderFeedback(q,a,gained){
   if(rd.strength)readEl.appendChild(document.createTextNode(" — "+rd.strength));
   if(rd.draw)readEl.appendChild(document.createTextNode(", plus "+rd.draw));
   readEl.appendChild(document.createTextNode("."));
-  // "Where you stand" is populated here but lives inside the collapsible "more" block
-  // (set up further down), so the default view stays calm.
-  document.getElementById("stand").textContent=standingText(rd);
+  // (The "where you stand" read now lives in the always-visible factor panel — no longer
+  //  duplicated in a separate collapsible.)
   // explanation adapts to the level: Beginner = plain 'why' only; Learning = term
   // tag + explaining headline; Pro = term tag + richer baked headline + bullets.
   const rm=eff("reason:"+q.reason);
@@ -1354,17 +1340,12 @@ function renderFeedback(q,a,gained){
       ? "On a coordinated board, a one-pair-type hand is vulnerable — bets are thin and often get called by better."
       : "On a coordinated board, a one-pair-type hand is a bluff-catcher, not a monster — keep the pot small and don't bet into the likely straights and flushes.")
     : ruleFor(q);
-  if(ruleText){ruleEl.hidden=false;
+  // Rule of thumb: a compact always-visible takeaway (the factor panel is the depth now).
+  // Hidden in Pro, which shows the solver detail bullets instead.
+  if(ruleText&&rm!=="poker"){ruleEl.hidden=false;
     const lab=document.createElement("b");lab.textContent="Rule of thumb";ruleEl.appendChild(lab);
     ruleEl.appendChild(document.createTextNode(ruleText));}
   else{ruleEl.hidden=true;}
-  // Depth (where-you-stand + rule) lives behind "Explain more" so the default view is
-  // just verdict -> held -> why -> cost -> payoffs. Hidden entirely in Pro (which
-  // shows the solver detail bullets instead). Remembers the reader's open/closed choice.
-  const depth=(mode!=="poker");
-  const moreT=document.getElementById("moretoggle"),moreB=document.getElementById("morebody");
-  if(depth){moreT.hidden=false;moreB.hidden=!moreOpen;moreT.textContent=moreOpen?"Show less ▾":"Explain more ▸";}
-  else{moreT.hidden=true;moreB.hidden=true;}
   // Concrete cost: when the pick isn't the top play, show how much it gives up so
   // "why is this wrong?" has a number behind it, not just a color.
   const cost=document.getElementById("cost");
@@ -1537,15 +1518,11 @@ document.getElementById("prev").onclick=prev;
 document.getElementById("fwd").onclick=next;
 document.getElementById("hd-back").onclick=closeHandDetail;
 document.getElementById("hd-scrim").onclick=closeHandDetail;
-document.getElementById("moretoggle").onclick=function(){
-  moreOpen=!moreOpen;try{localStorage.setItem("moreOpen",moreOpen?"1":"0");}catch(e){}
-  document.getElementById("morebody").hidden=!moreOpen;
-  this.textContent=moreOpen?"Show less ▾":"Explain more ▸";};
 document.addEventListener("keydown",e=>{
   // hand-strength panel is modal: Left/Escape closes it, everything else is swallowed
   if(document.getElementById("handdetail").classList.contains("on")){
     if(e.key==="ArrowLeft"||e.key==="Escape"){e.preventDefault();closeHandDetail();}return;}
-  if(e.target.tagName==="SUMMARY"||e.target.id==="moretoggle")return;   // let the toggle handle its own Enter/Space
+  if(e.target.tagName==="SUMMARY")return;   // let details summaries handle their own Enter/Space
   if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;         // don't hijack typing in inputs
   if(e.target.closest&&e.target.closest("#coach"))return;              // coach panel owns its own keys (chips/send/input)
   if(e.target.closest&&e.target.closest("#compare"))return;            // let the compare summary / "Play this hand" handle Enter/Space themselves
