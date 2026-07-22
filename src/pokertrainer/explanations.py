@@ -42,6 +42,8 @@ RIVER_HEADLINES = {
     "call_odds":     "Call — you have the pot odds to continue.",
     "raise_semibluff": "Raise as a bluff — represent strength and pressure their bets.",
     "protection":    "Bet for thin value / denial — charge worse hands while the board is final.",
+    "trap":          "Check to trap — you're very strong; induce a bet or bluff on a completed board.",
+    "pot_control":   "Check to keep the pot small — decent showdown value on a completed board.",
 }
 
 # Casual board-texture phrasing (§6.4 style).

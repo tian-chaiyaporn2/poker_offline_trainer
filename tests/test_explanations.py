@@ -114,3 +114,13 @@ def test_river_realization_headline_has_no_free_card():
     assert e["reason"] == "realization"
     assert "free card" not in e["headline"].lower()
     assert "no more cards" in e["headline"].lower() or "no more" in e["headline"].lower()
+
+
+def test_river_trap_headline_has_no_catch_up():
+    r = rec("bb_first", "strong_made", "check", 3.0, 2.0, ("check", "bet"))
+    r["board"] = "As 7h 2d Ks 9c"
+    e = explain(r)
+    assert e["reason"] == "trap"
+    assert "let them catch up" not in e["headline"].lower()
+    assert "catch up or bluff" not in e["headline"].lower()
+    assert "completed board" in e["headline"].lower() or "induce" in e["headline"].lower()

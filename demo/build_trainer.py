@@ -1033,8 +1033,14 @@ function standingText(rd){
       break;
     case "twopair":base="You're ahead of every one-pair hand — mainly three of a kind or better beats you.";break;
     case "trips":base="Very strong — only a straight, flush, or full house could beat you, and only if the shared cards line up for it.";break;
-    case "straight":return "A big hand — only a flush or a full house beats you here.";
-    case "flush":return "A big hand — only a full house or better beats you.";
+    // On very coordinated boards a made straight/flush is often NOT the nuts — higher
+    // straights / higher flush cards still beat you (board-alone cases handled above).
+    case "straight":return (rd.boardStraighty>=2||rd.boardFlushy>=1)
+      ?"A straight — strong, but a better straight or a flush can still beat you."
+      :"A big hand — only a flush or a full house beats you here.";
+    case "flush":return (rd.boardFlushy>=2)
+      ?"A flush — strong, but a higher flush card (or a full house) still beats you."
+      :"A big hand — only a full house or better beats you.";
     case "full":case "quads":case "sflush":return "You've got a monster — just about nothing beats this.";
     default:return rd.draw
       ? "Nothing made yet, but your hand can still improve — for now you're behind any pair."
@@ -1520,6 +1526,16 @@ const AXIS_WHY={
   face:"how many <b>bluffs</b> are in their betting range versus real hands. Call when they'd bet worse (or bluff) often enough that you beat those; fold when their bet is mostly hands that already beat you.",
   raise:"whether raising wins more than flat-calling. Raise to build the pot / deny equity when worse hands pay or draws must fold; just call to keep their bluffs and weaker hands in."
 };
+// River: no "later card" / "free card" / "chance to improve" — board is final.
+const RIVER_AXIS_WHY={
+  strong:"whether a bet gets <b>called by worse hands</b>. Bet to get paid when weaker hands call; check to trap when a bet would fold out everything worse — so you keep their bluffs in.",
+  medium:"how exposed your hand is on a completed board. Bet thin value/denial when worse still calls; check to keep the pot small when betting only folds out worse.",
+  weak:"whether betting can win a pot you'd otherwise lose. Bet as a bluff when you can't win by checking; check when keeping their bluffs in is worth more.",
+  draw:"draws are done — leftover 'draw' labels are bluffs or give-ups on the river.",
+  draw2:"the price versus showdown value. Call when the pot lays you enough to see who wins; fold when it's too expensive.",
+  face:"how many <b>bluffs</b> are in their betting range versus real hands. Call when you'd beat their bluffs often enough; fold when their bet is mostly hands that already beat you.",
+  raise:"whether raising wins more than flat-calling. Raise to build the pot / get folds; just call to keep their bluffs and weaker hands in."
+};
 function cap1(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
 function findContrast(q){
   if(q.preflop||!CONTRAST[q.reason])return null;
@@ -1543,7 +1559,9 @@ function findContrast(q){
   return best;
 }
 function contrastWhy(q,rd,o,ord){
-  let s=AXIS_WHY[CONTRAST[q.reason].axis]||AXIS_WHY.strong;
+  const axis=CONTRAST[q.reason].axis;
+  const table=(q.street==="river"||o.street==="river")?RIVER_AXIS_WHY:AXIS_WHY;
+  let s=table[axis]||AXIS_WHY.strong;
   const d=[];
   if(q.is_oop!==o.is_oop)d.push("here you "+(q.is_oop?"act first (out of position)":"act last (in position)")+", there you "+(o.is_oop?"act first":"act last"));
   const wa=rd.boardStraighty>=2||rd.boardFlushy>=2, wb=ord.boardStraighty>=2||ord.boardFlushy>=2;

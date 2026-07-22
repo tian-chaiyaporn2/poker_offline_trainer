@@ -116,6 +116,29 @@ Explanations remain **labels** (category × action × texture), not a second sol
 
 ---
 
+## Pass 3 (2026-07-22)
+
+### H5. River `trap` pack headline still said “catch up” — **FIXED**
+- **Where:** `explanations.RIVER_HEADLINES`
+- **Bug:** JS `RIVER_PLAIN` / `RIVER_RULES` covered trap, but poker-mode
+  headlines come from the pack. `RIVER_HEADLINES` had no `trap` entry → 29–30
+  river trap rows kept the flop line “let them catch up or bluff.”
+- **Fix:** River trap (+ pot_control) headlines; refresh turn/river packs.
+
+### M6. Contrast “what flips it” still said “free card” / “later card” on river — **FIXED**
+- **Where:** demo `AXIS_WHY` / `contrastWhy`
+- **Bug:** River bluff / protection / pot_control twins reused flop axis copy.
+- **Fix:** `RIVER_AXIS_WHY`; `contrastWhy` picks it when either spot is river.
+
+### M7. Straight/flush standing claimed nuts on wet boards — **FIXED**
+- **Where:** demo `standingText`
+- **Bug:** Any straight/flush got “only a flush/FH beats you,” even on
+  four-straight / four-flush boards where a better straight or higher flush
+  card beats you (board-alone cases were already special-cased).
+- **Fix:** Coordinated-board variants that name the higher-hand risk.
+
+---
+
 ## Design notes (not bugs)
 
 1. **Board-flush + `value` / `raise_value` reasons** — Heuristic still labels
@@ -129,13 +152,15 @@ Explanations remain **labels** (category × action × texture), not a second sol
    standing now warns vulnerability without saying “you must call.”
 5. **`acts_first` vs `is_oop`** — Decision-first vs seat-role; do not merge them
    again when adding scenarios.
+6. **Glossary trap definition** still mentions “catch up” as a general concept —
+   OK; river lesson copy is separate.
 
 ---
 
 ## Tests / rebuild
 
 - `tests/test_explanations.py` — board-flush detail + softened headline; river
-  realization headline.
+  realization / trap headlines (no free card / catch up).
 - `tests/test_solver_to_training.py` — `_to_q` acts_first / is_oop for BTN-vs-BB
   and SB-vs-BB.
 - `python -m pokertrainer.content_pack --refresh-lessons` on turn/river packs.
