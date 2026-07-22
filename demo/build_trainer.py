@@ -150,7 +150,15 @@ def _oop_pos(rows):
     return "BB"
 
 
-def _to_q(d, oop_pos="BB"):
+def _ip_pos(rows, oop):
+    """IP position = the other of the two seats present in the rows."""
+    for d in rows:
+        if d["acting_player"] != oop:
+            return d["acting_player"]
+    return "BTN" if oop != "BTN" else "BB"
+
+
+def _to_q(d, oop_pos="BB", ip_pos=None):
     from pokertrainer.explanations import freq_pct_ints
     acts = json.loads(d["actions"])
     board = [d["board"][i:i+2] for i in range(0, len(d["board"]), 2)]
@@ -166,6 +174,10 @@ def _to_q(d, oop_pos="BB"):
         "board": board, "hero": [d["hand"][0:2], d["hand"][2:4]], "street": street,
         "node": node, "acting_player": d["acting_player"], "acts_first": acts_first,
         "is_oop": d["acting_player"] == oop_pos,
+        # the opponent's actual seat, so the table graphic labels it correctly for
+        # every matchup (not just BTN/SB-vs-BB): villain = the seat that isn't the hero.
+        "villain": (ip_pos or ("BTN" if oop_pos != "BTN" else "BB"))
+        if d["acting_player"] == oop_pos else oop_pos,
         "actions": acts, "labels": {a: ALAB.get(a, a) for a in acts},
         "ev": {k: round(v, 2) for k, v in json.loads(d["ev"]).items()},
         # Largest-remainder ints so the Pro frequency mix always sums to 100.
@@ -194,8 +206,8 @@ def load_questions():
     from itertools import zip_longest
     groups = [g[:PER_REASON] for g in buckets.values()]
     picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:MAX_Q]
-    oop = _oop_pos(picked)
-    return meta, [_to_q(d, oop) for d in picked]
+    oop = _oop_pos(picked); ip = _ip_pos(picked, oop)
+    return meta, [_to_q(d, oop, ip) for d in picked]
 
 
 def load_raise(n=RAISE_Q, required=True):
@@ -220,9 +232,9 @@ def load_raise(n=RAISE_Q, required=True):
     from itertools import zip_longest
     groups = [g[:3] for g in by_reason.values()]
     picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
-    oop = _oop_pos(picked)
+    oop = _oop_pos(picked); ip = _ip_pos(picked, oop)
     out = []
-    for q in (_to_q(d, oop) for d in picked):
+    for q in (_to_q(d, oop, ip) for d in picked):
         q["labels"] = {**q["labels"], "raise": raise_lab}
         q["badge"] = "raise demo"     # flag so the UI can note the reduced-range source
         out.append(q)
@@ -258,9 +270,9 @@ def load_turnriver(n=TR_Q, required=True):
     nb = [g[:2] for k, g in items if "vs_bet" not in k[1]]
     groups = [g for pair in zip_longest(vb, nb) for g in pair if g is not None]
     picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
-    oop = _oop_pos(picked)
+    oop = _oop_pos(picked); ip = _ip_pos(picked, oop)
     out = []
-    for q in (_to_q(d, oop) for d in picked):
+    for q in (_to_q(d, oop, ip) for d in picked):
         q["badge"] = q["street"]
         out.append(q)
     streets = {q["street"] for q in out}
@@ -282,7 +294,7 @@ def load_sb(n=SB_Q, required=False):
     rows = c.execute(f"SELECT {','.join(COLS)} FROM flop_decision").fetchall()
     c.close()
     dicts = [dict(zip(COLS, r)) for r in rows]
-    oop = _oop_pos(dicts)
+    oop = _oop_pos(dicts); ip = _ip_pos(dicts, oop)
     buckets = defaultdict(list)
     for d in dicts:
         buckets[(d["node"], d["reason"])].append(d)
@@ -290,7 +302,7 @@ def load_sb(n=SB_Q, required=False):
     groups = [g[:2] for g in buckets.values()]
     picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
     out = []
-    for q in (_to_q(d, oop) for d in picked):
+    for q in (_to_q(d, oop, ip) for d in picked):
         q["badge"] = "SB vs BB"
         out.append(q)
     return out
@@ -567,36 +579,39 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .view .intro,.view .glossary{margin-top:8px}
 /* ===== position / situation graphic ===== */
 .seats{padding:12px 15px 4px}
-/* top-down felt table: two seats, dealer button, pot in the middle */
-.tv{position:relative;height:244px;max-width:308px;margin:0 auto;
-  background:
-    radial-gradient(120% 130% at 50% 46%, color-mix(in srgb,var(--best) 15%,var(--panel2)) 0%, color-mix(in srgb,var(--best) 4%,var(--panel)) 62%, var(--panel) 100%);
-  border:1px solid color-mix(in srgb,var(--best) 22%,var(--line));border-radius:120px/70px;
+/* 6-max ring seen from above: all seats, folded ones dimmed, button on its seat */
+.tv{position:relative;height:230px;max-width:320px;margin:0 auto;
+  background:radial-gradient(120% 130% at 50% 46%, color-mix(in srgb,var(--best) 15%,var(--panel2)) 0%, color-mix(in srgb,var(--best) 4%,var(--panel)) 60%, var(--panel) 100%);
+  border:1px solid color-mix(in srgb,var(--best) 22%,var(--line));border-radius:132px/78px;
   box-shadow:inset 0 2px 16px rgba(0,0,0,.35), inset 0 0 0 6px color-mix(in srgb,var(--best) 6%,transparent)}
-.tvseat{position:absolute;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:5px;width:180px}
-.tvseat.top{top:16px}
-.tvseat.bot{bottom:14px;flex-direction:column-reverse}
-.av{width:34px;height:34px;border-radius:50%;position:relative;
+.tvs{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;width:72px;text-align:center;line-height:1.15}
+.tvs.ab{flex-direction:column-reverse}
+.av{width:26px;height:26px;border-radius:50%;position:relative;
   background:radial-gradient(70% 70% at 50% 35%, var(--panel2), var(--panel));border:1.5px solid var(--line)}
-.av.me{border-color:var(--best);box-shadow:0 0 0 4px color-mix(in srgb,var(--best) 20%,transparent)}
-.av::after{content:"";position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);width:15px;height:15px;border-radius:50%;
-  background:color-mix(in srgb,var(--muted) 55%,transparent)}
-.av.me::after{background:color-mix(in srgb,var(--best) 75%,transparent)}
+.av::after{content:"";position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);width:11px;height:11px;border-radius:50%;
+  background:color-mix(in srgb,var(--muted) 50%,transparent)}
+.tvs.fold{opacity:.4}
+.tvs.fold .av{width:20px;height:20px}
+.tvs.opp .av{border-color:var(--brass);box-shadow:0 0 0 3px color-mix(in srgb,var(--brass) 20%,transparent)}
+.tvs.opp .av::after{background:color-mix(in srgb,var(--brass) 75%,transparent)}
+.tvs.you .av{width:32px;height:32px;border-color:var(--best);box-shadow:0 0 0 4px color-mix(in srgb,var(--best) 20%,transparent)}
+.tvs.you .av::after{width:14px;height:14px;background:color-mix(in srgb,var(--best) 78%,transparent)}
 .dbtn{position:absolute;right:-6px;bottom:-4px;width:16px;height:16px;border-radius:50%;
   background:#f5f0e7;color:#15171e;font-family:var(--mono);font-weight:700;font-size:9px;
-  display:grid;place-items:center;border:1px solid rgba(0,0,0,.4);box-shadow:0 1px 3px rgba(0,0,0,.4)}
-.tvlab{text-align:center;line-height:1.25}
-.tvlab b{font-size:13px;font-weight:700;display:block;color:var(--muted)}
-.tvseat.bot .tvlab b{color:var(--ink)}
-.tvlab span{font-size:11px;color:var(--muted)}
-.tvmid{position:absolute;top:48%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:7px}
+  display:grid;place-items:center;border:1px solid rgba(0,0,0,.4);box-shadow:0 1px 3px rgba(0,0,0,.4);z-index:3}
+.nm{font-size:11px;font-weight:700;color:var(--ink)}
+.tvs.fold .nm{font-size:9.5px;color:var(--muted);font-family:var(--label);letter-spacing:.04em}
+.tvs.you .nm{color:var(--best)}
+.tvs.opp .nm{color:var(--brass)}
+.ps{font-size:9.5px;color:var(--muted)}
+.turn{font-family:var(--label);font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--best)}
+.tvmid{position:absolute;top:46%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:6px}
 .potlab{font-family:var(--label);font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
   border:1px dashed color-mix(in srgb,var(--muted) 40%,transparent);border-radius:999px;padding:3px 13px}
 .oppchip{font-family:var(--label);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;
   padding:4px 11px;border-radius:999px;border:1px solid transparent}
 .oppchip.a-check{background:color-mix(in srgb,var(--accept) 16%,transparent);color:var(--accept);border-color:color-mix(in srgb,var(--accept) 40%,var(--line))}
 .oppchip.a-bet{background:color-mix(in srgb,var(--costly) 16%,transparent);color:var(--costly);border-color:color-mix(in srgb,var(--costly) 40%,var(--line))}
-.yourturn{font-family:var(--label);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--best)}
 .pfstrip{padding:2px 0}
 .pfrow{display:flex;gap:5px;justify-content:center;flex-wrap:wrap}
 .pf-seat{font-family:var(--label);font-size:10px;font-weight:700;letter-spacing:.03em;padding:5px 8px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
@@ -1128,29 +1143,36 @@ const SEATS6=["UTG","HJ","CO","BTN","SB","BB"];
 function renderSeats(q){
   const el=document.getElementById("seats");if(!el)return;
   el.innerHTML="";el.hidden=false;
-  el.appendChild(q.preflop?preflopStrip(q):headsupTable(q));
+  el.appendChild(q.preflop?preflopStrip(q):ringTable(q));
 }
 const POS_PLAIN={BTN:"on the button",BB:"in the big blind",SB:"in the small blind",CO:"in the cutoff",HJ:"in the hijack",UTG:"first to act"};
-function headsupTable(q){
-  const sbbb=String(q.badge||"").indexOf("SB vs BB")>=0;
+// full 6-max ring so position is spatial: clockwise seating + fixed screen slots.
+const RING_ORDER=["BTN","SB","BB","UTG","HJ","CO"];
+const RING_SLOTS=[[50,88,1],[15,70,1],[15,30,0],[50,12,0],[85,30,0],[85,70,1]]; // x%,y%,labelAbove
+const RING_SHORT={BTN:"the button",BB:"big blind",SB:"small blind",CO:"cutoff",HJ:"hijack",UTG:"under the gun"};
+function ringTable(q){
   const hero=q.acting_player||"BB";
-  const villain=sbbb?(hero==="SB"?"BB":"SB"):(hero==="BTN"?"BB":"BTN");
-  const heroLast=!q.is_oop;                        // in position = acts last
+  const villain=q.villain||(hero==="BTN"?"BB":"BTN");
   const node=q.node||"";
   let oppAct="",ok="wait";
   if(node.endsWith("_vs_check")){oppAct="checked";ok="check";}
   else if(node.endsWith("_vs_bet")){oppAct="bet";ok="bet";}
-  // the dealer button belongs to whoever is literally the BTN (folded away in blind-vs-blind)
+  const start=Math.max(0,RING_ORDER.indexOf(hero));
+  const seats=[];for(var i=0;i<6;i++)seats.push(RING_ORDER[(start+i)%6]);
   const D='<span class="dbtn" title="dealer button">D</span>';
-  const w=document.createElement("div");w.className="tv";
-  w.innerHTML=
-    '<div class="tvseat top"><div class="av opp">'+(villain==="BTN"?D:'')+'</div>'
-    +'<div class="tvlab"><b>Opponent</b><span>'+(POS_PLAIN[villain]||villain)+' &middot; '+(heroLast?"acts first":"acts last")+'</span></div></div>'
-    +'<div class="tvmid">'+(ok!=="wait"?'<span class="oppchip a-'+ok+'">'+oppAct+'</span>':'')+'<span class="potlab">pot</span></div>'
-    +'<div class="tvseat bot me"><div class="av me">'+(hero==="BTN"?D:'')+'</div>'
-    +'<div class="tvlab"><b>You</b><span>'+(POS_PLAIN[hero]||hero)+' &middot; '+(heroLast?"you act last":"you act first")+'</span></div>'
-    +'<div class="yourturn">&#9679; your move</div></div>';
-  return w;
+  let html="";
+  seats.forEach(function(pos,i){
+    const x=RING_SLOTS[i][0],y=RING_SLOTS[i][1],above=RING_SLOTS[i][2];
+    const role=pos===hero?"you":pos===villain?"opp":"fold";
+    const btn=(pos==="BTN")?D:"";
+    let inner='<div class="av">'+btn+'</div>';
+    if(role==="you")inner+='<div class="nm">You</div><div class="ps">'+(RING_SHORT[pos]||pos)+'</div><div class="turn">&#9679; your move</div>';
+    else if(role==="opp")inner+='<div class="nm">Opponent</div><div class="ps">'+(RING_SHORT[pos]||pos)+'</div>';
+    else inner+='<div class="nm">'+pos+'</div>';
+    html+='<div class="tvs '+role+(above?" ab":"")+'" style="left:'+x+'%;top:'+y+'%">'+inner+'</div>';
+  });
+  html+='<div class="tvmid">'+(ok!=="wait"?'<span class="oppchip a-'+ok+'">'+oppAct+'</span>':'')+'<span class="potlab">pot</span></div>';
+  const w=document.createElement("div");w.className="tv";w.innerHTML=html;return w;
 }
 function preflopStrip(q){
   const opener=q.opener||null,tb=q.tbettor||null;
