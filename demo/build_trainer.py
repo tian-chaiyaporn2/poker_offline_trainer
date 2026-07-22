@@ -78,11 +78,15 @@ DB = "output/packs/flop_pack_v1_fullrange.db"
 RAISE_DB = "output/packs/flop_pack_v1_raise_demo.db"   # reduced-range, but HAS fold/call/raise
 TR_DB = "output/packs/flop_pack_turnriver_fullrange.db"  # turn/river decisions (full range; still unconditioned)
 SB_DB = "output/packs/flop_pack_sb_vs_bb.db"           # 2nd scenario: SB vs BB (full range)
+BTNSB_DB = "output/packs/flop_pack_btn_vs_sb.db"       # BTN vs SB single-raised pot
+CO_DB = "output/packs/flop_pack_co_vs_bb.db"           # CO vs BB single-raised pot (pending)
 PER_REASON = 6          # cap questions per reason for variety
 MAX_Q = 60
 RAISE_Q = 12            # extra 3-action spots blended in to show the raise UX
 TR_Q = 16               # turn/river spots blended in
 SB_Q = 20               # SB-vs-BB spots blended in (2nd position)
+BTNSB_Q = 16            # BTN-vs-SB spots blended in
+CO_Q = 16               # CO-vs-BB spots blended in
 
 STREET = {6: "flop", 8: "turn", 10: "river"}       # by board-string length
 
@@ -281,16 +285,15 @@ def load_turnriver(n=TR_Q, required=True):
     return out
 
 
-def load_sb(n=SB_Q, required=False):
-    """SB-vs-BB spots (2nd position, full range). Here the SB is out of position
-    (acts first) and the BB is in position (acts last) — inverse of BTN-vs-BB."""
-    if not os.path.exists(SB_DB):
-        if required:
-            raise SystemExit(f"SB pack missing ({SB_DB})")
-        print(f"  note: SB pack not present ({SB_DB}) — skipping SB spots")
+def load_scenario(db, badge, n):
+    """Blend in a secondary single-raised-pot scenario (SB-vs-BB, BTN-vs-SB, CO-vs-BB, ...),
+    balanced across (node, reason). Positions (OOP/IP + villain seat) are read from the pack
+    itself, so the table graphic is correct for any matchup. Missing pack => skipped."""
+    if not os.path.exists(db):
+        print(f"  note: pack not present ({db}) — skipping {badge} spots")
         return []
-    _require_verified(SB_DB)
-    c = sqlite3.connect(SB_DB)
+    _require_verified(db)
+    c = sqlite3.connect(db)
     rows = c.execute(f"SELECT {','.join(COLS)} FROM flop_decision").fetchall()
     c.close()
     dicts = [dict(zip(COLS, r)) for r in rows]
@@ -303,9 +306,13 @@ def load_sb(n=SB_Q, required=False):
     picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
     out = []
     for q in (_to_q(d, oop, ip) for d in picked):
-        q["badge"] = "SB vs BB"
+        q["badge"] = badge
         out.append(q)
     return out
+
+
+def load_sb(n=SB_Q, required=False):
+    return load_scenario(SB_DB, "SB vs BB", n)
 
 
 PF_Q = 16   # pre-flop spots blended in ("Chapter 0")
@@ -334,7 +341,8 @@ def load_contrast_pool(per_bucket=2):
     wet board). These never enter the quiz rotation — they only serve as contrasts."""
     from pokertrainer.cards import parse_cards, card_rank
     from pokertrainer.evaluator import evaluate, category_name
-    specs = [(DB, None), (SB_DB, "SB vs BB"), (TR_DB, "street")]
+    specs = [(DB, None), (SB_DB, "SB vs BB"), (BTNSB_DB, "BTN vs SB"),
+             (CO_DB, "CO vs BB"), (TR_DB, "street")]
     buckets, seen, out = defaultdict(int), set(), []
     for db, badge in specs:
         if not os.path.exists(db):
@@ -381,13 +389,16 @@ def build(allow_missing_demo_packs=False):
     meta, qs = load_questions()
     tr_qs = load_turnriver(required=not allow_missing_demo_packs)
     sb_qs = load_sb()
+    btnsb_qs = load_scenario(BTNSB_DB, "BTN vs SB", BTNSB_Q)
+    co_qs = load_scenario(CO_DB, "CO vs BB", CO_Q)
     pf_qs = load_preflop()
-    qs = qs + tr_qs + sb_qs + pf_qs
+    qs = qs + tr_qs + sb_qs + btnsb_qs + co_qs + pf_qs
     cpool = load_contrast_pool()
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
                             capture_output=True, text=True).stdout.strip() or "local"
-    print(f"  ({len(tr_qs)} turn/river + {len(sb_qs)} SB-vs-BB + {len(pf_qs)} pre-flop "
-          f"spots blended in; {len(cpool)} contrast-pool spots; full-range raise now in the main pack)")
+    print(f"  ({len(tr_qs)} turn/river + {len(sb_qs)} SB-vs-BB + {len(btnsb_qs)} BTN-vs-SB + "
+          f"{len(co_qs)} CO-vs-BB + {len(pf_qs)} pre-flop spots blended in; "
+          f"{len(cpool)} contrast-pool spots; full-range raise in the main pack)")
     # Escape </script> so pack strings cannot break out of the inline script.
     data = json.dumps(qs, separators=(",", ":")).replace("<", "\\u003c")
     cdata = json.dumps(cpool, separators=(",", ":")).replace("<", "\\u003c")
