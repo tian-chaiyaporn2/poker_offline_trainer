@@ -1376,7 +1376,9 @@ function renderContrast(q){
   const why=document.createElement("div");why.className="cmp-why";
   why.innerHTML="<b>What flips it:</b> "+contrastWhy(q,rd,c.q,c.rd);
   const go=document.createElement("button");go.type="button";go.className="cmp-go";go.textContent="Play this hand →";
-  go.onclick=function(){hist.push({qi:c.qi,pick:null});hidx=hist.length-1;renderHand();};
+  // insert right AFTER the current hand (not at the end) so Back returns to this one even
+  // when the contrast is opened while reviewing an earlier hand.
+  go.onclick=function(){hist.splice(hidx+1,0,{qi:c.qi,pick:null});hidx++;renderHand();};
   body.appendChild(l1);body.appendChild(l2);body.appendChild(why);body.appendChild(go);
 }
 function renderFeedback(q,a,gained){
@@ -1624,6 +1626,7 @@ document.addEventListener("keydown",e=>{
   if(e.target.tagName==="SUMMARY"||e.target.id==="moretoggle")return;   // let the toggle handle its own Enter/Space
   if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;         // don't hijack typing in inputs
   if(e.target.closest&&e.target.closest("#coach"))return;              // coach panel owns its own keys (chips/send/input)
+  if(e.target.closest&&e.target.closest("#compare"))return;            // let the compare summary / "Play this hand" handle Enter/Space themselves
   const tv=document.getElementById("v-train");if(tv&&!tv.classList.contains("on"))return;  // only the Train view takes hotkeys
   if(e.key==="ArrowLeft"){e.preventDefault();prev();return;}   // step back to review
   if(!answered){const i=parseInt(e.key);if(cur&&i>=1&&i<=cur.actions.length)answer(cur.actions[i-1]);}
