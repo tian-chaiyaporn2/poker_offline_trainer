@@ -428,6 +428,20 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
   box-shadow:0 -16px 44px -10px rgba(0,0,0,.75);max-height:86vh;overflow-y:auto;overscroll-behavior:contain;
   animation:sheetup .3s cubic-bezier(.2,.85,.25,1);padding-bottom:10px}
 .fb .grab{width:38px;height:4px;border-radius:3px;background:var(--line);margin:9px auto 2px}
+/* decision breakdown: the factors behind the play, each with a plain why */
+.factors{margin:11px 0 4px;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--panel2) 45%,transparent);padding:2px 14px}
+.fac{padding:10px 0;border-top:1px solid var(--line)}
+.fac:first-child{border-top:none}
+.fac-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.fac-top>span:first-child{min-width:0}
+.fac-l{font-family:var(--label);font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.fac-read{font-weight:700;font-size:14px}
+.meter{display:inline-flex;gap:3px;flex:none}
+.meter i{width:7px;height:7px;border-radius:50%;background:var(--line)}
+.meter i.on{background:var(--best)}
+.meter i.on.mid{background:var(--accept)}
+.meter i.on.low{background:var(--costly)}
+.fac-why{font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:3px}
 /* "similar hand, opposite rule" — teach the deciding factor by contrast */
 .compare{margin:8px 18px 2px;border:1px solid color-mix(in srgb,var(--brass) 30%,var(--line));border-radius:12px;background:color-mix(in srgb,var(--brass) 6%,transparent);overflow:hidden}
 .compare>summary{cursor:pointer;padding:11px 14px;font-family:var(--label);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--brass);list-style:none;display:flex;align-items:center;gap:7px}
@@ -677,6 +691,7 @@ __SUITDEFS__
         <p class="read" id="read"></p>
         <span class="reason" id="reason"></span>
         <p class="head" id="head"></p>
+        <div class="factors" id="factors" hidden></div>
         <button class="more" id="moretoggle" type="button" hidden>Explain more ▸</button>
         <div class="morebody" id="morebody" hidden>
           <p class="stand" id="stand"></p>
@@ -1294,6 +1309,53 @@ function renderPreflopFeedback(q,a){
   document.querySelector(".mix").style.display="none";
   document.getElementById("fb").className="fb on";sheetOpen(true);
 }
+// ===== Decision breakdown: the handful of factors behind the play, each with a plain why.
+// Only HAND STRENGTH gets a 1-5 meter (it is genuinely an ordinal scale); position / board /
+// their line are categorical, so they get a clear read + why instead of a fake number. The
+// verdict line above the panel is the synthesis — these are the pieces that add up to it. =====
+function handTier(rd){
+  const c=rd.cat;
+  if(["straight","flush","full","quads","sflush","trips","twopair"].indexOf(c)>=0)return 5;
+  if(c==="pair")return (rd.pairKind==="over"||rd.pairKind==="top")?4:(rd.pairKind==="mid"?3:2);
+  return rd.draw?2:1;   // air (with/without a draw)
+}
+function decisionFactors(q,rd){
+  const items=[];
+  // relative-strength read (what you beat / what beats you) — the real "how strong is this".
+  items.push({label:"Your hand",meter:handTier(rd),read:cap1(rd.made),why:standingText(rd)});
+  const bd=rd.boardStraighty>=2||rd.boardFlushy>=2?2:(rd.boardStraighty>=1||rd.boardFlushy>=1?1:0);
+  items.push({label:"Board",meter:null,
+    read:bd===0?"Dry & safe":bd===1?"A few draws out there":"Wet — straights/flushes live",
+    why:bd===0?"No straights or flushes are possible, so the board is unlikely to change who's ahead."
+      :bd===1?"Some cards can still come that shift who's ahead — worth keeping in mind."
+      :"Straights and flushes are live, so big made hands and big draws are both in play."});
+  items.push({label:"Position",meter:null,
+    read:q.is_oop?"Out of position":"In position",
+    why:q.is_oop?"You act first — you have to decide before seeing what they do, which is harder."
+      :"You act last — you decide with the most information, which is the easier seat."});
+  const node=q.node||""; let lr,lw;
+  if(node.indexOf("_vs_check")>=0){lr="They checked to you";lw="Their range is capped toward weak — most strong hands would have bet, so a monster is unlikely.";}
+  else if(node.indexOf("_vs_bet")>=0){lr="They bet into you";lw="They're representing strength — but a betting range still holds bluffs and worse hands you beat.";}
+  else{lr="You're first to act";lw="No information yet — you set the price and take the lead.";}
+  items.push({label:"Their move",meter:null,read:lr,why:lw});
+  return items;
+}
+function renderFactors(q){
+  const el=document.getElementById("factors");if(!el)return;
+  if(q.preflop||eff("reason:"+q.reason)==="poker"){el.hidden=true;el.innerHTML="";return;}
+  el.hidden=false;el.innerHTML="";
+  decisionFactors(q,handRead(q.hero,q.board)).forEach(function(f){
+    const row=document.createElement("div");row.className="fac";
+    const top=document.createElement("div");top.className="fac-top";
+    top.innerHTML='<span><span class="fac-l">'+f.label+'</span> &middot; <b class="fac-read">'+f.read+'</b></span>';
+    if(f.meter!=null){const m=document.createElement("span");m.className="meter";
+      const cls=f.meter>=4?"":f.meter===3?" mid":" low";
+      for(let i=1;i<=5;i++){const d=document.createElement("i");if(i<=f.meter)d.className="on"+cls;m.appendChild(d);}
+      top.appendChild(m);}
+    const why=document.createElement("div");why.className="fac-why";why.textContent=f.why;
+    row.appendChild(top);row.appendChild(why);el.appendChild(row);
+  });
+}
 // ===== "A similar hand plays the opposite way" — the same hand strength can call for
 // opposite plays (bet-for-value vs check-to-trap, bluff vs give-up, call vs fold, ...). Each
 // reason IS the rule of thumb, so a confusing twin = same hand tier + the paired opposite
@@ -1382,7 +1444,7 @@ function renderContrast(q){
   body.appendChild(l1);body.appendChild(l2);body.appendChild(why);body.appendChild(go);
 }
 function renderFeedback(q,a,gained){
-  renderContrast(q);
+  renderContrast(q);renderFactors(q);
   if(q.preflop)return renderPreflopFeedback(q,a);
   document.querySelector(".mix").style.display="";document.getElementById("stand").hidden=false;
   document.querySelectorAll("#acts .act").forEach(b=>{
