@@ -1127,7 +1127,9 @@ const RIVER_PLAIN={
   semi_bluff:"You can't improve anymore — but you can still bet to make better hands fold.",
   call_odds:"It's the last card — a cheap call to see who wins.",
   raise_semibluff:"Nothing left to draw to — this raise is a bluff to pressure them into folding.",
-  protection:"The board is complete — bet to get paid by worse hands; nothing can catch up now."
+  protection:"The board is complete — bet to get paid by worse hands; nothing can catch up now.",
+  // no more cards on the river, so "let them catch up" doesn't apply — checking induces a bet/bluff.
+  trap:"You're very strong — checking hides it so they bet into you (or bluff) instead of folding to a bet; then you take their chips."
 };
 // A "mixed" (near-tie) spot only says "any play is fine" by default — but when one of the
 // tied plays is an aggressive line with a weak hand, that reads as a contradiction ("why is
@@ -1442,7 +1444,7 @@ const CONTRAST={
   protection:{vs:["pot_control","trap"],axis:"medium"},
   pot_control:{vs:["protection","value"],axis:"medium"},
   bluff:{vs:["realization"],axis:"weak"},
-  semi_bluff:{vs:["realization","call_odds"],axis:"draw"},
+  semi_bluff:{vs:["realization"],axis:"draw"},
   realization:{vs:["bluff","semi_bluff"],axis:"weak"},
   bluff_catch:{vs:["fold"],axis:"face"},
   value_call:{vs:["fold"],axis:"face"},
@@ -1461,7 +1463,7 @@ const AXIS_WHY={
   strong:"whether a bet gets <b>called by worse hands</b>. Bet to build the pot when weaker hands will pay you off; check to trap when a bet would fold out everything worse — so you keep their bluffs and weak hands in.",
   medium:"how exposed your hand is and how many worse hands call. Bet to charge draws and get value when a later card could beat you; check to keep the pot small when the board is safe and betting only folds out worse.",
   weak:"whether betting can win a pot you'd otherwise lose. Bet as a bluff when you can't win by checking but can make better hands fold; check (give up) when a free card or keeping their bluffs in is worth more.",
-  draw:"whether pressing now beats waiting. Bet/raise the draw as a semi-bluff to fold them out or build a pot you'll often win; just call to keep it cheap and see the next card.",
+  draw:"whether the draw is worth betting now. Bet it as a semi-bluff to fold out better hands and build a pot you'll often win; check to take a free card and keep the pot small.",
   draw2:"the price versus your chance to improve. Call when the pot lays you enough to chase; fold when it's too expensive for how often you get there.",
   face:"how many <b>bluffs</b> are in their betting range versus real hands. Call when they'd bet worse (or bluff) often enough that you beat those; fold when their bet is mostly hands that already beat you.",
   raise:"whether raising wins more than flat-calling. Raise to build the pot / deny equity when worse hands pay or draws must fold; just call to keep their bluffs and weaker hands in."
@@ -1474,12 +1476,16 @@ function findContrast(q){
   // IS the reason it plays differently (two pair calls / one pair folds is trivial, not a
   // "same hand, opposite play"). Require the SAME made-hand category; if there's no twin of
   // the same category with the opposite play, hide the block rather than show a mismatch.
+  const fam=function(x){var a=x.actions||[];return (a.indexOf("bet")>=0&&a.indexOf("check")>=0)?"line":(a.indexOf("fold")>=0&&a.indexOf("call")>=0)?"facing":"?";};
+  const myFam=fam(q);
   let best=null,bs=-1;
   for(let i=0;i<ALLSPOTS.length;i++){const o=ALLSPOTS[i];   // deck + contrast-only pool
     if(o===q||o.preflop||vs.indexOf(o.reason)<0)continue;
     const ord=handRead(o.hero,o.board);
     if(ord.cat!==rd.cat)continue;                                    // same made-hand category only
-    const sc=(o.street===q.street?2:0)+(o.is_oop!==q.is_oop?1:0);    // same street + a position flip
+    // strongly prefer the SAME situation (both check/bet, or both facing-a-bet), then same
+    // street, then a position flip — so the twin differs in the deciding factor, not the setup.
+    const sc=(fam(o)===myFam?4:0)+(o.street===q.street?2:0)+(o.is_oop!==q.is_oop?1:0);
     if(sc>bs){bs=sc;best={q:o,rd:ord};}
   }
   return best;
