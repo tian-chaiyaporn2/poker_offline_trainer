@@ -111,12 +111,39 @@ def test_refresh_backfills_pot_and_roles(tmp_path):
 
 
 def test_acts_first_only_for_first_nodes():
-    def acts_first(node):
-        return node.endswith("_first")
-    assert acts_first("bb_first") is True
-    assert acts_first("bb_vs_bet") is False
-    assert acts_first("btn_vs_check") is False
-    assert acts_first("sb_first") is True
+    """OOP facing a bet must not be labeled acts_first (regression from SB-vs-BB wiring)."""
+    import importlib.util
+    import sys
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    sys.path.insert(0, str(root / "src"))
+    path = root / "demo" / "build_trainer.py"
+    spec = importlib.util.spec_from_file_location("build_trainer", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    row = {
+        "board": "As7h2d", "hand": "JhJc", "node": "bb_vs_bet",
+        "acting_player": "BB",
+        "actions": '["fold","call"]',
+        "ev": '{"fold":0.0,"call":1.0}',
+        "freq": '{"fold":0.2,"call":0.8}',
+        "preferred_action": "call",
+        "action_grades": '{"fold":"major_error","call":"best"}',
+        "reason": "value_call", "headline": "x", "detail": '["d"]',
+        "mixed": 0,
+    }
+    q = mod._to_q(row, oop_pos="BB", ip_pos="BTN")
+    assert q["acts_first"] is False and q["is_oop"] is True
+    q2 = mod._to_q({**row, "node": "bb_first", "actions": '["check","bet"]',
+                    "ev": '{"check":1.0,"bet":0.5}', "freq": '{"check":0.8,"bet":0.2}',
+                    "preferred_action": "check",
+                    "action_grades": '{"check":"best","bet":"costly"}',
+                    "reason": "pot_control"}, oop_pos="BB", ip_pos="BTN")
+    assert q2["acts_first"] is True
+    # SB-vs-BB: BB is IP — still not acts_first on vs_bet, and is_oop False.
+    q3 = mod._to_q({**row, "acting_player": "BB", "node": "bb_vs_bet"},
+                   oop_pos="SB", ip_pos="BB")
+    assert q3["acts_first"] is False and q3["is_oop"] is False
 
 
 def test_freq_pct_ints_sum_to_100():
