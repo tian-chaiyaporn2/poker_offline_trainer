@@ -83,6 +83,11 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .sum-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .sum-read{font-size:14.5px;font-weight:700;color:var(--ink)}
 .sum-why{font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:4px}
+.sum-str-wrap{display:flex;align-items:center;gap:7px;flex:none}
+.sum-str{font-family:var(--label);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.sum-str.str-hi{color:var(--best)}
+.sum-str.str-mid{color:var(--accept)}
+.sum-str.str-lo{color:var(--muted)}
 .sum-hint{font-family:var(--label);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--brass);margin-top:8px}
 .analytics[open] .sum-hint{display:none}
 .factors{padding:2px 14px 8px}
@@ -451,7 +456,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
     </details>
     <div class="s-sec">About</div>
     <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>fbc1eef</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>fe25ba5</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
     <span class="demo">Turn / river</span> spots are now full-range solver output too, but
@@ -1071,8 +1076,8 @@ function decisionFactors(q,rd){
   const bd=rd.boardStraighty>=2||rd.boardFlushy>=2?2:(rd.boardStraighty>=1||rd.boardFlushy>=1?1:0);
   const river=q.street==="river";
   items.push({label:"Board",meter:null,
-    read:rd.boardFlushAlone?"Board flush":rd.boardStraightAlone?"Board straight"
-      :(bd===0?"Dry & safe":bd===1?"A few draws out there":"Wet — straights/flushes live"),
+    read:rd.boardFlushAlone?"Flush on the board":rd.boardStraightAlone?"Straight on the board"
+      :(bd===0?"Safe — no draws":bd===1?"A few draws possible":"Dangerous — draws out there"),
     why:rd.boardFlushAlone?"The five shared cards are already a flush — hole cards only matter if they beat that flush."
       :rd.boardStraightAlone?"The five shared cards are already a straight — hole cards only matter if they beat that straight."
       :bd===0?(river?"No straights or flushes on this board, so the ranking is unlikely to surprise you."
@@ -1099,6 +1104,10 @@ function decisionFactors(q,rd){
 }
 function meterHTML(lv){if(lv==null)return"";const cls=lv>=4?"":lv===3?" mid":" low";
   let s='<span class="meter">';for(let i=1;i<=5;i++)s+='<i class="'+(i<=lv?"on"+cls:"")+'"></i>';return s+'</span>';}
+// plain word for the strength dots so a beginner isn't decoding a bar chart
+const STRENGTH_WORD=["","Weak","Weak-ish","Medium","Strong","Very strong"];
+function strengthTag(lv){if(lv==null)return"";const cls=lv>=4?"str-hi":lv===3?"str-mid":"str-lo";
+  return '<span class="sum-str '+cls+'">'+STRENGTH_WORD[lv]+'</span>';}
 function renderFactors(q){
   const el=document.getElementById("factors"),wrap=document.getElementById("analytics"),sum=document.getElementById("analytics-sum");
   if(!el||!wrap)return;
@@ -1106,7 +1115,7 @@ function renderFactors(q){
   wrap.hidden=false;el.innerHTML="";
   const items=decisionFactors(q,handRead(q.hero,q.board)),hand=items[0];
   // Summary = YOUR HAND (named once, always visible): read + strength meter + the standing read.
-  sum.innerHTML='<div class="sum-top"><b class="sum-read">'+hand.read+'</b>'+meterHTML(hand.meter)+'</div>'
+  sum.innerHTML='<div class="sum-top"><b class="sum-read">'+hand.read+'</b><span class="sum-str-wrap">'+strengthTag(hand.meter)+meterHTML(hand.meter)+'</span></div>'
     +'<div class="sum-why">'+hand.why+'</div>'
     +'<div class="sum-hint">Board &middot; position &middot; opponent &middot; odds</div>';
   // Body (expand) = the situational factors — no need to re-name the hand here.
@@ -1373,7 +1382,7 @@ function renderFeedback(q,a,gained){
   const cost=document.getElementById("cost");
   const dEv=Math.round((q.ev[pref]-q.ev[a])*100)/100;
   if(g!=="best"&&dEv>=0.05){cost.hidden=false;
-    cost.textContent=best+" averages "+fmtEv(q.ev[pref])+" "+unit+" here vs your "+you+" at "+fmtEv(q.ev[a])+" "+unit+" — about "+dEv+" "+unit+" per hand left behind.";
+    cost.textContent=best+" is worth about "+dEv+" "+unit+" more per hand than "+you+" here — small leaks like this add up.";
   }else{cost.hidden=true;}
   const dl=document.getElementById("det");dl.innerHTML="";
   // Pro detail: keep the baked bullets but tame the false precision ("~7.951%") and
