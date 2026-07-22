@@ -1060,23 +1060,25 @@ const RIVER_PLAIN={
 // raising with Queen-high as good as folding?"). This spells out the missing half: the
 // aggressive line is a bluff/semi-bluff, and its fold-equity is what makes it break even with
 // giving up. Keyed off the actual co-best actions + the real holding.
+// Infer the *logic* of an action from the hand + the action itself, so a "mixed" spot (where
+// the solver only tags it "close") can still say WHY the best play edges ahead.
+function inferReason(q,rd){
+  const p=q.preferred,made=rd.cat!=="high",strong=handTier(rd)>=4;
+  if(p==="raise")return !made?(rd.draw?"raise_semibluff":"raise_bluff"):(strong?"raise_value":"raise_semibluff");
+  if(p==="bet")return !made?(rd.draw?"semi_bluff":"bluff"):(strong?"value":"protection");
+  if(p==="check")return strong?"trap":(made?"pot_control":"realization");
+  if(p==="call")return made?"value_call":"call_odds";
+  if(p==="fold")return "fold";
+  return null;
+}
 function closeExplain(q,rd){
-  const best=q.actions.filter(a=>q.grades[a]==="best");
-  const has=a=>best.indexOf(a)>=0;
-  const giveup=has("fold")?"folding":has("check")?"checking":"giving up";
-  const aggr=has("raise")?"raising":has("bet")?"betting":null;
-  if(aggr&&(has("fold")||has("check"))){
-    const hand=rd.made.toLowerCase().replace(" (no pair)","");
-    if(rd.cat==="high"&&!rd.draw)
-      return "Genuinely close — "+giveup+" and "+aggr+" are worth about the same. You've only got "+hand
-        +", nothing that wins if the hand checks down, so "+aggr+" here is a bluff: it can push better hands off the pot and win it now. "
-        +"That chance to take it uncontested is worth about as much as just "+giveup+" — which is why the two tie.";
-    if(rd.draw)
-      return "Close call — "+aggr+" and "+giveup+" come out about even. You're not ahead yet, but with "+rd.draw
-        +" "+aggr+" doubles as a semi-bluff: better hands may fold now, and if they call you can still improve. That's why it's a wash with "+giveup+".";
-    return "Close — "+aggr+" for thin value and "+giveup+" to keep the pot small are about equal here; either is fine, so just pick one.";
-  }
-  return "This one's genuinely close — any play is fine here.";
+  const pa=shortAct(q.preferred),r=inferReason(q,rd);
+  // why the best play edges ahead — reuse the plain per-reason logic (river-aware).
+  const why=(q.street==="river"&&RIVER_PLAIN[r])?RIVER_PLAIN[r]:(r&&PLAIN_HEAD[r])?PLAIN_HEAD[r]:"the options are all near break-even here.";
+  const alt=q.actions.filter(function(a){return a!==q.preferred;})
+    .sort(function(a,b){return (q.ev[b]||0)-(q.ev[a]||0);});
+  const altTxt=alt.length?" "+cap1(shortAct(alt[0]))+" is fine too — it's nearly a coin-flip, so don't sweat which you pick.":"";
+  return "It's genuinely close, but "+pa+" edges it out. "+why+altTxt;
 }
 // True when a "trap"/"value" made hand should be reframed as a bluff-catcher: a very
 // coordinated board AND this is actually a check-or-bet decision (so "check to keep the pot
