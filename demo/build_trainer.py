@@ -538,6 +538,29 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .cmp-go{align-self:flex-start;appearance:none;font-family:var(--label);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--brass);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:8px 14px;cursor:pointer}
 .cmp-go:hover{border-color:var(--brass)}
 .fb-scrim{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.55);backdrop-filter:blur(1.5px);animation:rise .25s ease}
+/* on-demand "hand strength & odds" panel — slides up over everything, dismiss with Back */
+.hd-open{display:block;margin:12px auto 0;appearance:none;font-family:var(--label);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--brass);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:8px 15px;cursor:pointer;transition:.12s}
+.hd-open:hover{border-color:var(--brass);background:color-mix(in srgb,var(--brass) 10%,var(--panel2))}
+.hd{display:none}
+.hd.on{display:block;position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:100%;max-width:440px;z-index:60;background:var(--panel);border:1px solid var(--line);border-bottom:none;border-radius:22px 22px 0 0;max-height:92vh;overflow-y:auto;overscroll-behavior:contain;animation:sheetup .3s cubic-bezier(.2,.85,.25,1);box-shadow:0 -16px 44px -10px rgba(0,0,0,.75)}
+.hd-scrim{position:fixed;inset:0;z-index:55;background:rgba(0,0,0,.6);backdrop-filter:blur(1.5px);animation:rise .25s ease}
+.hd-topbar{display:flex;align-items:center;gap:11px;padding:13px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:1}
+.hd-back{appearance:none;flex:none;font-family:var(--label);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--brass);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:7px 12px;cursor:pointer}
+.hd-back:hover{border-color:var(--brass)}
+.hd-title{font-family:var(--disp);font-size:16px}
+.hd-body{padding:15px 18px 24px}
+.hd-cards{display:flex;align-items:center;gap:11px;justify-content:center;flex-wrap:wrap;margin-bottom:4px}
+.hd-on{color:var(--muted);font-size:12px}
+.hd-sec{margin-top:17px}
+.hd-h{font-family:var(--label);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+.hd-now{font-size:14px;line-height:1.5;margin:0;color:var(--ink)}
+.hd-out{margin-bottom:12px}
+.hd-out-top{display:flex;justify-content:space-between;align-items:baseline;font-size:14px}
+.hd-pct{font-family:var(--mono);font-weight:700;color:var(--best)}
+.hd-bar{height:7px;background:var(--panel2);border-radius:4px;overflow:hidden;margin:5px 0 3px}
+.hd-bar>i{display:block;height:100%;background:var(--best);border-radius:4px}
+.hd-note{font-size:12px;color:var(--muted)}
+.hd-total{font-size:12.5px;color:var(--muted);margin:9px 0 0;font-style:italic}
 @keyframes sheetup{from{transform:translate(-50%,100%)}to{transform:translate(-50%,0)}}
 @keyframes rise{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){.fb.on,.fb-scrim{animation:none}.act:hover:not(:disabled){transform:none}}
@@ -761,6 +784,7 @@ __SUITDEFS__
         <span class="reason" id="reason"></span>
         <p class="head" id="head"></p>
         <div class="factors" id="factors" hidden></div>
+        <button class="hd-open" id="hd-open" type="button" hidden>&#128202; Hand strength &amp; odds</button>
         <button class="more" id="moretoggle" type="button" hidden>Explain more ▸</button>
         <div class="morebody" id="morebody" hidden>
           <p class="stand" id="stand"></p>
@@ -905,6 +929,11 @@ __SUITDEFS__
   </section>
   </div>
   <div class="fb-scrim" id="fb-scrim" hidden></div>
+  <div class="hd-scrim" id="hd-scrim" hidden></div>
+  <div class="hd" id="handdetail">
+    <div class="hd-topbar"><button class="hd-back" id="hd-back" type="button">&#8249; Back</button><span class="hd-title">Hand strength &amp; odds</span></div>
+    <div class="hd-body" id="hd-body"></div>
+  </div>
   <nav class="tabbar" id="tabbar">
     <button data-v="train" class="on"><svg class="ti"><use href="#so-spade"/></svg>Train</button>
     <button data-v="progress"><span class="ti">&#9636;</span>Progress</button>
@@ -1507,6 +1536,76 @@ function renderFactors(q){
     row.appendChild(top);row.appendChild(why);el.appendChild(row);
   });
 }
+// ===== Detailed hand-strength & odds panel: what you hold now, the exact outs to improve,
+// and the real probability by the river — computed by enumerating every unseen card. =====
+const CATRANK={high:0,pair:1,twopair:2,trips:3,straight:4,flush:5,full:6,quads:7,sflush:8};
+const CATNAME={pair:"a pair",twopair:"two pair",trips:"three of a kind",straight:"a straight",flush:"a flush",full:"a full house",quads:"four of a kind",sflush:"a straight flush"};
+function hitPct(outs,U,toCome){                     // chance >=1 out lands in `toCome` cards
+  if(outs<=0||toCome<=0)return 0;
+  let miss=1;for(let i=0;i<toCome;i++){miss*=(U-outs-i)/(U-i);}
+  return Math.round(100*(1-miss));
+}
+function handDetail(hero,board){
+  const rd=handRead(hero,board),toCome=Math.max(0,5-board.length);
+  const seen={};hero.concat(board).forEach(function(c){seen[c]=1;});
+  const RK="23456789TJQKA",SU="cdhs",unseen=[];
+  for(let i=0;i<13;i++)for(let j=0;j<4;j++){const c=RK[i]+SU[j];if(!seen[c])unseen.push(c);}
+  const cur=CATRANK[rd.cat],groups={};
+  if(toCome>0)unseen.forEach(function(c){
+    const nc=CATRANK[handRead(hero,board.concat([c])).cat];
+    if(nc>cur){const k=Object.keys(CATRANK).find(function(kk){return CATRANK[kk]===nc;});
+      groups[k]=groups[k]||{n:0,ranks:{}};groups[k].n++;groups[k].ranks[c[0]]=1;}
+  });
+  const maxB=board.length?Math.max.apply(null,board.map(function(c){return RV[c[0]];})):0;
+  const outs=Object.keys(groups).sort(function(a,b){return CATRANK[b]-CATRANK[a];}).map(function(k){
+    const g=groups[k],rks=Object.keys(g.ranks).sort(function(a,b){return RV[b]-RV[a];});
+    let label=CATNAME[k]||k;
+    if(k==="pair"&&rks.every(function(r){return RV[r]>maxB;}))label="top pair";
+    return {label:label,cards:g.n,ranks:rks.map(function(r){return ONE[RV[r]]||r;}),pct:hitPct(g.n,unseen.length,toCome)};
+  });
+  const totalOuts=Object.keys(groups).reduce(function(s,k){return s+groups[k].n;},0);
+  const threats=[];
+  if(rd.boardFlushy>=2)threats.push("four to a flush is on the board — a flush is very live");
+  else if(rd.boardFlushy>=1)threats.push("two of one suit are out, so a flush can still come");
+  if(rd.boardStraighty>=2)threats.push("the board is four to a straight");
+  else if(rd.boardStraighty>=1)threats.push("the cards are connected, so a straight is possible");
+  return {now:cap1(rd.made),draw:rd.draw,outs:outs,improvePct:hitPct(totalOuts,unseen.length,toCome),
+    toCome:toCome,threats:threats,standing:standingText(rd)};
+}
+function renderHandDetail(q){
+  const body=document.getElementById("hd-body");if(!body)return;
+  const d=handDetail(q.hero,q.board);body.innerHTML="";
+  const hdr=document.createElement("div");hdr.className="hd-cards";
+  const hc=document.createElement("div");hc.className="cmp-cards";q.hero.forEach(function(x){hc.appendChild(card(x));});
+  const on=document.createElement("span");on.className="hd-on";on.textContent="on";
+  const bc=document.createElement("div");bc.className="cmp-cards";q.board.forEach(function(x){bc.appendChild(card(x));});
+  hdr.appendChild(hc);hdr.appendChild(on);hdr.appendChild(bc);body.appendChild(hdr);
+  function sec(title){const s=document.createElement("div");s.className="hd-sec";
+    const t=document.createElement("div");t.className="hd-h";t.textContent=title;s.appendChild(t);body.appendChild(s);return s;}
+  const now=sec("Right now");const nowP=document.createElement("p");nowP.className="hd-now";
+  nowP.innerHTML="<b>"+d.now+"</b>"+(d.draw?" &mdash; with "+d.draw:"");now.appendChild(nowP);
+  if(d.outs.length&&d.toCome>0){
+    const label=d.toCome===2?"by the river":"on the last card";
+    const im=sec("Ways to improve — "+label);
+    d.outs.forEach(function(o){
+      const row=document.createElement("div");row.className="hd-out";
+      row.innerHTML='<div class="hd-out-top"><b>'+cap1(o.label)+'</b><span class="hd-pct">'+o.pct+'%</span></div>'
+        +'<div class="hd-bar"><i style="width:'+Math.min(100,o.pct)+'%"></i></div>'
+        +'<div class="hd-note">'+o.cards+' card'+(o.cards>1?'s':'')+(o.ranks.length?' (any '+o.ranks.join(" or ")+')':'')+'</div>';
+      im.appendChild(row);});
+    if(d.outs.length>1){const p=document.createElement("p");p.className="hd-total";
+      p.textContent="About "+d.improvePct+"% to improve to a made hand or better "+label+".";im.appendChild(p);}
+  }else if(d.toCome>0){const im=sec("Ways to improve");const p=document.createElement("p");p.className="hd-now";
+    p.textContent="Not much left to draw to — this hand mostly plays as it is.";im.appendChild(p);}
+  if(d.threats.length){const w=sec("Watch out");const p=document.createElement("p");p.className="hd-now";
+    p.textContent=cap1(d.threats.join("; "))+".";w.appendChild(p);}
+  const st=sec("Where you stand");const p=document.createElement("p");p.className="hd-now";p.textContent=d.standing;st.appendChild(p);
+}
+function openHandDetail(){if(!cur||cur.preflop||!(cur.board&&cur.board.length>=3))return;
+  renderHandDetail(cur);document.getElementById("handdetail").className="hd on";
+  var s=document.getElementById("hd-scrim");if(s)s.hidden=false;}
+function closeHandDetail(){document.getElementById("handdetail").className="hd";
+  var s=document.getElementById("hd-scrim");if(s)s.hidden=true;}
 // ===== "A similar hand plays the opposite way" — the same hand strength can call for
 // opposite plays (bet-for-value vs check-to-trap, bluff vs give-up, call vs fold, ...). Each
 // reason IS the rule of thumb, so a confusing twin = same hand tier + the paired opposite
@@ -1614,6 +1713,7 @@ function renderContrast(q){
 }
 function renderFeedback(q,a,gained){
   renderContrast(q);renderFactors(q);
+  const hdBtn=document.getElementById("hd-open");if(hdBtn)hdBtn.hidden=!!q.preflop;   // odds need a board
   if(q.preflop)return renderPreflopFeedback(q,a);
   document.querySelector(".mix").style.display="";document.getElementById("stand").hidden=false;
   document.querySelectorAll("#acts .act").forEach(b=>{
@@ -1855,11 +1955,17 @@ intro.addEventListener("toggle",()=>{try{localStorage.setItem("introOpen",intro.
 document.getElementById("next").onclick=next;
 document.getElementById("prev").onclick=prev;
 document.getElementById("fwd").onclick=next;
+document.getElementById("hd-open").onclick=openHandDetail;
+document.getElementById("hd-back").onclick=closeHandDetail;
+document.getElementById("hd-scrim").onclick=closeHandDetail;
 document.getElementById("moretoggle").onclick=function(){
   moreOpen=!moreOpen;try{localStorage.setItem("moreOpen",moreOpen?"1":"0");}catch(e){}
   document.getElementById("morebody").hidden=!moreOpen;
   this.textContent=moreOpen?"Show less ▾":"Explain more ▸";};
 document.addEventListener("keydown",e=>{
+  // hand-strength panel is modal: Left/Escape closes it, everything else is swallowed
+  if(document.getElementById("handdetail").classList.contains("on")){
+    if(e.key==="ArrowLeft"||e.key==="Escape"){e.preventDefault();closeHandDetail();}return;}
   if(e.target.tagName==="SUMMARY"||e.target.id==="moretoggle")return;   // let the toggle handle its own Enter/Space
   if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;         // don't hijack typing in inputs
   if(e.target.closest&&e.target.closest("#coach"))return;              // coach panel owns its own keys (chips/send/input)
