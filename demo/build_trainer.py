@@ -612,13 +612,6 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
   padding:4px 11px;border-radius:999px;border:1px solid transparent}
 .oppchip.a-check{background:color-mix(in srgb,var(--accept) 16%,transparent);color:var(--accept);border-color:color-mix(in srgb,var(--accept) 40%,var(--line))}
 .oppchip.a-bet{background:color-mix(in srgb,var(--costly) 16%,transparent);color:var(--costly);border-color:color-mix(in srgb,var(--costly) 40%,var(--line))}
-.pfstrip{padding:2px 0}
-.pfrow{display:flex;gap:5px;justify-content:center;flex-wrap:wrap}
-.pf-seat{font-family:var(--label);font-size:10px;font-weight:700;letter-spacing:.03em;padding:5px 8px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
-.pf-seat.blind{border-style:dashed}
-.pf-seat.villain{color:var(--costly);border-color:color-mix(in srgb,var(--costly) 45%,var(--line))}
-.pf-seat.cur{background:var(--brass);color:#0b0c10;border-color:var(--brass)}
-.pfctx{text-align:center;font-family:var(--label);font-size:10px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);margin-top:8px}
 </style>
 __SUITDEFS__
 <div class="app">
@@ -1139,11 +1132,10 @@ function setHint(n){const el=document.getElementById("hint");if(!el)return;
   el.innerHTML="Pick with "+ks+" &middot; next hand with <kbd>Enter</kbd>";}
 // ---- position / situation graphic: a small table diagram so who-you-are, where the
 // button is, and what just happened read at a glance (not only from text). ----
-const SEATS6=["UTG","HJ","CO","BTN","SB","BB"];
 function renderSeats(q){
   const el=document.getElementById("seats");if(!el)return;
   el.innerHTML="";el.hidden=false;
-  el.appendChild(q.preflop?preflopStrip(q):ringTable(q));
+  el.appendChild(q.preflop?preflopRing(q):ringTable(q));
 }
 const POS_PLAIN={BTN:"on the button",BB:"in the big blind",SB:"in the small blind",CO:"in the cutoff",HJ:"in the hijack",UTG:"first to act"};
 // full 6-max ring so position is spatial: clockwise seating + fixed screen slots.
@@ -1174,21 +1166,29 @@ function ringTable(q){
   html+='<div class="tvmid">'+(ok!=="wait"?'<span class="oppchip a-'+ok+'">'+oppAct+'</span>':'')+'<span class="potlab">pot</span></div>';
   const w=document.createElement("div");w.className="tv";w.innerHTML=html;return w;
 }
-function preflopStrip(q){
-  const opener=q.opener||null,tb=q.tbettor||null;
-  const N={BTN:"the button",BB:"the big blind",SB:"the small blind",CO:"the cutoff",HJ:"the hijack",UTG:"UTG"};
-  const you="You're "+(POS_PLAIN[q.pos]||("in "+q.pos));
-  const ctx=q.ctx==="rfi"?(you+" — folded to you, you're first in")
-    :q.ctx==="def"?(you+" — "+(N[opener]||"an opponent")+" opened, it's on you")
-    :q.ctx==="sbdef"?(you+" — folded to you")
-    :q.ctx==="vs3bet"?(you+" — you opened, "+(N[tb]||"a blind")+" re-raised"):you;
-  let seats="";
-  SEATS6.forEach(function(s){var c="pf-seat";if(s===q.pos)c+=" cur";
-    if(s===opener||s===tb)c+=" villain";if(s==="SB"||s==="BB")c+=" blind";
-    seats+='<span class="'+c+'">'+s+'</span>';});
-  const w=document.createElement("div");w.className="pfstrip";
-  w.innerHTML='<div class="pfrow">'+seats+'</div><div class="pfctx">'+ctx+'</div>';
-  return w;
+function preflopRing(q){
+  // same 6-max ring as postflop, so preflop position is spatial too: you + the raiser
+  // highlighted, the button on its seat, everyone else dimmed. The situation line above
+  // spells out the action ("the button opens, it's on you"); the chip echoes it.
+  const hero=q.pos, opener=q.opener||null, tb=q.tbettor||null;
+  const start=Math.max(0,RING_ORDER.indexOf(hero));
+  const seats=[];for(var i=0;i<6;i++)seats.push(RING_ORDER[(start+i)%6]);
+  const D='<span class="dbtn" title="dealer button">D</span>';
+  let html="";
+  seats.forEach(function(pos,i){
+    const x=RING_SLOTS[i][0],y=RING_SLOTS[i][1],above=RING_SLOTS[i][2];
+    const isHero=pos===hero, isTb=pos===tb&&!isHero, isOpener=pos===opener&&!isHero&&!isTb;
+    const role=isHero?"you":(isTb||isOpener)?"opp":"fold";
+    const btn=(pos==="BTN")?D:"";
+    let inner='<div class="av">'+btn+'</div>';
+    if(isHero)inner+='<div class="nm">You</div><div class="ps">'+(RING_SHORT[pos]||pos)+'</div><div class="turn">&#9679; your move</div>';
+    else if(isTb)inner+='<div class="nm">Opponent</div><div class="ps">'+(RING_SHORT[pos]||pos)+'</div><div class="oppchip a-bet">3-bets</div>';
+    else if(isOpener)inner+='<div class="nm">Opponent</div><div class="ps">'+(RING_SHORT[pos]||pos)+'</div><div class="oppchip a-bet">opens</div>';
+    else inner+='<div class="nm">'+pos+'</div>';
+    html+='<div class="tvs '+role+(above?" ab":"")+'" style="left:'+x+'%;top:'+y+'%">'+inner+'</div>';
+  });
+  html+='<div class="tvmid"><span class="potlab">blinds</span></div>';
+  const w=document.createElement("div");w.className="tv";w.innerHTML=html;return w;
 }
 function deal(){answered=false;chosen=null;cur=Q[order[pos]];document.getElementById("fb").className="fb";sheetOpen(false);renderQuestion(cur);coachReset();}
 
