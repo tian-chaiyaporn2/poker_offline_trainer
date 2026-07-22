@@ -1396,14 +1396,16 @@ function cap1(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
 function findContrast(q){
   if(q.preflop||!CONTRAST[q.reason])return null;
   const rd=handRead(q.hero,q.board),vs=CONTRAST[q.reason].vs;
+  // A twin is only instructive if the HAND is genuinely similar — otherwise the strength gap
+  // IS the reason it plays differently (two pair calls / one pair folds is trivial, not a
+  // "same hand, opposite play"). Require the SAME made-hand category; if there's no twin of
+  // the same category with the opposite play, hide the block rather than show a mismatch.
   let best=null,bs=-1;
   for(let i=0;i<Q.length;i++){const o=Q[i];
     if(o===q||o.preflop||vs.indexOf(o.reason)<0)continue;
     const ord=handRead(o.hero,o.board);
-    let sc=0;
-    if(ord.cat===rd.cat)sc+=3; else if((ord.cat==="high")===(rd.cat==="high"))sc+=1;
-    if(o.street===q.street)sc+=2;
-    if(o.is_oop!==q.is_oop)sc+=1;               // a flip in position is instructive
+    if(ord.cat!==rd.cat)continue;                                    // same made-hand category only
+    const sc=(o.street===q.street?2:0)+(o.is_oop!==q.is_oop?1:0);    // same street + a position flip
     if(sc>bs){bs=sc;best={qi:i,q:o,rd:ord};}
   }
   return best;
