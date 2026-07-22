@@ -1110,9 +1110,9 @@ const VOCAB_TOTAL=2+Object.keys(TERMS.poker.reason).length;
 function eff(term){return mode!=="progressive"?mode:(learned.has(term)?"learning":"plain");}
 function T(){return TERMS[eff("streets")];}
 function posLabel(q){const m=eff("positions");
-  // Seat role (OOP/IP), not this decision's acts_first — facing a bet you still
-  // "act first" as a role when out of position.
-  if(m==="plain")return q.is_oop?"You act first":"You act last";
+  // Seat ROLE, not this decision's order — "You act first" reads as wrong when you're
+  // facing a bet (they just acted), so use the plain role: in / out of position.
+  if(m==="plain")return q.is_oop?"Out of position":"In position";
   return (TERMS[m].pos[q.acting_player]||q.acting_player);}
 function actLabel(a){const m=eff("positions");
   if(m!=="plain"&&cur&&cur.labels&&cur.labels[a])return cur.labels[a];  // per-pack bet/raise sizing

@@ -432,7 +432,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
     </details>
     <div class="s-sec">About</div>
     <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>d4e03fd</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>94dc893</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
     <span class="demo">Turn / river</span> spots are now full-range solver output too, but
@@ -696,9 +696,9 @@ const VOCAB_TOTAL=2+Object.keys(TERMS.poker.reason).length;
 function eff(term){return mode!=="progressive"?mode:(learned.has(term)?"learning":"plain");}
 function T(){return TERMS[eff("streets")];}
 function posLabel(q){const m=eff("positions");
-  // Seat role (OOP/IP), not this decision's acts_first — facing a bet you still
-  // "act first" as a role when out of position.
-  if(m==="plain")return q.is_oop?"You act first":"You act last";
+  // Seat ROLE, not this decision's order — "You act first" reads as wrong when you're
+  // facing a bet (they just acted), so use the plain role: in / out of position.
+  if(m==="plain")return q.is_oop?"Out of position":"In position";
   return (TERMS[m].pos[q.acting_player]||q.acting_player);}
 function actLabel(a){const m=eff("positions");
   if(m!=="plain"&&cur&&cur.labels&&cur.labels[a])return cur.labels[a];  // per-pack bet/raise sizing
