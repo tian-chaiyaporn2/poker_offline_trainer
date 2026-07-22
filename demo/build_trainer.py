@@ -498,7 +498,17 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
   animation:sheetup .3s cubic-bezier(.2,.85,.25,1);padding-bottom:10px}
 .fb .grab{width:38px;height:4px;border-radius:3px;background:var(--line);margin:9px auto 2px}
 /* decision breakdown: the factors behind the play, each with a plain why */
-.factors{margin:11px 0 4px;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--panel2) 45%,transparent);padding:2px 14px}
+/* one shared container look for the grouped sections (analytics / rule / compare) */
+.analytics{margin:11px 0 4px;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--panel2) 45%,transparent);overflow:hidden}
+.analytics-sum{cursor:pointer;list-style:none;padding:12px 14px}
+.analytics-sum::-webkit-details-marker{display:none}
+.analytics[open] .analytics-sum{border-bottom:1px solid var(--line)}
+.sum-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sum-read{font-size:14.5px;font-weight:700;color:var(--ink)}
+.sum-why{font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:4px}
+.sum-hint{font-family:var(--label);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--brass);margin-top:8px}
+.analytics[open] .sum-hint{display:none}
+.factors{padding:2px 14px 8px}
 .fac{padding:10px 0;border-top:1px solid var(--line)}
 .fac:first-child{border-top:none}
 .fac-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -512,11 +522,11 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .meter i.on.low{background:var(--costly)}
 .fac-why{font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:3px}
 /* "similar hand, opposite rule" — teach the deciding factor by contrast */
-.compare{margin:8px 18px 2px;border:1px solid color-mix(in srgb,var(--brass) 30%,var(--line));border-radius:12px;background:color-mix(in srgb,var(--brass) 6%,transparent);overflow:hidden}
+.compare{margin:11px 18px 2px;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--panel2) 45%,transparent);overflow:hidden}
 .compare>summary{cursor:pointer;padding:11px 14px;font-family:var(--label);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--brass);list-style:none;display:flex;align-items:center;gap:7px}
 .compare>summary::-webkit-details-marker{display:none}
 .compare>summary span{font-size:14px}
-.compare[open]>summary{border-bottom:1px solid color-mix(in srgb,var(--brass) 22%,var(--line))}
+.compare[open]>summary{border-bottom:1px solid var(--line)}
 .compare-body{padding:13px 14px;display:flex;flex-direction:column;gap:11px}
 .cmp-line{font-size:13.5px;line-height:1.4}
 .cmp-line .cw{display:block;font-family:var(--label);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px}
@@ -588,7 +598,7 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .g-best{--rc:var(--best)}.g-good{--rc:var(--good)}.g-acceptable{--rc:var(--accept)}.g-costly{--rc:var(--costly)}.g-major_error{--rc:var(--major)}
 .read{margin:0 0 5px;font-size:14.5px;font-weight:600;color:var(--ink)}
 .read b{color:var(--brass)}
-.rule{margin:11px 0 4px;font-size:12.5px;color:var(--ink);line-height:1.5;padding:9px 12px;border-radius:9px;background:color-mix(in srgb,var(--best) 9%,transparent)}
+.rule{margin:11px 0 4px;font-size:12.5px;color:var(--ink);line-height:1.5;padding:10px 13px;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--panel2) 45%,transparent)}
 .rule b{display:block;color:var(--best);text-transform:uppercase;font-size:10px;letter-spacing:.1em;margin-bottom:2px;font-weight:700}
 .cost{margin:9px 0 2px;font-size:12.5px;color:var(--muted);line-height:1.45;font-variant-numeric:tabular-nums}
 .row.best-row,.row.you-row{padding:6px 9px;border-radius:9px;margin:6px -9px}
@@ -779,7 +789,10 @@ __SUITDEFS__
         <p class="read" id="read"></p>
         <span class="reason" id="reason"></span>
         <p class="head" id="head"></p>
-        <div class="factors" id="factors" hidden></div>
+        <details class="analytics" id="analytics" hidden>
+          <summary class="analytics-sum" id="analytics-sum"></summary>
+          <div class="factors" id="factors"></div>
+        </details>
         <p class="rule" id="rule" hidden></p>
         <p class="cost" id="cost" hidden></p>
         <ul class="det" id="det"></ul>
@@ -1442,7 +1455,7 @@ function renderPreflopFeedback(q,a){
   else if(closeOk){v.className="verdict v-good";
     v.textContent="≈ Close — "+pfActLabel(a).toLowerCase()+" is fine; "+pfActLabel(q.answer).toLowerCase()+" is the small favourite.";}
   else{v.className="verdict v-major_error";v.textContent="✗ Not quite — the play is "+pfActLabel(q.answer)+".";}
-  const rd=document.getElementById("read");rd.innerHTML="";rd.appendChild(document.createTextNode("You held "));
+  const rd=document.getElementById("read");rd.hidden=false;rd.innerHTML="";rd.appendChild(document.createTextNode("You held "));
   const bc=document.createElement("b");bc.textContent=q.read;rd.appendChild(bc);rd.appendChild(document.createTextNode("."));
   document.getElementById("reason").style.display="none";
   document.getElementById("head").textContent=q.why;
@@ -1507,22 +1520,27 @@ function decisionFactors(q,rd){
   items.push({label:"Their move",meter:null,read:lr,why:lw});
   return items;
 }
+function meterHTML(lv){if(lv==null)return"";const cls=lv>=4?"":lv===3?" mid":" low";
+  let s='<span class="meter">';for(let i=1;i<=5;i++)s+='<i class="'+(i<=lv?"on"+cls:"")+'"></i>';return s+'</span>';}
 function renderFactors(q){
-  const el=document.getElementById("factors");if(!el)return;
-  if(q.preflop||eff("reason:"+q.reason)==="poker"){el.hidden=true;el.innerHTML="";return;}
-  el.hidden=false;el.innerHTML="";
-  decisionFactors(q,handRead(q.hero,q.board)).forEach(function(f){
+  const el=document.getElementById("factors"),wrap=document.getElementById("analytics"),sum=document.getElementById("analytics-sum");
+  if(!el||!wrap)return;
+  if(q.preflop||eff("reason:"+q.reason)==="poker"){wrap.hidden=true;el.innerHTML="";return;}
+  wrap.hidden=false;el.innerHTML="";
+  const items=decisionFactors(q,handRead(q.hero,q.board)),hand=items[0];
+  // Summary = YOUR HAND (named once, always visible): read + strength meter + the standing read.
+  sum.innerHTML='<div class="sum-top"><b class="sum-read">'+hand.read+'</b>'+meterHTML(hand.meter)+'</div>'
+    +'<div class="sum-why">'+hand.why+'</div>'
+    +'<div class="sum-hint">Board &middot; position &middot; opponent &middot; odds</div>';
+  // Body (expand) = the situational factors — no need to re-name the hand here.
+  items.slice(1).forEach(function(f){
     const row=document.createElement("div");row.className="fac";
     const top=document.createElement("div");top.className="fac-top";
     top.innerHTML='<span><span class="fac-l">'+f.label+'</span> &middot; <b class="fac-read">'+f.read+'</b></span>';
-    if(f.meter!=null){const m=document.createElement("span");m.className="meter";
-      const cls=f.meter>=4?"":f.meter===3?" mid":" low";
-      for(let i=1;i<=5;i++){const d=document.createElement("i");if(i<=f.meter)d.className="on"+cls;m.appendChild(d);}
-      top.appendChild(m);}
+    if(f.meter!=null)top.insertAdjacentHTML("beforeend",meterHTML(f.meter));
     const why=document.createElement("div");why.className="fac-why";why.textContent=f.why;
     row.appendChild(top);row.appendChild(why);el.appendChild(row);
   });
-  // the deep-dive on "Your hand" lives right here in the analytics — outs + real odds.
   const od=document.createElement("button");od.type="button";od.className="fac-odds";
   od.innerHTML='<span>&#128202; Hand strength &amp; full odds</span><span class="fac-odds-arr">&rsaquo;</span>';
   od.onclick=openHandDetail;el.appendChild(od);
@@ -1712,6 +1730,8 @@ function renderFeedback(q,a,gained){
   });
   const g=q.grades[a],pref=q.preferred;
   const you=shortAct(a),best=shortAct(pref);
+  // Break down the analytics by default on a MISTAKE; keep it tidy (collapsed) when you nailed it.
+  const aw=document.getElementById("analytics");if(aw&&!aw.hidden)aw.open=!(g==="best"||g==="good");
   const v=document.getElementById("verdict");v.className="verdict v-"+g;
   v.textContent="";const dot=document.createElement("span");dot.className="dot";v.appendChild(dot);
   // Verdict names YOUR pick AND the better action — so a wrong answer immediately
@@ -1730,13 +1750,15 @@ function renderFeedback(q,a,gained){
   // is what makes the 'why' land.
   const rd=handRead(q.hero,q.board);
   const readEl=document.getElementById("read");readEl.innerHTML="";
-  readEl.appendChild(document.createTextNode("You held "));
-  const mb=document.createElement("b");mb.textContent=rd.made;readEl.appendChild(mb);
-  if(rd.strength)readEl.appendChild(document.createTextNode(" — "+rd.strength));
-  if(rd.draw)readEl.appendChild(document.createTextNode(", plus "+rd.draw));
-  readEl.appendChild(document.createTextNode("."));
-  // (The "where you stand" read now lives in the always-visible factor panel — no longer
-  //  duplicated in a separate collapsible.)
+  // The hand is named once — in the analytics summary (plain/learning). Only show the
+  // standalone "You held X" line in Pro, where the factor panel is hidden.
+  if(eff("reason:"+q.reason)==="poker"){
+    readEl.hidden=false;readEl.appendChild(document.createTextNode("You held "));
+    const mb=document.createElement("b");mb.textContent=rd.made;readEl.appendChild(mb);
+    if(rd.strength)readEl.appendChild(document.createTextNode(" — "+rd.strength));
+    if(rd.draw)readEl.appendChild(document.createTextNode(", plus "+rd.draw));
+    readEl.appendChild(document.createTextNode("."));
+  }else{readEl.hidden=true;}
   // explanation adapts to the level: Beginner = plain 'why' only; Learning = term
   // tag + explaining headline; Pro = term tag + richer baked headline + bullets.
   const rm=eff("reason:"+q.reason);
