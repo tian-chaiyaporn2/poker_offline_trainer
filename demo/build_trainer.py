@@ -533,9 +533,11 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 /* ===== mobile app shell ===== */
 .app{max-width:440px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative;background:var(--bg)}
 .appbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:flex-start;gap:11px;padding:12px 16px;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-.revbtn{appearance:none;flex:none;font-family:var(--label);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--brass);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:6px 11px;cursor:pointer;transition:.12s}
+.pager{display:flex;gap:5px;flex:none}
+.revbtn{appearance:none;flex:none;font-family:var(--label);font-size:16px;line-height:1;font-weight:700;color:var(--brass);background:var(--panel2);border:1px solid var(--line);border-radius:9px;width:30px;height:30px;display:grid;place-items:center;cursor:pointer;transition:.12s;padding:0}
 .revbtn:hover:not(:disabled){border-color:var(--brass);background:color-mix(in srgb,var(--brass) 10%,var(--panel2))}
-.revbtn:disabled{opacity:.32;cursor:default}
+.revbtn:disabled{opacity:.3;cursor:default}
+.appbar .brand{white-space:nowrap}
 .appbar .vocab{margin-left:auto}
 .appbar .brand{font-size:18px}
 .views{flex:1;padding-bottom:72px}
@@ -620,7 +622,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 __SUITDEFS__
 <div class="app">
   <div class="appbar">
-    <button class="revbtn" id="prev" type="button" disabled aria-label="Back to the previous hand">&#8249; Back</button>
+    <div class="pager"><button class="revbtn" id="prev" type="button" disabled aria-label="Back to the previous hand" title="Previous hand">&#8249;</button><button class="revbtn" id="fwd" type="button" disabled aria-label="Forward to the next hand" title="Next hand">&#8250;</button></div>
     <div class="brand"><span class="sp">&spades;</span> Hold'em Trainer</div>
     <span class="vocab" id="vocab" hidden></span>
   </div>
@@ -1231,7 +1233,11 @@ function renderHand(){                                  // draw the current hist
 function newHand(){hist.push({qi:order[pos],pick:null});hidx=hist.length-1;renderHand();}
 function replayAnswer(a){answered=true;chosen=a;renderFeedback(cur,a,[]);}  // review: no stats change
 function prev(){if(hidx>0){hidx--;renderHand();}}
-function updateNav(){const p=document.getElementById("prev");if(p)p.disabled=hidx<=0;}
+// Forward is allowed when reviewing an earlier hand, or on the newest hand once it's answered
+// (so you can't skip a hand without answering it).
+function canFwd(){return hidx<hist.length-1||(hidx===hist.length-1&&answered);}
+function updateNav(){const p=document.getElementById("prev"),f=document.getElementById("fwd");
+  if(p)p.disabled=hidx<=0;if(f)f.disabled=!canFwd();}
 
 function renderPreflopFeedback(q,a){
   const correct=a===q.answer, closeOk=q.mixed&&a===q.alt;
@@ -1389,7 +1395,7 @@ function renderFeedback(q,a,gained){
   document.getElementById("fb").className="fb on";sheetOpen(true);
 }
 function answer(a){
-  if(answered)return;answered=true;chosen=a;if(hist[hidx])hist[hidx].pick=a;
+  if(answered)return;answered=true;chosen=a;if(hist[hidx])hist[hidx].pick=a;updateNav();
   if(cur.preflop){
     const correct=a===cur.answer, closeOk=!correct&&cur.mixed&&a===cur.alt;
     stats.n++; if(correct||closeOk)stats.solid++; else stats.leak++;
@@ -1424,14 +1430,24 @@ function next(){
 // tap the dimmer, or hit Next to deal the next one. ----
 function sheetOpen(b){const s=document.getElementById("fb-scrim");if(s)s.hidden=!b;
   document.documentElement.classList.toggle("sheet-open",b);}
+// Dismissing the sheet (scrim tap / swipe down) only CLOSES it — it never advances the hand.
+// Advancing is always an explicit Next (the sheet button, the app-bar Next, or Enter/->), so
+// dismissing a hand you stepped Back to review no longer skips you forward.
+function closeSheet(){document.getElementById("fb").className="fb";sheetOpen(false);}
+function reopenSheet(){if(answered){document.getElementById("fb").className="fb on";sheetOpen(true);}}
 (function(){const scrim=document.getElementById("fb-scrim"),fb=document.getElementById("fb");
-  if(scrim)scrim.onclick=function(){next();};
+  if(scrim)scrim.onclick=function(){closeSheet();};
+  // tap the hand (once dismissed) to bring the result back up
+  const card=document.querySelector(".card");
+  if(card)card.addEventListener("click",function(e){
+    if(!answered||e.target.closest(".fb"))return;
+    if(!document.getElementById("fb").classList.contains("on"))reopenSheet();});
   if(!fb)return;let y0=null;
   fb.addEventListener("touchstart",function(e){y0=fb.scrollTop<=0?e.touches[0].clientY:null;},{passive:true});
   fb.addEventListener("touchmove",function(e){if(y0==null)return;const dy=e.touches[0].clientY-y0;
     if(dy>0)fb.style.transform="translate(-50%,"+Math.min(dy,140)+"px)";},{passive:true});
   fb.addEventListener("touchend",function(e){if(y0==null)return;const dy=e.changedTouches[0].clientY-y0;y0=null;
-    fb.style.transform="";if(dy>90)next();},{passive:true});
+    fb.style.transform="";if(dy>90)closeSheet();},{passive:true});
 })();
 
 // Adaptive unlock: play a spot well (best/good) and its concept graduates into
@@ -1483,6 +1499,7 @@ intro.addEventListener("toggle",()=>{try{localStorage.setItem("introOpen",intro.
 
 document.getElementById("next").onclick=next;
 document.getElementById("prev").onclick=prev;
+document.getElementById("fwd").onclick=next;
 document.getElementById("moretoggle").onclick=function(){
   moreOpen=!moreOpen;try{localStorage.setItem("moreOpen",moreOpen?"1":"0");}catch(e){}
   document.getElementById("morebody").hidden=!moreOpen;

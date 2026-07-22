@@ -175,9 +175,11 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 /* ===== mobile app shell ===== */
 .app{max-width:440px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative;background:var(--bg)}
 .appbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:flex-start;gap:11px;padding:12px 16px;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-.revbtn{appearance:none;flex:none;font-family:var(--label);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--brass);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:6px 11px;cursor:pointer;transition:.12s}
+.pager{display:flex;gap:5px;flex:none}
+.revbtn{appearance:none;flex:none;font-family:var(--label);font-size:16px;line-height:1;font-weight:700;color:var(--brass);background:var(--panel2);border:1px solid var(--line);border-radius:9px;width:30px;height:30px;display:grid;place-items:center;cursor:pointer;transition:.12s;padding:0}
 .revbtn:hover:not(:disabled){border-color:var(--brass);background:color-mix(in srgb,var(--brass) 10%,var(--panel2))}
-.revbtn:disabled{opacity:.32;cursor:default}
+.revbtn:disabled{opacity:.3;cursor:default}
+.appbar .brand{white-space:nowrap}
 .appbar .vocab{margin-left:auto}
 .appbar .brand{font-size:18px}
 .views{flex:1;padding-bottom:72px}
@@ -262,7 +264,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.6"/></filter><filter id="soft2" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="1.4"/></filter><radialGradient id="sheen" cx="0.34" cy="0.26" r="0.62"><stop offset="0" stop-color="#fff" stop-opacity="0.17"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><clipPath id="cl-spade"><path d="M50 9 C 61 32, 90 46, 90 64 C 90 78, 79 85, 68 82.5 C 62 81, 57 77, 54.5 72 C 55 79, 58 87, 65 92 L 35 92 C 42 87, 45 79, 45.5 72 C 43 77, 38 81, 32 82.5 C 21 85, 10 78, 10 64 C 10 46, 39 32, 50 9 Z"/></clipPath><clipPath id="lr-spade"><path d="M50 11 C 39 30 12 46 12 64 C 12 79 27 85 39 79 C 51 73 58 56 57 42 C 56 30 54 19 50 11 Z"/></clipPath><linearGradient id="gl-spade" x1="0.3" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#454951"/><stop offset="1" stop-color="#34373d"/></linearGradient><linearGradient id="gd-spade" x1="0.4" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#141519"/><stop offset="1" stop-color="#0c0d11"/></linearGradient><clipPath id="cl-heart"><path d="M50 86 C 22 63, 8 48, 8 32 C 8 18, 19 10, 31 10 C 40 10, 47 15, 50 23 C 53 15, 60 10, 69 10 C 81 10, 92 18, 92 32 C 92 48, 78 63, 50 86 Z"/></clipPath><clipPath id="lr-heart"><path d="M50 22 C 45 14 38 10 30 10 C 18 10 8 18 8 32 C 8 47 24 63 50 82 C 61 62 61 36 50 22 Z"/></clipPath><linearGradient id="gl-heart" x1="0.3" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#f6454f"/><stop offset="1" stop-color="#e8232f"/></linearGradient><linearGradient id="gd-heart" x1="0.4" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#a8121d"/><stop offset="1" stop-color="#880c15"/></linearGradient><clipPath id="cl-diam"><path d="M50 8 C 58 24, 76 42, 92 50 C 76 58, 58 76, 50 92 C 42 76, 24 58, 8 50 C 24 42, 42 24, 50 8 Z"/></clipPath><clipPath id="lr-diam"><path d="M50 8 C 41 26 22 44 8 50 C 24 57 43 75 50 92 C 61 66 61 34 50 8 Z"/></clipPath><linearGradient id="gl-diam" x1="0.3" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#ff7134"/><stop offset="1" stop-color="#f4551b"/></linearGradient><linearGradient id="gd-diam" x1="0.4" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#c31f12"/><stop offset="1" stop-color="#9f170c"/></linearGradient><clipPath id="cl-club"><circle cx="50" cy="31" r="19"/><circle cx="30" cy="56" r="19"/><circle cx="70" cy="56" r="19"/><path d="M50 48 C 47 68, 41 83, 30 92 L 70 92 C 59 83, 53 68, 50 48 Z"/></clipPath><clipPath id="lr-club"><path d="M48 10 C 40 14 34 22 32 30 C 20 33 10 44 12 56 C 14 70 28 80 42 75 C 52 71 58 58 57 42 C 56 28 54 18 48 10 Z"/></clipPath><linearGradient id="gl-club" x1="0.3" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#415448"/><stop offset="1" stop-color="#334339"/></linearGradient><linearGradient id="gd-club" x1="0.4" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#15231c"/><stop offset="1" stop-color="#0d1712"/></linearGradient><symbol id="sym-spade" viewBox="0 0 100 100"><g clip-path="url(#cl-spade)"><rect width="100" height="100" fill="url(#gd-spade)"/><path d="M50 11 C 54 19 56 30 57 42 C 58 56 51 73 39 79" fill="none" stroke="#000" stroke-width="8" opacity="0.42" filter="url(#soft)" transform="translate(2.6 1)"/><g clip-path="url(#lr-spade)"><rect width="100" height="100" fill="url(#gl-spade)"/><path d="M50 11 C 54 19 56 30 57 42 C 58 56 51 73 39 79" fill="none" stroke="#000" stroke-width="4" opacity="0.16" filter="url(#soft2)" transform="translate(-0.6 0)"/></g><ellipse cx="31" cy="24" rx="34" ry="26" fill="url(#sheen)"/></g></symbol><symbol id="so-spade" viewBox="0 0 100 100"><g fill="currentColor"><path d="M50 9 C 61 32, 90 46, 90 64 C 90 78, 79 85, 68 82.5 C 62 81, 57 77, 54.5 72 C 55 79, 58 87, 65 92 L 35 92 C 42 87, 45 79, 45.5 72 C 43 77, 38 81, 32 82.5 C 21 85, 10 78, 10 64 C 10 46, 39 32, 50 9 Z"/></g></symbol><symbol id="sym-heart" viewBox="0 0 100 100"><g clip-path="url(#cl-heart)"><rect width="100" height="100" fill="url(#gd-heart)"/><path d="M50 22 C 61 36 61 62 50 82" fill="none" stroke="#000" stroke-width="8" opacity="0.42" filter="url(#soft)" transform="translate(2.6 1)"/><g clip-path="url(#lr-heart)"><rect width="100" height="100" fill="url(#gl-heart)"/><path d="M50 22 C 61 36 61 62 50 82" fill="none" stroke="#000" stroke-width="4" opacity="0.16" filter="url(#soft2)" transform="translate(-0.6 0)"/></g><ellipse cx="31" cy="24" rx="34" ry="26" fill="url(#sheen)"/></g></symbol><symbol id="so-heart" viewBox="0 0 100 100"><g fill="currentColor"><path d="M50 86 C 22 63, 8 48, 8 32 C 8 18, 19 10, 31 10 C 40 10, 47 15, 50 23 C 53 15, 60 10, 69 10 C 81 10, 92 18, 92 32 C 92 48, 78 63, 50 86 Z"/></g></symbol><symbol id="sym-diam" viewBox="0 0 100 100"><g clip-path="url(#cl-diam)"><rect width="100" height="100" fill="url(#gd-diam)"/><path d="M50 8 C 61 34 61 66 50 92" fill="none" stroke="#000" stroke-width="8" opacity="0.42" filter="url(#soft)" transform="translate(2.6 1)"/><g clip-path="url(#lr-diam)"><rect width="100" height="100" fill="url(#gl-diam)"/><path d="M50 8 C 61 34 61 66 50 92" fill="none" stroke="#000" stroke-width="4" opacity="0.16" filter="url(#soft2)" transform="translate(-0.6 0)"/></g><ellipse cx="31" cy="24" rx="34" ry="26" fill="url(#sheen)"/></g></symbol><symbol id="so-diam" viewBox="0 0 100 100"><g fill="currentColor"><path d="M50 8 C 58 24, 76 42, 92 50 C 76 58, 58 76, 50 92 C 42 76, 24 58, 8 50 C 24 42, 42 24, 50 8 Z"/></g></symbol><symbol id="sym-club" viewBox="0 0 100 100"><g clip-path="url(#cl-club)"><rect width="100" height="100" fill="url(#gd-club)"/><path d="M48 10 C 54 18 56 28 57 42 C 58 58 52 71 42 75" fill="none" stroke="#000" stroke-width="8" opacity="0.42" filter="url(#soft)" transform="translate(2.6 1)"/><g clip-path="url(#lr-club)"><rect width="100" height="100" fill="url(#gl-club)"/><path d="M48 10 C 54 18 56 28 57 42 C 58 58 52 71 42 75" fill="none" stroke="#000" stroke-width="4" opacity="0.16" filter="url(#soft2)" transform="translate(-0.6 0)"/></g><ellipse cx="31" cy="24" rx="34" ry="26" fill="url(#sheen)"/></g></symbol><symbol id="so-club" viewBox="0 0 100 100"><g fill="currentColor"><circle cx="50" cy="31" r="19"/><circle cx="30" cy="56" r="19"/><circle cx="70" cy="56" r="19"/><path d="M50 48 C 47 68, 41 83, 30 92 L 70 92 C 59 83, 53 68, 50 48 Z"/></g></symbol></defs></svg>
 <div class="app">
   <div class="appbar">
-    <button class="revbtn" id="prev" type="button" disabled aria-label="Back to the previous hand">&#8249; Back</button>
+    <div class="pager"><button class="revbtn" id="prev" type="button" disabled aria-label="Back to the previous hand" title="Previous hand">&#8249;</button><button class="revbtn" id="fwd" type="button" disabled aria-label="Forward to the next hand" title="Next hand">&#8250;</button></div>
     <div class="brand"><span class="sp">&spades;</span> Hold'em Trainer</div>
     <span class="vocab" id="vocab" hidden></span>
   </div>
@@ -372,7 +374,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
     </details>
     <div class="s-sec">About</div>
     <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>09679c6</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>ccccc97</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
     <span class="demo">Turn / river</span> spots are now full-range solver output too, but
@@ -873,7 +875,11 @@ function renderHand(){                                  // draw the current hist
 function newHand(){hist.push({qi:order[pos],pick:null});hidx=hist.length-1;renderHand();}
 function replayAnswer(a){answered=true;chosen=a;renderFeedback(cur,a,[]);}  // review: no stats change
 function prev(){if(hidx>0){hidx--;renderHand();}}
-function updateNav(){const p=document.getElementById("prev");if(p)p.disabled=hidx<=0;}
+// Forward is allowed when reviewing an earlier hand, or on the newest hand once it's answered
+// (so you can't skip a hand without answering it).
+function canFwd(){return hidx<hist.length-1||(hidx===hist.length-1&&answered);}
+function updateNav(){const p=document.getElementById("prev"),f=document.getElementById("fwd");
+  if(p)p.disabled=hidx<=0;if(f)f.disabled=!canFwd();}
 
 function renderPreflopFeedback(q,a){
   const correct=a===q.answer, closeOk=q.mixed&&a===q.alt;
@@ -1031,7 +1037,7 @@ function renderFeedback(q,a,gained){
   document.getElementById("fb").className="fb on";sheetOpen(true);
 }
 function answer(a){
-  if(answered)return;answered=true;chosen=a;if(hist[hidx])hist[hidx].pick=a;
+  if(answered)return;answered=true;chosen=a;if(hist[hidx])hist[hidx].pick=a;updateNav();
   if(cur.preflop){
     const correct=a===cur.answer, closeOk=!correct&&cur.mixed&&a===cur.alt;
     stats.n++; if(correct||closeOk)stats.solid++; else stats.leak++;
@@ -1066,14 +1072,24 @@ function next(){
 // tap the dimmer, or hit Next to deal the next one. ----
 function sheetOpen(b){const s=document.getElementById("fb-scrim");if(s)s.hidden=!b;
   document.documentElement.classList.toggle("sheet-open",b);}
+// Dismissing the sheet (scrim tap / swipe down) only CLOSES it — it never advances the hand.
+// Advancing is always an explicit Next (the sheet button, the app-bar Next, or Enter/->), so
+// dismissing a hand you stepped Back to review no longer skips you forward.
+function closeSheet(){document.getElementById("fb").className="fb";sheetOpen(false);}
+function reopenSheet(){if(answered){document.getElementById("fb").className="fb on";sheetOpen(true);}}
 (function(){const scrim=document.getElementById("fb-scrim"),fb=document.getElementById("fb");
-  if(scrim)scrim.onclick=function(){next();};
+  if(scrim)scrim.onclick=function(){closeSheet();};
+  // tap the hand (once dismissed) to bring the result back up
+  const card=document.querySelector(".card");
+  if(card)card.addEventListener("click",function(e){
+    if(!answered||e.target.closest(".fb"))return;
+    if(!document.getElementById("fb").classList.contains("on"))reopenSheet();});
   if(!fb)return;let y0=null;
   fb.addEventListener("touchstart",function(e){y0=fb.scrollTop<=0?e.touches[0].clientY:null;},{passive:true});
   fb.addEventListener("touchmove",function(e){if(y0==null)return;const dy=e.touches[0].clientY-y0;
     if(dy>0)fb.style.transform="translate(-50%,"+Math.min(dy,140)+"px)";},{passive:true});
   fb.addEventListener("touchend",function(e){if(y0==null)return;const dy=e.changedTouches[0].clientY-y0;y0=null;
-    fb.style.transform="";if(dy>90)next();},{passive:true});
+    fb.style.transform="";if(dy>90)closeSheet();},{passive:true});
 })();
 
 // Adaptive unlock: play a spot well (best/good) and its concept graduates into
@@ -1125,6 +1141,7 @@ intro.addEventListener("toggle",()=>{try{localStorage.setItem("introOpen",intro.
 
 document.getElementById("next").onclick=next;
 document.getElementById("prev").onclick=prev;
+document.getElementById("fwd").onclick=next;
 document.getElementById("moretoggle").onclick=function(){
   moreOpen=!moreOpen;try{localStorage.setItem("moreOpen",moreOpen?"1":"0");}catch(e){}
   document.getElementById("morebody").hidden=!moreOpen;
