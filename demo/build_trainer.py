@@ -327,6 +327,54 @@ def load_preflop(n=PF_Q):
     return out
 
 
+def load_contrast_pool(per_bucket=2):
+    """A broader, category-diverse pool drawn from the FULL packs (not just the quiz sample),
+    so the "similar hand, opposite play" contrast can find a genuine same-category twin even
+    for combos the 96-spot deck doesn't happen to include (e.g. a two-pair that FOLDS on a
+    wet board). These never enter the quiz rotation — they only serve as contrasts."""
+    from pokertrainer.cards import parse_cards, card_rank
+    from pokertrainer.evaluator import evaluate, category_name
+    specs = [(DB, None), (SB_DB, "SB vs BB"), (TR_DB, "street")]
+    buckets, seen, out = defaultdict(int), set(), []
+    for db, badge in specs:
+        if not os.path.exists(db):
+            continue
+        try:
+            _require_verified(db)
+        except SystemExit:
+            continue
+        c = sqlite3.connect(db)
+        dicts = [dict(zip(COLS, r)) for r in
+                 c.execute(f"SELECT {','.join(COLS)} FROM flop_decision").fetchall()]
+        c.close()
+        oop = _oop_pos(dicts); ip = _ip_pos(dicts, oop)
+        for d in dicts:
+            cs = parse_cards(d["board"]) + parse_cards(d["hand"])
+            if len(cs) < 5:
+                continue
+            cat = category_name(evaluate(cs))
+            # Match the JS handRead teaching: "two pair" only counts when the hero's OWN two
+            # cards pair the board. A board pair (KK) + one matching hole card is really a single
+            # pair, so it must not fill the genuine two-pair bucket used for contrasts.
+            if cat == "two pair":
+                hr = [card_rank(x) for x in parse_cards(d["hand"])]
+                br = [card_rank(x) for x in parse_cards(d["board"])]
+                from collections import Counter as _C
+                allc = _C(br + hr); bc = _C(br)
+                hero_made = [r for r, n in allc.items() if n == 2 and r in hr and bc.get(r, 0) < 2]
+                if len(hero_made) < 2:
+                    cat = "one pair"
+            key = (d["reason"], cat)
+            k2 = (d["board"], d["hand"], d["node"])
+            if buckets[key] >= per_bucket or k2 in seen:
+                continue
+            seen.add(k2); buckets[key] += 1
+            q = _to_q(d, oop, ip)
+            q["badge"] = q["street"] if badge == "street" else badge
+            out.append(q)
+    return out
+
+
 def build(allow_missing_demo_packs=False):
     # The full-range pack now includes Fold/Call/Raise on facing-a-bet nodes (FR-011
     # landed), so the reduced-range raise-demo blend is retired.
@@ -335,13 +383,15 @@ def build(allow_missing_demo_packs=False):
     sb_qs = load_sb()
     pf_qs = load_preflop()
     qs = qs + tr_qs + sb_qs + pf_qs
+    cpool = load_contrast_pool()
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
                             capture_output=True, text=True).stdout.strip() or "local"
     print(f"  ({len(tr_qs)} turn/river + {len(sb_qs)} SB-vs-BB + {len(pf_qs)} pre-flop "
-          f"spots blended in; full-range raise now in the main pack)")
+          f"spots blended in; {len(cpool)} contrast-pool spots; full-range raise now in the main pack)")
     # Escape </script> so pack strings cannot break out of the inline script.
     data = json.dumps(qs, separators=(",", ":")).replace("<", "\\u003c")
-    body = TEMPLATE.replace("__DATA__", data).replace("__VERSION__", html.escape(meta.get("version", ""))) \
+    cdata = json.dumps(cpool, separators=(",", ":")).replace("<", "\\u003c")
+    body = TEMPLATE.replace("__DATA__", data).replace("__CPOOL__", cdata).replace("__VERSION__", html.escape(meta.get("version", ""))) \
                    .replace("__RECORDS__", html.escape(str(meta.get("record_count", "")))).replace("__COMMIT__", html.escape(commit)) \
                    .replace("__FONTFACE__", _fontface()).replace("__SUITDEFS__", _suitdefs())
     os.makedirs("demo", exist_ok=True)
@@ -844,6 +894,9 @@ __SUITDEFS__
 </div>
 <script>
 const Q = __DATA__;
+// Extra spots (from the full packs) used ONLY as "similar hand" contrasts, never in the quiz.
+const CPOOL = __CPOOL__;
+const ALLSPOTS = Q.concat(CPOOL);
 const SUIT = {s:["♠",0],h:["♥",1],d:["♦",1],c:["♣",0]};
 
 // Plain-English hand reader — tells the player WHAT they hold and where they stand
@@ -901,9 +954,15 @@ function handRead(hero,board){
   else if(straight){made="a straight";cat="straight";}
   else if(top===3){made=(pocket&&hv[0]===groups[0])?"a set of "+MANY[groups[0]]+" (three of a kind)":"three "+MANY[groups[0]]+" (three of a kind)";cat="trips";}
   else if(top===2&&second===2){
-    // Pocket pair + a separate board pair is two pair at showdown, but teach it as the pocket pair.
-    if(pocket&&boardPaired&&(bCnt[hv[0]]||0)<2)pairOf(hv[0]);
-    else{made="two pair";cat="twopair";}
+    // GENUINE two pair = the hero's OWN two cards pair two board cards. If one of the pairs is
+    // really a board pair (KK on the board) and the hero only holds one matching card, they
+    // have a single pair, not two pair — teach that (same idea as a pocket pair on a paired
+    // board). heroMade = paired ranks the hero holds that aren't already a board pair.
+    const prRanks=groups.filter(function(g){return cnt[g]===2;});
+    const heroMade=prRanks.filter(function(r){return hv.indexOf(r)>=0&&(bCnt[r]||0)<2;});
+    if(heroMade.length>=2){made="two pair";cat="twopair";}       // both hole cards work
+    else if(heroMade.length===1)pairOf(heroMade[0]);             // one real pair alongside a board pair
+    else{made="two pair";cat="twopair";}                         // double-paired board — hero rides it
   }
   else if(top===2){const pr=groups[0];const heroInPair=pocket?hv[0]===pr:hv.includes(pr);
     if(!heroInPair)air();    // board-pair-only — hero holds none of that rank
@@ -1271,13 +1330,13 @@ function preflopRing(q){
   const w=document.createElement("div");w.className="tv";w.innerHTML=html;return w;
 }
 function renderHand(){                                  // draw the current history entry
-  const e=hist[hidx];answered=false;chosen=null;cur=Q[e.qi];
+  const e=hist[hidx];answered=false;chosen=null;cur=e.q;
   document.getElementById("fb").className="fb";sheetOpen(false);
   renderQuestion(cur);coachReset();
   if(e.pick!=null)replayAnswer(e.pick);                 // already answered -> show its result again
   updateNav();
 }
-function newHand(){hist.push({qi:order[pos],pick:null});hidx=hist.length-1;renderHand();}
+function newHand(){hist.push({q:Q[order[pos]],pick:null});hidx=hist.length-1;renderHand();}
 function replayAnswer(a){answered=true;chosen=a;renderFeedback(cur,a,[]);}  // review: no stats change
 function prev(){if(hidx>0){hidx--;renderHand();}}
 // Forward is allowed when reviewing an earlier hand, or on the newest hand once it's answered
@@ -1401,12 +1460,12 @@ function findContrast(q){
   // "same hand, opposite play"). Require the SAME made-hand category; if there's no twin of
   // the same category with the opposite play, hide the block rather than show a mismatch.
   let best=null,bs=-1;
-  for(let i=0;i<Q.length;i++){const o=Q[i];
+  for(let i=0;i<ALLSPOTS.length;i++){const o=ALLSPOTS[i];   // deck + contrast-only pool
     if(o===q||o.preflop||vs.indexOf(o.reason)<0)continue;
     const ord=handRead(o.hero,o.board);
     if(ord.cat!==rd.cat)continue;                                    // same made-hand category only
     const sc=(o.street===q.street?2:0)+(o.is_oop!==q.is_oop?1:0);    // same street + a position flip
-    if(sc>bs){bs=sc;best={qi:i,q:o,rd:ord};}
+    if(sc>bs){bs=sc;best={q:o,rd:ord};}
   }
   return best;
 }
@@ -1444,7 +1503,7 @@ function renderContrast(q){
   const go=document.createElement("button");go.type="button";go.className="cmp-go";go.textContent="Play this hand →";
   // insert right AFTER the current hand (not at the end) so Back returns to this one even
   // when the contrast is opened while reviewing an earlier hand.
-  go.onclick=function(){hist.splice(hidx+1,0,{qi:c.qi,pick:null});hidx++;renderHand();};
+  go.onclick=function(){hist.splice(hidx+1,0,{q:c.q,pick:null});hidx++;renderHand();};
   body.appendChild(l1);body.appendChild(l2);body.appendChild(why);body.appendChild(go);
 }
 function renderFeedback(q,a,gained){
