@@ -33,6 +33,10 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .pos{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.05em;padding:2px 8px;border-radius:6px;flex:none}
 .pos.BB,.pos.SB,.pos.UTG,.pos.HJ,.pos.CO{background:color-mix(in srgb,var(--brass) 20%,transparent);color:var(--brass)}
 .pos.BTN{background:color-mix(in srgb,var(--best) 20%,transparent);color:var(--best)}
+/* postflop: colour by the in/out-of-position advantage, not the seat code, so position
+   is obvious at a glance on every spot (green = you act last / the good seat). */
+.pos.ip{background:color-mix(in srgb,var(--best) 20%,transparent);color:var(--best)}
+.pos.oop{background:color-mix(in srgb,var(--accept) 22%,transparent);color:var(--accept)}
 .demo{margin-left:auto;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accept);border:1px solid color-mix(in srgb,var(--accept) 45%,var(--line));border-radius:6px;padding:1px 6px}
 .felt{background:radial-gradient(120% 130% at 50% -10%,color-mix(in srgb,var(--best) 20%,var(--panel)),var(--panel));padding:8px 16px 8px;text-align:center}
 .cap{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
@@ -419,7 +423,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
     </details>
     <div class="s-sec">About</div>
     <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>9312d3d</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>d4e03fd</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
     <span class="demo">Turn / river</span> spots are now full-range solver output too, but
@@ -888,7 +892,7 @@ function renderPreflop(q){
 function renderQuestion(q){
   if(q.preflop)return renderPreflop(q);
   document.getElementById("boardcap").style.display="";document.getElementById("board").style.display="";
-  const posEl=document.getElementById("pos");posEl.textContent=posLabel(q);posEl.className="pos "+q.acting_player;
+  const posEl=document.getElementById("pos");posEl.textContent=posLabel(q);posEl.className="pos "+(q.is_oop?"oop":"ip");
   document.getElementById("sit").textContent=situation(q);
   const bd=document.getElementById("demotag");bd.hidden=!q.badge;bd.textContent=q.badge||"";
   document.getElementById("boardcap").textContent=(T().boardcap&&T().boardcap[q.street])||"Flop";
