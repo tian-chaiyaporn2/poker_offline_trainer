@@ -532,7 +532,11 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .coach-ask button:disabled{opacity:.5;cursor:default}
 /* ===== mobile app shell ===== */
 .app{max-width:440px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative;background:var(--bg)}
-.appbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.appbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:flex-start;gap:11px;padding:12px 16px;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.revbtn{appearance:none;flex:none;font-family:var(--label);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--brass);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:6px 11px;cursor:pointer;transition:.12s}
+.revbtn:hover:not(:disabled){border-color:var(--brass);background:color-mix(in srgb,var(--brass) 10%,var(--panel2))}
+.revbtn:disabled{opacity:.32;cursor:default}
+.appbar .vocab{margin-left:auto}
 .appbar .brand{font-size:18px}
 .views{flex:1;padding-bottom:72px}
 .view{display:none;padding:14px 15px 8px}
@@ -616,6 +620,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 __SUITDEFS__
 <div class="app">
   <div class="appbar">
+    <button class="revbtn" id="prev" type="button" disabled aria-label="Back to the previous hand">&#8249; Back</button>
     <div class="brand"><span class="sp">&spades;</span> Hold'em Trainer</div>
     <span class="vocab" id="vocab" hidden></span>
   </div>
@@ -684,7 +689,7 @@ __SUITDEFS__
     </div>
   </details>
 
-  <div class="hint" id="hint">Pick with <kbd>1</kbd><kbd>2</kbd> · next hand with <kbd>Enter</kbd></div>
+  <div class="hint" id="hint">Pick with <kbd>1</kbd><kbd>2</kbd> · next <kbd>Enter</kbd> · back <kbd>←</kbd></div>
   </section>
 
   <section class="view" id="v-progress">
@@ -947,6 +952,9 @@ const TERMS = {
     herocap:"Your hand (your 2 private cards)"}
 };
 let order=[], pos=0, answered=false, cur=null, chosen=null, stats={n:0,solid:0,ok:0,leak:0,street:{}};
+// Hand history so you can step BACK and re-read a hand you already answered (with its
+// result), then step forward again. hist = [{qi, pick}] in the order shown; hidx = cursor.
+let hist=[], hidx=-1;
 function trackStreet(hit){const k=qcat(cur);const s=stats.street[k]||(stats.street[k]={n:0,hit:0});s.n++;if(hit)s.hit++;}
 let mode=(function(){try{const m=localStorage.getItem("lang");return (m==="poker"||m==="learning"||m==="plain"||m==="progressive")?m:"progressive";}catch(e){return "progressive";}})();
 // Which part to train (pre-flop / flop / turn / river / all).
@@ -1000,6 +1008,29 @@ const RIVER_PLAIN={
   raise_semibluff:"Nothing left to draw to — this raise is a bluff to pressure them into folding.",
   protection:"The board is complete — bet to get paid by worse hands; nothing can catch up now."
 };
+// A "mixed" (near-tie) spot only says "any play is fine" by default — but when one of the
+// tied plays is an aggressive line with a weak hand, that reads as a contradiction ("why is
+// raising with Queen-high as good as folding?"). This spells out the missing half: the
+// aggressive line is a bluff/semi-bluff, and its fold-equity is what makes it break even with
+// giving up. Keyed off the actual co-best actions + the real holding.
+function closeExplain(q,rd){
+  const best=q.actions.filter(a=>q.grades[a]==="best");
+  const has=a=>best.indexOf(a)>=0;
+  const giveup=has("fold")?"folding":has("check")?"checking":"giving up";
+  const aggr=has("raise")?"raising":has("bet")?"betting":null;
+  if(aggr&&(has("fold")||has("check"))){
+    const hand=rd.made.toLowerCase().replace(" (no pair)","");
+    if(rd.cat==="high"&&!rd.draw)
+      return "Genuinely close — "+giveup+" and "+aggr+" are worth about the same. You've only got "+hand
+        +", nothing that wins if the hand checks down, so "+aggr+" here is a bluff: it can push better hands off the pot and win it now. "
+        +"That chance to take it uncontested is worth about as much as just "+giveup+" — which is why the two tie.";
+    if(rd.draw)
+      return "Close call — "+aggr+" and "+giveup+" come out about even. You're not ahead yet, but with "+rd.draw
+        +" "+aggr+" doubles as a semi-bluff: better hands may fold now, and if they call you can still improve. That's why it's a wash with "+giveup+".";
+    return "Close — "+aggr+" for thin value and "+giveup+" to keep the pot small are about equal here; either is fine, so just pick one.";
+  }
+  return "This one's genuinely close — any play is fine here.";
+}
 // True when a "trap"/"value" made hand should be reframed as a bluff-catcher: a very
 // coordinated board AND this is actually a check-or-bet decision (so "check to keep the pot
 // small" is a real option — never fire on a facing-a-bet fold/call/raise node).
@@ -1129,7 +1160,7 @@ function renderQuestion(q){
 }
 function setHint(n){const el=document.getElementById("hint");if(!el)return;
   let ks="";for(let i=1;i<=n;i++)ks+="<kbd>"+i+"</kbd>";
-  el.innerHTML="Pick with "+ks+" &middot; next hand with <kbd>Enter</kbd>";}
+  el.innerHTML="Pick with "+ks+" &middot; next <kbd>Enter</kbd> &middot; back <kbd>&larr;</kbd>";}
 // ---- position / situation graphic: a small table diagram so who-you-are, where the
 // button is, and what just happened read at a glance (not only from text). ----
 function renderSeats(q){
@@ -1190,7 +1221,17 @@ function preflopRing(q){
   html+='<div class="tvmid"><span class="potlab">blinds</span></div>';
   const w=document.createElement("div");w.className="tv";w.innerHTML=html;return w;
 }
-function deal(){answered=false;chosen=null;cur=Q[order[pos]];document.getElementById("fb").className="fb";sheetOpen(false);renderQuestion(cur);coachReset();}
+function renderHand(){                                  // draw the current history entry
+  const e=hist[hidx];answered=false;chosen=null;cur=Q[e.qi];
+  document.getElementById("fb").className="fb";sheetOpen(false);
+  renderQuestion(cur);coachReset();
+  if(e.pick!=null)replayAnswer(e.pick);                 // already answered -> show its result again
+  updateNav();
+}
+function newHand(){hist.push({qi:order[pos],pick:null});hidx=hist.length-1;renderHand();}
+function replayAnswer(a){answered=true;chosen=a;renderFeedback(cur,a,[]);}  // review: no stats change
+function prev(){if(hidx>0){hidx--;renderHand();}}
+function updateNav(){const p=document.getElementById("prev");if(p)p.disabled=hidx<=0;}
 
 function renderPreflopFeedback(q,a){
   const correct=a===q.answer, closeOk=q.mixed&&a===q.alt;
@@ -1260,6 +1301,9 @@ function renderFeedback(q,a,gained){
   if(rm==="plain"){rp.style.display="none";}
   else{rp.style.display="";rp.textContent=TERMS.poker.reason[q.reason]||q.reason;}
   document.getElementById("head").textContent=(rm==="poker")?q.headline:(rm==="plain")?plainHead(q):(TERMS[rm].reason[q.reason]||q.headline);
+  // For near-tie spots, replace the generic "any play is fine" with a reason the tie
+  // exists — especially why an aggressive line with a weak hand is a co-best play (a bluff).
+  if(q.reason==="mixed"&&rm!=="poker")document.getElementById("head").textContent=closeExplain(q,rd);
   // The portable takeaway, also inside the collapsible block.
   const ruleEl=document.getElementById("rule");
   ruleEl.innerHTML="";
@@ -1345,7 +1389,7 @@ function renderFeedback(q,a,gained){
   document.getElementById("fb").className="fb on";sheetOpen(true);
 }
 function answer(a){
-  if(answered)return;answered=true;chosen=a;
+  if(answered)return;answered=true;chosen=a;if(hist[hidx])hist[hidx].pick=a;
   if(cur.preflop){
     const correct=a===cur.answer, closeOk=!correct&&cur.mixed&&a===cur.alt;
     stats.n++; if(correct||closeOk)stats.solid++; else stats.leak++;
@@ -1372,7 +1416,10 @@ function answer(a){
   // preventScroll: focusing Next must not yank the viewport to the bottom of the card.
   document.getElementById("next").focus({preventScroll:true});
 }
-function next(){pos=(pos+1)%order.length;if(pos===0)order=shuffle(order.slice());deal();}
+function next(){
+  if(hidx<hist.length-1){hidx++;renderHand();}          // stepping forward through review
+  else{pos=(pos+1)%order.length;if(pos===0)order=shuffle(order.slice());newHand();}
+}
 // ---- result as a slide-up bottom sheet: verdict + why rise over the hand; swipe down,
 // tap the dimmer, or hit Next to deal the next one. ----
 function sheetOpen(b){const s=document.getElementById("fb-scrim");if(s)s.hidden=!b;
@@ -1421,12 +1468,12 @@ document.querySelectorAll("#lang button").forEach(b=>b.onclick=()=>setMode(b.dat
 // --- train-category selector: filter the deck to one street (or all) ---
 function qcat(q){return q.preflop?"preflop":(q.street||"flop");}
 function catCounts(){const c={all:Q.length,preflop:0,flop:0,turn:0,river:0};Q.forEach(q=>{const k=qcat(q);c[k]=(c[k]||0)+1;});return c;}
-function buildOrder(){order=shuffle([...Q.keys()].filter(i=>cat==="all"||qcat(Q[i])===cat));pos=0;
+function buildOrder(){order=shuffle([...Q.keys()].filter(i=>cat==="all"||qcat(Q[i])===cat));pos=0;hist=[];hidx=-1;
   const cc=catCounts();document.getElementById("catcount").textContent=(cat==="all"?Q.length:(cc[cat]||0))+" spots";}
 function applyCatUI(){const cc=catCounts();
   document.querySelectorAll("#cats button").forEach(b=>{b.classList.toggle("on",b.dataset.c===cat);
     const n=b.dataset.c==="all"?Q.length:(cc[b.dataset.c]||0);b.disabled=n===0;b.style.opacity=n===0?"0.4":"";});}
-function setCat(c){cat=c;try{localStorage.setItem("cat",c);}catch(e){}applyCatUI();buildOrder();deal();}
+function setCat(c){cat=c;try{localStorage.setItem("cat",c);}catch(e){}applyCatUI();buildOrder();newHand();}
 document.querySelectorAll("#cats button").forEach(b=>b.onclick=()=>setCat(b.dataset.c));
 // intro: open by default, remember if the reader dismisses it
 const intro=document.getElementById("intro");
@@ -1435,6 +1482,7 @@ try{intro.open=localStorage.getItem("introOpen")==="1";}catch(e){intro.open=fals
 intro.addEventListener("toggle",()=>{try{localStorage.setItem("introOpen",intro.open?"1":"0");}catch(e){}});
 
 document.getElementById("next").onclick=next;
+document.getElementById("prev").onclick=prev;
 document.getElementById("moretoggle").onclick=function(){
   moreOpen=!moreOpen;try{localStorage.setItem("moreOpen",moreOpen?"1":"0");}catch(e){}
   document.getElementById("morebody").hidden=!moreOpen;
@@ -1444,8 +1492,9 @@ document.addEventListener("keydown",e=>{
   if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;         // don't hijack typing in inputs
   if(e.target.closest&&e.target.closest("#coach"))return;              // coach panel owns its own keys (chips/send/input)
   const tv=document.getElementById("v-train");if(tv&&!tv.classList.contains("on"))return;  // only the Train view takes hotkeys
+  if(e.key==="ArrowLeft"){e.preventDefault();prev();return;}   // step back to review
   if(!answered){const i=parseInt(e.key);if(cur&&i>=1&&i<=cur.actions.length)answer(cur.actions[i-1]);}
-  else if(e.key==="Enter"||e.key===" "){e.preventDefault();next();}
+  else if(e.key==="Enter"||e.key===" "||e.key==="ArrowRight"){e.preventDefault();next();}
 });
 // ===== Ask-a-coach — bring-your-own-key. Transport seam: web fetch today, native
 // CapacitorHttp when this same page is wrapped as the mobile app (no CORS/CSP there). =====
@@ -1637,7 +1686,7 @@ document.getElementById("reset-btn").onclick=function(){
 applyMotion();
 try{setView(localStorage.getItem("view")||"train");}catch(e){setView("train");}
 
-coachInit();applyModeUI();updateVocab();updateLevelHint();applyCatUI();buildOrder();deal();
+coachInit();applyModeUI();updateVocab();updateLevelHint();applyCatUI();buildOrder();newHand();
 </script>'''
 
 if __name__ == "__main__":
