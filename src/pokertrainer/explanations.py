@@ -160,6 +160,30 @@ def classify_reason(rec: Dict) -> str:
     return "fold"
 
 
+def _board_plays_note(rec: Dict, street: str) -> Optional[str]:
+    """When the board alone is already a made hand, hole cards only matter if they beat it.
+
+    Demo teaching was claiming nut-level strength for any 'flush'/'straight' label even
+    when everyone shares the board (or when a higher flush card still beats you).
+    """
+    if street != "river":
+        return None
+    board = rec.get("board") or ""
+    try:
+        from .cards import parse_cards
+        from .evaluator import category_name, evaluate
+        cards = parse_cards(board if isinstance(board, str) else " ".join(board))
+        if len(cards) < 5:
+            return None
+        bcat = category_name(evaluate(list(cards)))
+    except Exception:
+        return None
+    if bcat in ("flush", "straight", "full house", "four of a kind", "straight flush"):
+        return (f"The board alone is a {bcat} — everyone shares it unless your hole "
+                f"cards beat that (and higher {bcat} cards still beat a weaker one).")
+    return None
+
+
 def explain(rec: Dict, board_favored: Optional[str] = None) -> Dict:
     """Return {reason, headline, detail:[...]} for a decision record."""
     reason = classify_reason(rec)
@@ -202,6 +226,9 @@ def explain(rec: Dict, board_favored: Optional[str] = None) -> Dict:
         if board_favored == rec["acting_player"]:
             detail.append(f"{rec['acting_player']}'s range is stronger on this board, "
                           f"which supports betting.")
+    note = _board_plays_note(rec, street)
+    if note:
+        detail.append(note)
     tex = rec.get("board_texture", [])
     tex_words = [ _TEXTURE[t] for t in tex if t in _TEXTURE ]
     if tex_words:

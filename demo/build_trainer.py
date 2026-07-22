@@ -948,6 +948,9 @@ function handRead(hero,board){
   const bsuit={};bs.forEach(s=>bsuit[s]=(bsuit[s]||0)+1);
   const bmax=Math.max(0,...Object.values(bsuit));
   const boardFlushy=bmax>=4?2:(bmax>=3?1:0);
+  // Board alone already makes the hand (river): everyone shares it unless hole cards beat it.
+  const boardFlushAlone=river&&bmax>=5;
+  const boardStraightAlone=river&&hasStraight(bv);
   const top=cnt[groups[0]],second=cnt[groups[1]]||0;
   let made,strength=null,cat="high",pairKind=null,overs=[];
   // A pair/trips the hero doesn't contribute to is the shared board, not their hand —
@@ -965,8 +968,8 @@ function handRead(hero,board){
   if(sflush){made="a straight flush";cat="sflush";}
   else if(top===4){made="four of a kind ("+MANY[groups[0]]+")";cat="quads";}
   else if(top===3&&second>=2){made="a full house";cat="full";}
-  else if(flush){made="a flush";cat="flush";}
-  else if(straight){made="a straight";cat="straight";}
+  else if(flush){made=boardFlushAlone?"a flush (the board is already a flush)":"a flush";cat="flush";}
+  else if(straight){made=boardStraightAlone?"a straight (the board is already a straight)":"a straight";cat="straight";}
   else if(top===3){made=(pocket&&hv[0]===groups[0])?"a set of "+MANY[groups[0]]+" (three of a kind)":"three "+MANY[groups[0]]+" (three of a kind)";cat="trips";}
   else if(top===2&&second===2){
     // GENUINE two pair = the hero's OWN two cards pair two board cards. If one of the pairs is
@@ -989,7 +992,7 @@ function handRead(hero,board){
     // Only the hero's draw — if the board alone already forms the straight draw, it's shared, not yours.
     const sd=straightDraw(allV);if(sd&&!straightDraw(bv))parts.push(sd);
     if(parts.length)draw=parts.join(" and ");}
-  return {made,strength,draw,cat,pairKind,overs,boardStraighty,boardFlushy};
+  return {made,strength,draw,cat,pairKind,overs,boardStraighty,boardFlushy,boardFlushAlone,boardStraightAlone};
 }
 // "Where you stand" — plain relative strength: what you beat and what beats you.
 // The single most important read for a beginner; hedged so it stays true regardless
@@ -1008,11 +1011,18 @@ function standingText(rd){
   else if(rd.boardFlushy===1)dg.push("a flush is possible");
   const danger=dg.length===1?dg[0]:dg.length?dg.slice(0,-1).join(", ")+" and "+dg[dg.length-1]:"";
   const high=rd.boardStraighty>=2||rd.boardFlushy>=2;
-  // A very coordinated board turns even a big made hand into a bluff-catcher — this
-  // dominates the read (the old logic wrongly called any overpair near-nuts).
+  // Board alone is already the made hand — do not claim nut-level strength.
+  if(rd.boardFlushAlone&&(rd.cat==="flush"||rd.cat==="high"||rd.cat==="pair")){
+    return "The board itself is a flush — everyone shares it. Your hole cards only help if they make a better flush (or a full house). Any higher flush card still beats you.";
+  }
+  if(rd.boardStraightAlone&&(rd.cat==="straight"||rd.cat==="high"||rd.cat==="pair")){
+    return "The board itself is a straight — everyone shares it unless your hole cards make a better straight (or a flush/full house).";
+  }
+  // A very coordinated board turns even a big made hand vulnerable — state the risk
+  // without prescribing "don't value-bet" (the solver may still prefer a bet/raise).
   if(high&&(rd.cat==="pair"||rd.cat==="twopair"||rd.cat==="trips")){
     const nm=rd.cat==="trips"?"three of a kind":rd.cat==="twopair"?"two pair":"a pair";
-    return "Careful — even with "+nm+", "+danger+", so here you're mostly bluff-catching, not value-betting.";
+    return "Careful — even with "+nm+", "+danger+", so made hands are vulnerable here.";
   }
   let base;
   switch(rd.cat){
@@ -1131,6 +1141,15 @@ const RIVER_PLAIN={
   // no more cards on the river, so "let them catch up" doesn't apply — checking induces a bet/bluff.
   trap:"You're very strong — checking hides it so they bet into you (or bluff) instead of folding to a bet; then you take their chips."
 };
+// Learning-mode river tags (short term + meaning; flop learning copy still says "improve").
+const RIVER_LEARNING={
+  realization:"Realize equity — check; there are no more cards to come",
+  semi_bluff:"Bluff — no more cards, so this bet only works if they fold",
+  call_odds:"Call — the price is right to see the showdown",
+  raise_semibluff:"Bluff raise — nothing left to draw to; pressure them to fold",
+  protection:"Thin value / denial — charge worse hands on a completed board",
+  trap:"Trap — check a monster to induce a bet; nothing can catch up"
+};
 // A "mixed" (near-tie) spot only says "any play is fine" by default — but when one of the
 // tied plays is an aggressive line with a weak hand, that reads as a contradiction ("why is
 // raising with Queen-high as good as folding?"). This spells out the missing half: the
@@ -1143,7 +1162,8 @@ function inferReason(q,rd){
   if(p==="raise")return !made?(rd.draw?"raise_semibluff":"raise_bluff"):(strong?"raise_value":"raise_semibluff");
   if(p==="bet")return !made?(rd.draw?"semi_bluff":"bluff"):(strong?"value":"protection");
   if(p==="check")return strong?"trap":(made?"pot_control":"realization");
-  if(p==="call")return made?"value_call":"call_odds";
+  // No-pair calls are bluff-catches, not "odds to chase" — only draws chase.
+  if(p==="call")return made?"value_call":(rd.draw?"call_odds":"bluff_catch");
   if(p==="fold")return "fold";
   return null;
 }
@@ -1196,6 +1216,19 @@ const RULES={
   raise_semibluff:"Raise hands that can improve — pressure them now, and you can still hit.",
   mixed:"When two plays are this close, either is fine — just pick one."
 };
+// River rules: no "cards to come" / "improve" / "catch up" wording (board is final).
+const RIVER_RULES={
+  realization:"A weak hand on the river just checks and goes to showdown cheaply.",
+  semi_bluff:"No more cards — this bet is a pure bluff to make better hands fold.",
+  call_odds:"It's the last card — call only when the price is right to see who wins.",
+  raise_semibluff:"Nothing left to draw to — this raise is a bluff to pressure them into folding.",
+  protection:"The board is final — bet thin value / denial against hands that still call worse.",
+  trap:"A huge hand can check to induce a bet or bluff; nothing can catch up anymore."
+};
+function ruleFor(q){
+  if(q.street==="river"&&RIVER_RULES[q.reason])return RIVER_RULES[q.reason];
+  return RULES[q.reason];
+}
 function situation(q){
   const first=q.node.endsWith("_first"), vscheck=q.node.endsWith("_vs_check");
   const sm=eff("positions");
@@ -1402,11 +1435,18 @@ function decisionFactors(q,rd){
   // relative-strength read (what you beat / what beats you) — the real "how strong is this".
   items.push({label:"Your hand",meter:handTier(rd),read:cap1(rd.made),why:standingText(rd)});
   const bd=rd.boardStraighty>=2||rd.boardFlushy>=2?2:(rd.boardStraighty>=1||rd.boardFlushy>=1?1:0);
+  const river=q.street==="river";
   items.push({label:"Board",meter:null,
-    read:bd===0?"Dry & safe":bd===1?"A few draws out there":"Wet — straights/flushes live",
-    why:bd===0?"No straights or flushes are possible, so the board is unlikely to change who's ahead."
-      :bd===1?"Some cards can still come that shift who's ahead — worth keeping in mind."
-      :"Straights and flushes are live, so big made hands and big draws are both in play."});
+    read:rd.boardFlushAlone?"Board flush":rd.boardStraightAlone?"Board straight"
+      :(bd===0?"Dry & safe":bd===1?"A few draws out there":"Wet — straights/flushes live"),
+    why:rd.boardFlushAlone?"The five shared cards are already a flush — hole cards only matter if they beat that flush."
+      :rd.boardStraightAlone?"The five shared cards are already a straight — hole cards only matter if they beat that straight."
+      :bd===0?(river?"No straights or flushes on this board, so the ranking is unlikely to surprise you."
+        :"No straights or flushes are possible, so the board is unlikely to change who's ahead.")
+      :bd===1?(river?"Some straight/flush possibilities are already on the board — keep that in mind."
+        :"Some cards can still come that shift who's ahead — worth keeping in mind.")
+      :(river?"Straights and flushes are live on this board, so big made hands are vulnerable."
+        :"Straights and flushes are live, so big made hands and big draws are both in play.")});
   items.push({label:"Position",meter:null,
     read:q.is_oop?"Out of position":"In position",
     why:q.is_oop?"You act first — you have to decide before seeing what they do, which is harder."
@@ -1571,6 +1611,10 @@ function renderFeedback(q,a,gained){
   if(rm==="plain"){rp.style.display="none";}
   else{rp.style.display="";rp.textContent=TERMS.poker.reason[q.reason]||q.reason;}
   document.getElementById("head").textContent=(rm==="poker")?q.headline:(rm==="plain")?plainHead(q):(TERMS[rm].reason[q.reason]||q.headline);
+  // Learning mode: flop TERMS still say "improve" / "free card" — use river tags.
+  if(rm==="learning"&&q.street==="river"&&RIVER_LEARNING[q.reason]){
+    document.getElementById("head").textContent=RIVER_LEARNING[q.reason];
+  }
   // For near-tie spots, replace the generic "any play is fine" with a reason the tie
   // exists — especially why an aggressive line with a weak hand is a co-best play (a bluff).
   if(q.reason==="mixed"&&rm!=="poker")document.getElementById("head").textContent=closeExplain(q,rd);
@@ -1582,7 +1626,7 @@ function renderFeedback(q,a,gained){
   const bcRule=bcReframe(q,rd);
   const ruleText=bcRule
     ? "On a coordinated board, a one-pair-type hand is a bluff-catcher, not a monster — keep the pot small and don't bet into the likely straights and flushes."
-    : RULES[q.reason];
+    : ruleFor(q);
   if(ruleText){ruleEl.hidden=false;
     const lab=document.createElement("b");lab.textContent="Rule of thumb";ruleEl.appendChild(lab);
     ruleEl.appendChild(document.createTextNode(ruleText));}

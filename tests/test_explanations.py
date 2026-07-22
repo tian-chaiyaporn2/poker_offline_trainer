@@ -88,3 +88,27 @@ def test_relabeled_first_action_is_value_not_fold():
     r["decision_type"] = "first_action"
     r["acting_player"] = "SB"
     assert classify_reason(r) == "value"
+
+
+def test_board_flush_detail_notes_shared_board():
+    """River board-flush spots must not teach nut-level strength silently."""
+    r = {
+        "node": "bb_first", "acting_player": "BB", "hand": "JhJc",
+        "board": "Qh8h3h2hAh", "hand_category": "strong_made", "preferred": "bet",
+        "actions": ["check", "bet"], "ev": {"check": 1.0, "bet": 1.5},
+        "freq": {"check": 0.2, "bet": 0.8}, "ev_sep_pct": 5.0,
+        "board_texture": ["monotone", "high_card"], "mixed": False,
+        "decision_type": "first_action", "pot_bb": 5.5,
+    }
+    e = explain(r)
+    assert e["reason"] == "value"
+    assert any("board alone is a flush" in d for d in e["detail"])
+
+
+def test_river_realization_headline_has_no_free_card():
+    r = rec("bb_first", "air", "check", 1.0, 0.5, ("check", "bet"))
+    r["board"] = "As 7h 2d Ks 9c"
+    e = explain(r)
+    assert e["reason"] == "realization"
+    assert "free card" not in e["headline"].lower()
+    assert "no more cards" in e["headline"].lower() or "no more" in e["headline"].lower()
