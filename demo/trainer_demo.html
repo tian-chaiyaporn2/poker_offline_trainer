@@ -456,7 +456,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
     </details>
     <div class="s-sec">About</div>
     <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>fe25ba5</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>53fd0ce</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
     <span class="demo">Turn / river</span> spots are now full-range solver output too, but
@@ -739,20 +739,20 @@ function reasonLabel(r){return (TERMS[eff("reason:"+r)].reason[r]||r);}
 // action. Replaces the generic per-reason phrase for plain mode; Learning keeps the
 // term-tagged phrase, Pro keeps the solver's baked headline.
 const PLAIN_HEAD={
-  value:"You're ahead of the hands that would call — bet so the weaker ones pay you off.",
-  protection:"You're often ahead now, but cards could still come that beat you — bet so the chasing hands have to pay.",
-  bluff:"Your hand probably can't win if you both check to the end — so bet to make better hands give up.",
-  semi_bluff:"Betting can make better hands fold now — and if you're called, your hand can still improve to the best.",
-  pot_control:"A decent hand, but not strong enough to build a big pot — check to keep it small and cheap.",
-  trap:"You're very strong here — checking hides it and lets your opponent bluff or catch up before you pounce.",
-  realization:"Not much yet — check to see the next card for free instead of throwing chips in.",
-  value_call:"You're ahead of enough of their betting hands — call to keep collecting from the worse ones.",
-  bluff_catch:"Your hand beats the ones they'd bluff with — call to catch those bluffs.",
-  call_odds:"Your hand isn't made yet but could improve — it's cheap enough to call and try to get there.",
-  fold:"There isn't enough here to keep going — fold and save your chips for a better spot.",
-  raise_value:"You're strong — raise to build a bigger pot while the worse hands pay.",
-  raise_bluff:"Raising tells the story of a big hand — do it to pressure them into folding.",
-  raise_semibluff:"Raise: you can fold out better hands now, and still improve if they call.",
+  value:"Your hand is better than the hands that would call — so bet, and they pay you off.",
+  protection:"You're ahead now, but a card could come that beats you — bet so hands chasing a draw pay to try, instead of hitting it for free.",
+  bluff:"You probably can't win by checking to the end — so bet, and make the better hands give up.",
+  semi_bluff:"Betting can make better hands fold now — and if they call, your hand can still improve to the best.",
+  pot_control:"A decent hand — but bet big, get called, and you're often beaten. Check to see the next card cheaply and keep the pot small.",
+  trap:"You're very strong — check to hide it, so they keep betting into you (or bluff), and you win a bigger pot later.",
+  realization:"Not much yet — check and take a free card instead of throwing chips in with a weak hand.",
+  value_call:"Their bet is often a worse hand or a bluff, and you beat those — so call and take their chips.",
+  bluff_catch:"You beat the hands they'd bluff with — so call, and catch the bluff.",
+  call_odds:"Your hand isn't made yet but can improve — it's cheap enough to call and try to hit.",
+  fold:"There just isn't enough here to keep going — fold and save your chips for a better spot.",
+  raise_value:"You're strong — raise to build a bigger pot while worse hands pay you off.",
+  raise_bluff:"Raise to tell the story of a big hand and pressure them into folding — even though you don't have it.",
+  raise_semibluff:"Raise: you can make better hands fold now, and still improve if they call.",
   mixed:"This one's genuinely close — any play is fine here."
 };
 // River-specific "why": no more cards, so nothing about drawing / free cards / improving.
@@ -1106,16 +1106,20 @@ function meterHTML(lv){if(lv==null)return"";const cls=lv>=4?"":lv===3?" mid":" l
   let s='<span class="meter">';for(let i=1;i<=5;i++)s+='<i class="'+(i<=lv?"on"+cls:"")+'"></i>';return s+'</span>';}
 // plain word for the strength dots so a beginner isn't decoding a bar chart
 const STRENGTH_WORD=["","Weak","Weak-ish","Medium","Strong","Very strong"];
-function strengthTag(lv){if(lv==null)return"";const cls=lv>=4?"str-hi":lv===3?"str-mid":"str-lo";
+function strengthTag(lv,drawing){if(lv==null)return"";
+  // a hand with no made value but a draw is "Drawing" (potential), not a made-strength tier.
+  if(drawing)return '<span class="sum-str str-mid">Drawing</span>';
+  const cls=lv>=4?"str-hi":lv===3?"str-mid":"str-lo";
   return '<span class="sum-str '+cls+'">'+STRENGTH_WORD[lv]+'</span>';}
 function renderFactors(q){
   const el=document.getElementById("factors"),wrap=document.getElementById("analytics"),sum=document.getElementById("analytics-sum");
   if(!el||!wrap)return;
   if(q.preflop||eff("reason:"+q.reason)==="poker"){wrap.hidden=true;el.innerHTML="";return;}
   wrap.hidden=false;el.innerHTML="";
-  const items=decisionFactors(q,handRead(q.hero,q.board)),hand=items[0];
+  const rd=handRead(q.hero,q.board),items=decisionFactors(q,rd),hand=items[0];
+  const drawing=rd.cat==="high"&&!!rd.draw;   // no made hand, but a draw
   // Summary = YOUR HAND (named once, always visible): read + strength meter + the standing read.
-  sum.innerHTML='<div class="sum-top"><b class="sum-read">'+hand.read+'</b><span class="sum-str-wrap">'+strengthTag(hand.meter)+meterHTML(hand.meter)+'</span></div>'
+  sum.innerHTML='<div class="sum-top"><b class="sum-read">'+hand.read+'</b><span class="sum-str-wrap">'+strengthTag(hand.meter,drawing)+meterHTML(hand.meter)+'</span></div>'
     +'<div class="sum-why">'+hand.why+'</div>'
     +'<div class="sum-hint">Board &middot; position &middot; opponent &middot; odds</div>';
   // Body (expand) = the situational factors — no need to re-name the hand here.
@@ -1422,11 +1426,14 @@ function renderFeedback(q,a,gained){
     const num=document.createElement("span");num.className="num";
     const ev=q.ev[x];
     if(payoffView){
-      // Best row shows what it wins; the rest show what they GIVE UP vs best — so the
-      // number agrees with the verdict (a "mistake" reads as a loss, never a + payoff).
-      const txt=(ga==="best")?fmtEv(ev)+" "+unit
-        :"−"+(Math.round((q.ev[pref]-ev)*100)/100)+" "+unit+" vs best";
-      num.appendChild(document.createTextNode(txt+" "));
+      // Beginner (plain) reads the colour + tag + bar length — no chip math. Learning/Pro get
+      // the exact figures. Best row shows what it wins; the rest what they GIVE UP vs best, so
+      // the number always agrees with the verdict (a "mistake" reads as a loss, never a + gain).
+      if(unit!=="chips"){
+        const txt=(ga==="best")?fmtEv(ev)+" "+unit
+          :"−"+(Math.round((q.ev[pref]-ev)*100)/100)+" "+unit+" vs best";
+        num.appendChild(document.createTextNode(txt+" "));
+      }
     }else{
       num.appendChild(document.createTextNode(q.freq[x]+"% · "+(ev>=0?"+":"")+ev+" "+unit+" "));
     }
