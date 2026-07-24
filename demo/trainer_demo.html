@@ -456,7 +456,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
     </details>
     <div class="s-sec">About</div>
     <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>b492199</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>842d493</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
     <span class="demo">Turn / river</span> spots are now full-range solver output too, but
@@ -738,21 +738,23 @@ function reasonLabel(r){return (TERMS[eff("reason:"+r)].reason[r]||r);}
 // Beginner "why": explains the LOGIC of the play in plain words, not just names the
 // action. Replaces the generic per-reason phrase for plain mode; Learning keeps the
 // term-tagged phrase, Pro keeps the solver's baked headline.
+// The headline is the concrete SITUATION for this hand (what's true right now). The action is
+// in the verdict; the reusable principle is in the Rule of thumb — so no block repeats another.
 const PLAIN_HEAD={
-  value:"Your hand is better than the hands that would call — so bet, and they pay you off.",
-  protection:"You're ahead now, but a card could come that beats you — bet so hands chasing a draw pay to try, instead of hitting it for free.",
-  bluff:"You probably can't win by checking to the end — so bet, and make the better hands give up.",
-  semi_bluff:"Betting can make better hands fold now — and if they call, your hand can still improve to the best.",
-  pot_control:"A decent hand — but bet big, get called, and you're often beaten. Check to see the next card cheaply and keep the pot small.",
-  trap:"You're very strong — check to hide it, so they keep betting into you (or bluff), and you win a bigger pot later.",
-  realization:"Not much yet — check and take a free card instead of throwing chips in with a weak hand.",
-  value_call:"Their bet is often a worse hand or a bluff, and you beat those — so call and take their chips.",
-  bluff_catch:"You beat the hands they'd bluff with — so call, and catch the bluff.",
-  call_odds:"Your hand isn't made yet but can improve — it's cheap enough to call and try to hit.",
-  fold:"There just isn't enough here to keep going — fold and save your chips for a better spot.",
-  raise_value:"You're strong — raise to build a bigger pot while worse hands pay you off.",
-  raise_bluff:"Raise to tell the story of a big hand and pressure them into folding — even though you don't have it.",
-  raise_semibluff:"Raise: you can make better hands fold now, and still improve if they call.",
+  value:"Your hand is better than the hands that would call here.",
+  protection:"You're ahead right now — but a card could still come that beats you.",
+  bluff:"You almost certainly can't win this hand by checking it down.",
+  semi_bluff:"You're not ahead yet — but your draw can still get there.",
+  pot_control:"A decent hand — but bet big, get called, and you're usually beaten.",
+  trap:"You're very strong here, and betting would just scare the weaker hands off.",
+  realization:"Not much here — no reason to put chips in with a weak hand.",
+  value_call:"Their bet is often a worse hand or a bluff, and you beat those.",
+  bluff_catch:"You beat the hands they'd bluff with here.",
+  call_odds:"Not made yet, but you can still improve — and it's cheap to keep going.",
+  fold:"There just isn't enough here to keep going.",
+  raise_value:"You're strong, and there's a bet in front of you to punish.",
+  raise_bluff:"You can't win at showdown — but a big raise tells a believable story.",
+  raise_semibluff:"You're not there yet, but your draw can still get there.",
   mixed:"This one's genuinely close — any play is fine here."
 };
 // River-specific "why": no more cards, so nothing about drawing / free cards / improving.
@@ -828,17 +830,17 @@ function plainHead(q){
 // The generalizable lesson — a one-line pattern per spot type, so the takeaway
 // transfers to the next hand instead of staying stuck to this one. Jargon-free.
 const RULES={
-  value:"When you're ahead of the hands that would call, bet to get paid.",
-  protection:"Ahead, but dangerous cards could still come? Bet so the hands chasing a card have to pay.",
-  bluff:"No way to win at the end? Bet to make better hands fold.",
+  value:"A strong hand makes its money by betting and getting called.",
+  protection:"Bet a vulnerable lead — make draws pay to chase, not hit for free.",
+  bluff:"With nothing to show down, folding them out is the only way to win.",
   semi_bluff:"Bet hands that can still improve — you win now if they fold, later if your hand improves.",
   pot_control:"A medium-strength hand plays best in a small pot — check.",
   trap:"A huge hand can check to let a weaker one bluff or catch up.",
   realization:"A weak hand wants to reach the end cheaply — check and take a free card.",
   value_call:"Call when you're ahead of the hands doing the betting.",
-  bluff_catch:"Call when your hand beats the ones they'd bluff with.",
+  bluff_catch:"If you beat their bluffs, call and catch them.",
   call_odds:"Chase an unfinished hand when it's cheap enough to be worth your chance of completing it.",
-  fold:"Not enough to keep going? Folding to save chips is the winning play.",
+  fold:"Fold a hand too weak to continue — save your chips for a better spot.",
   raise_value:"A strong hand raises to build a bigger pot.",
   raise_bluff:"Raise as a bluff when a big hand is believable and they can fold.",
   raise_semibluff:"Raise hands that can improve — pressure them now, and you can still hit.",
