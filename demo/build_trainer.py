@@ -804,7 +804,7 @@ __SUITDEFS__
       </div>
       <div class="mix"><h4 id="mixhead"></h4><div id="bars"></div></div>
       <details class="compare" id="compare" hidden>
-        <summary><span>&#8646;</span> A similar hand plays the opposite way &mdash; see why</summary>
+        <summary><span>&#8646;</span> A similar hand, the opposite play</summary>
         <div class="compare-body" id="compare-body"></div>
       </details>
       <button class="next" id="next">Next hand &nbsp;&#8629;</button>
@@ -1809,7 +1809,9 @@ function renderFeedback(q,a,gained){
   const cost=document.getElementById("cost");
   const dEv=Math.round((q.ev[pref]-q.ev[a])*100)/100;
   if(g!=="best"&&dEv>=0.05){cost.hidden=false;
-    cost.textContent=best+" is worth about "+dEv+" "+unit+" more per hand than "+you+" here — small leaks like this add up.";
+    cost.textContent=(unit==="chips")   // beginner: qualitative, matching the number-free bars
+      ?"Over many hands, "+you+" here loses money — "+best+" is the better play."
+      :best+" is worth about "+dEv+" "+unit+" more per hand than "+you+" here — small leaks add up.";
   }else{cost.hidden=true;}
   const dl=document.getElementById("det");dl.innerHTML="";
   // Pro detail: keep the baked bullets but tame the false precision ("~7.951%") and
@@ -1829,7 +1831,7 @@ function renderFeedback(q,a,gained){
   // question a learner is actually asking.
   const payoffView=(mode!=="poker");
   document.getElementById("mixhead").textContent=payoffView
-    ?"What each choice is worth (best first)"
+    ?"What each play is worth"
     :"Solver mix — how often the solver plays each action (★ = best EV), and its EV";
   const bars=document.getElementById("bars");bars.innerHTML="";
   const maxf=Math.max(1,...q.actions.map(x=>q.freq[x]));
