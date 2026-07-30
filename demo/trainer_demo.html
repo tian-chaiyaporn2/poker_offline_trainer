@@ -338,6 +338,110 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
   padding:4px 11px;border-radius:999px;border:1px solid transparent}
 .oppchip.a-check{background:color-mix(in srgb,var(--accept) 16%,transparent);color:var(--accept);border-color:color-mix(in srgb,var(--accept) 40%,var(--line))}
 .oppchip.a-bet{background:color-mix(in srgb,var(--costly) 16%,transparent);color:var(--costly);border-color:color-mix(in srgb,var(--costly) 40%,var(--line))}
+/* ===== mobile-first player loop ===== */
+.session-hud{display:flex;align-items:center;justify-content:space-between;margin:0 2px 7px;
+  font-family:var(--label);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.session-hud b{color:var(--ink);font-variant-numeric:tabular-nums}
+.sit{min-height:54px;padding:8px 13px;align-items:flex-start}
+.sit-copy{min-width:0;display:flex;flex-direction:column;gap:2px;line-height:1.25}
+.sit-main{font-size:14px;font-weight:700;color:var(--ink)}
+.sit-context{font-size:11.5px;color:var(--muted)}
+.sit .demo{align-self:center}
+.felt{padding:7px 12px 10px}
+#board{gap:6px}
+#hero{gap:8px}
+#board .pc{width:46px;height:62px}
+#board .pc .ix b{font-size:13px}
+#board .pc .ix .mini{width:9px;height:9px}
+#board .pc .center .psuit{width:25px;height:25px}
+#hero .pc{width:60px;height:82px;border-radius:9px}
+#hero .pc::after{inset:4px;border-radius:6px}
+#hero .pc .ix{top:4px;left:5px}
+#hero .pc .ix b{font-size:16px}
+#hero .pc .ix .mini{width:10px;height:10px}
+#hero .pc .center .psuit{width:32px;height:32px}
+.hero{margin-top:7px}
+.acts{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:11px 13px 13px}
+.acts.n-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.act{min-width:0;min-height:68px;padding:9px 5px;justify-content:center;gap:1px}
+.act .al{font-size:14.5px;font-weight:750;line-height:1.15}
+.act .asub{font-size:10px;color:var(--muted);font-weight:500;line-height:1.2;text-align:center}
+.act .k{margin-top:2px;font-size:9px}
+/* Postflop is heads-up: only the two players, their roles, and the action matter. */
+.tv.duel{height:116px;border-radius:86px/45px}
+.tv.duel .tvs{width:105px}
+.tv.duel .tvs.opp{left:50%;top:19%}
+.tv.duel .tvs.you{left:50%;top:82%}
+.tv.duel .tvs.opp .av,.tv.duel .tvs.you .av{width:25px;height:25px}
+.tv.duel .tvs.opp .ps,.tv.duel .tvs.you .ps{font-size:8px}
+.tv.duel .tvmid{top:49%;gap:4px}
+.tv.duel .oppchip{padding:3px 10px}
+.tv.duel .potlab{padding:2px 12px}
+.fb-brief{padding:0 18px 2px}
+.fb-brief .head{font-size:14px;line-height:1.45;margin:0}
+.learn{margin:8px 18px 2px;border:1px solid var(--line);border-radius:12px;
+  background:color-mix(in srgb,var(--panel2) 45%,transparent);overflow:hidden}
+.learn>summary{list-style:none;cursor:pointer;padding:11px 13px;font-family:var(--label);font-size:10.5px;
+  font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--brass);
+  display:flex;align-items:center;justify-content:space-between}
+.learn>summary::-webkit-details-marker{display:none}
+.learn>summary::after{content:"＋";font-size:14px}
+.learn[open]>summary{border-bottom:1px solid var(--line)}
+.learn[open]>summary::after{content:"－"}
+.learn .why{padding:10px 13px 4px}
+.learn .analytics{margin-top:0}
+.fb-actions{position:sticky;bottom:0;z-index:3;display:flex;gap:8px;padding:10px 18px calc(12px + env(safe-area-inset-bottom));
+  background:linear-gradient(180deg,transparent,var(--panel) 18%,var(--panel));border-top:1px solid var(--line)}
+.fb-actions .next{flex:1;width:auto;margin:0;min-height:50px}
+.coach-open{appearance:none;flex:none;border:1px solid var(--line);border-radius:11px;background:var(--panel2);
+  color:var(--brass);font-family:var(--label);font-size:10px;font-weight:700;padding:0 12px;cursor:pointer}
+.session-end{padding:20px 16px 26px;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:16px}
+.session-end h2{font-family:var(--disp);font-size:26px;margin:0 0 5px}
+.session-end>p{font-size:13px;color:var(--muted);margin:0 0 16px}
+.session-score{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.session-score div{padding:10px 5px;border:1px solid var(--line);border-radius:11px;background:var(--panel2)}
+.session-score b{display:block;font-family:var(--mono);font-size:20px}
+.session-score span{font-family:var(--label);font-size:8px;text-transform:uppercase;color:var(--muted)}
+.session-end-actions{display:flex;gap:8px}
+.session-end-actions button{flex:1;min-height:48px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);
+  color:var(--ink);font-family:var(--sans);font-weight:700;cursor:pointer}
+.session-end-actions .primary{background:var(--brass);color:#0b0c10;border-color:var(--brass)}
+.progress-note{font-size:12px;color:var(--muted);margin:-7px 0 16px}
+.terms-progress{margin-top:20px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.terms-progress b{font-family:var(--mono);color:var(--brass)}
+.train-primer{margin-top:12px;border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:0 14px}
+.train-primer>summary{list-style:none;cursor:pointer;padding:11px 0;font-size:12px;font-weight:700;color:var(--brass)}
+.train-primer>summary::-webkit-details-marker{display:none}
+.train-primer>summary::after{content:"＋";float:right}
+.train-primer[open]>summary::after{content:"－"}
+.train-primer p{font-size:12.5px;line-height:1.55;color:var(--muted);margin:0 0 12px}
+.tech{margin-top:8px;border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:0 14px}
+.tech>summary{list-style:none;cursor:pointer;padding:12px 0;font-size:12.5px;font-weight:700;color:var(--brass)}
+.tech>summary::-webkit-details-marker{display:none}
+.tech>summary::before{content:"＋ "}
+.tech[open]>summary::before{content:"－ "}
+.tech .foot{padding-bottom:13px}
+.catcount{display:none}
+.pager[hidden]{display:none!important}
+.revbtn{width:44px;height:44px}
+.appbar .vocab{display:none}
+.street-seg button{min-height:44px}
+.prow .pv{width:58px}
+@media(max-width:390px){
+  .appbar{gap:9px;padding:10px 12px}
+  .appbar .brand{font-size:16px}
+  .street-seg{gap:5px}
+  .street-seg button{font-size:9.5px;padding:7px 10px}
+  .view{padding-left:14px;padding-right:14px}
+  .acts{padding-left:12px;padding-right:12px}
+  .act .al{font-size:13.5px}
+  .act .asub{font-size:9px}
+}
+@media(max-width:350px){
+  #board .pc{width:42px;height:58px}
+  #hero .pc{width:56px;height:76px}
+  .act .asub{display:none}
+}
 </style>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.6"/></filter><filter id="soft2" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="1.4"/></filter><radialGradient id="sheen" cx="0.34" cy="0.26" r="0.62"><stop offset="0" stop-color="#fff" stop-opacity="0.17"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><clipPath id="cl-spade"><path d="M50 9 C 61 32, 90 46, 90 64 C 90 78, 79 85, 68 82.5 C 62 81, 57 77, 54.5 72 C 55 79, 58 87, 65 92 L 35 92 C 42 87, 45 79, 45.5 72 C 43 77, 38 81, 32 82.5 C 21 85, 10 78, 10 64 C 10 46, 39 32, 50 9 Z"/></clipPath><clipPath id="lr-spade"><path d="M50 11 C 39 30 12 46 12 64 C 12 79 27 85 39 79 C 51 73 58 56 57 42 C 56 30 54 19 50 11 Z"/></clipPath><linearGradient id="gl-spade" x1="0.3" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#454951"/><stop offset="1" stop-color="#34373d"/></linearGradient><linearGradient id="gd-spade" x1="0.4" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#141519"/><stop offset="1" stop-color="#0c0d11"/></linearGradient><clipPath id="cl-heart"><path d="M50 86 C 22 63, 8 48, 8 32 C 8 18, 19 10, 31 10 C 40 10, 47 15, 50 23 C 53 15, 60 10, 69 10 C 81 10, 92 18, 92 32 C 92 48, 78 63, 50 86 Z"/></clipPath><clipPath id="lr-heart"><path d="M50 22 C 45 14 38 10 30 10 C 18 10 8 18 8 32 C 8 47 24 63 50 82 C 61 62 61 36 50 22 Z"/></clipPath><linearGradient id="gl-heart" x1="0.3" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#f6454f"/><stop offset="1" stop-color="#e8232f"/></linearGradient><linearGradient id="gd-heart" x1="0.4" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#a8121d"/><stop offset="1" stop-color="#880c15"/></linearGradient><clipPath id="cl-diam"><path d="M50 8 C 58 24, 76 42, 92 50 C 76 58, 58 76, 50 92 C 42 76, 24 58, 8 50 C 24 42, 42 24, 50 8 Z"/></clipPath><clipPath id="lr-diam"><path d="M50 8 C 41 26 22 44 8 50 C 24 57 43 75 50 92 C 61 66 61 34 50 8 Z"/></clipPath><linearGradient id="gl-diam" x1="0.3" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#ff7134"/><stop offset="1" stop-color="#f4551b"/></linearGradient><linearGradient id="gd-diam" x1="0.4" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#c31f12"/><stop offset="1" stop-color="#9f170c"/></linearGradient><clipPath id="cl-club"><circle cx="50" cy="31" r="19"/><circle cx="30" cy="56" r="19"/><circle cx="70" cy="56" r="19"/><path d="M50 48 C 47 68, 41 83, 30 92 L 70 92 C 59 83, 53 68, 50 48 Z"/></clipPath><clipPath id="lr-club"><path d="M48 10 C 40 14 34 22 32 30 C 20 33 10 44 12 56 C 14 70 28 80 42 75 C 52 71 58 58 57 42 C 56 28 54 18 48 10 Z"/></clipPath><linearGradient id="gl-club" x1="0.3" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#415448"/><stop offset="1" stop-color="#334339"/></linearGradient><linearGradient id="gd-club" x1="0.4" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#15231c"/><stop offset="1" stop-color="#0d1712"/></linearGradient><symbol id="sym-spade" viewBox="0 0 100 100"><g clip-path="url(#cl-spade)"><rect width="100" height="100" fill="url(#gd-spade)"/><path d="M50 11 C 54 19 56 30 57 42 C 58 56 51 73 39 79" fill="none" stroke="#000" stroke-width="8" opacity="0.42" filter="url(#soft)" transform="translate(2.6 1)"/><g clip-path="url(#lr-spade)"><rect width="100" height="100" fill="url(#gl-spade)"/><path d="M50 11 C 54 19 56 30 57 42 C 58 56 51 73 39 79" fill="none" stroke="#000" stroke-width="4" opacity="0.16" filter="url(#soft2)" transform="translate(-0.6 0)"/></g><ellipse cx="31" cy="24" rx="34" ry="26" fill="url(#sheen)"/></g></symbol><symbol id="so-spade" viewBox="0 0 100 100"><g fill="currentColor"><path d="M50 9 C 61 32, 90 46, 90 64 C 90 78, 79 85, 68 82.5 C 62 81, 57 77, 54.5 72 C 55 79, 58 87, 65 92 L 35 92 C 42 87, 45 79, 45.5 72 C 43 77, 38 81, 32 82.5 C 21 85, 10 78, 10 64 C 10 46, 39 32, 50 9 Z"/></g></symbol><symbol id="sym-heart" viewBox="0 0 100 100"><g clip-path="url(#cl-heart)"><rect width="100" height="100" fill="url(#gd-heart)"/><path d="M50 22 C 61 36 61 62 50 82" fill="none" stroke="#000" stroke-width="8" opacity="0.42" filter="url(#soft)" transform="translate(2.6 1)"/><g clip-path="url(#lr-heart)"><rect width="100" height="100" fill="url(#gl-heart)"/><path d="M50 22 C 61 36 61 62 50 82" fill="none" stroke="#000" stroke-width="4" opacity="0.16" filter="url(#soft2)" transform="translate(-0.6 0)"/></g><ellipse cx="31" cy="24" rx="34" ry="26" fill="url(#sheen)"/></g></symbol><symbol id="so-heart" viewBox="0 0 100 100"><g fill="currentColor"><path d="M50 86 C 22 63, 8 48, 8 32 C 8 18, 19 10, 31 10 C 40 10, 47 15, 50 23 C 53 15, 60 10, 69 10 C 81 10, 92 18, 92 32 C 92 48, 78 63, 50 86 Z"/></g></symbol><symbol id="sym-diam" viewBox="0 0 100 100"><g clip-path="url(#cl-diam)"><rect width="100" height="100" fill="url(#gd-diam)"/><path d="M50 8 C 61 34 61 66 50 92" fill="none" stroke="#000" stroke-width="8" opacity="0.42" filter="url(#soft)" transform="translate(2.6 1)"/><g clip-path="url(#lr-diam)"><rect width="100" height="100" fill="url(#gl-diam)"/><path d="M50 8 C 61 34 61 66 50 92" fill="none" stroke="#000" stroke-width="4" opacity="0.16" filter="url(#soft2)" transform="translate(-0.6 0)"/></g><ellipse cx="31" cy="24" rx="34" ry="26" fill="url(#sheen)"/></g></symbol><symbol id="so-diam" viewBox="0 0 100 100"><g fill="currentColor"><path d="M50 8 C 58 24, 76 42, 92 50 C 76 58, 58 76, 50 92 C 42 76, 24 58, 8 50 C 24 42, 42 24, 50 8 Z"/></g></symbol><symbol id="sym-club" viewBox="0 0 100 100"><g clip-path="url(#cl-club)"><rect width="100" height="100" fill="url(#gd-club)"/><path d="M48 10 C 54 18 56 28 57 42 C 58 58 52 71 42 75" fill="none" stroke="#000" stroke-width="8" opacity="0.42" filter="url(#soft)" transform="translate(2.6 1)"/><g clip-path="url(#lr-club)"><rect width="100" height="100" fill="url(#gl-club)"/><path d="M48 10 C 54 18 56 28 57 42 C 58 58 52 71 42 75" fill="none" stroke="#000" stroke-width="4" opacity="0.16" filter="url(#soft2)" transform="translate(-0.6 0)"/></g><ellipse cx="31" cy="24" rx="34" ry="26" fill="url(#sheen)"/></g></symbol><symbol id="so-club" viewBox="0 0 100 100"><g fill="currentColor"><circle cx="50" cy="31" r="19"/><circle cx="30" cy="56" r="19"/><circle cx="70" cy="56" r="19"/><path d="M50 48 C 47 68, 41 83, 30 92 L 70 92 C 59 83, 53 68, 50 48 Z"/></g></symbol></defs></svg>
 <div class="app">
@@ -352,10 +456,11 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
       <button data-c="all" type="button">All</button><button data-c="preflop" type="button">Pre-flop</button><button data-c="flop" type="button">Flop</button><button data-c="turn" type="button">Turn</button><button data-c="river" type="button">River</button>
     </div>
     <span class="catcount" id="catcount"></span>
+    <div class="session-hud"><span>Quick session</span><span>Hand <b id="session-step">1</b> of <b id="session-total">10</b></span></div>
     <div class="bar-top"><i id="prog" style="width:0"></i></div>
 
-  <div class="card">
-    <div class="sit"><span class="pos" id="pos"></span><span id="sit"></span><span class="demo" id="demotag" hidden>raise demo</span></div>
+  <div class="card" id="play-card">
+    <div class="sit"><span class="pos" id="pos"></span><span class="sit-copy"><strong class="sit-main" id="sit"></strong><span class="sit-context" id="sitcontext"></span></span><span class="demo" id="demotag" hidden>raise demo</span></div>
     <div class="seats" id="seats" hidden></div>
     <div class="felt">
       <div class="cap" id="boardcap">Flop</div>
@@ -367,10 +472,13 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
       <div class="grab" aria-hidden="true"></div>
       <div class="verdict" id="verdict"></div>
       <div class="unlock" id="unlock" hidden></div>
+      <div class="fb-brief"><p class="head" id="head"></p></div>
+      <div class="mix"><h4 id="mixhead"></h4><div id="bars"></div></div>
+      <details class="learn" id="learn">
+        <summary>Learn why this play works</summary>
       <div class="why">
         <p class="read" id="read"></p>
         <span class="reason" id="reason"></span>
-        <p class="head" id="head"></p>
         <details class="analytics" id="analytics" hidden>
           <summary class="analytics-sum" id="analytics-sum"></summary>
           <div class="factors" id="factors"></div>
@@ -379,14 +487,28 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
         <p class="cost" id="cost" hidden></p>
         <ul class="det" id="det"></ul>
       </div>
-      <div class="mix"><h4 id="mixhead"></h4><div id="bars"></div></div>
+      </details>
       <details class="compare" id="compare" hidden>
         <summary><span>&#8646;</span> A similar hand, the opposite play</summary>
         <div class="compare-body" id="compare-body"></div>
       </details>
-      <button class="next" id="next">Next hand &nbsp;&#8629;</button>
+      <div class="fb-actions"><button class="coach-open" id="coach-open" type="button">Ask coach</button><button class="next" id="next">Next hand &nbsp;&#8629;</button></div>
     </div>
   </div>
+  <section class="session-end" id="session-end" hidden>
+    <h2>Session complete</h2>
+    <p id="session-summary">Ten decisions. One clearer read of your game.</p>
+    <div class="session-score">
+      <div><b class="cSolid" id="session-solid">0</b><span>Strong</span></div>
+      <div><b class="cOk" id="session-ok">0</b><span>Playable</span></div>
+      <div><b class="cLeak" id="session-leak">0</b><span>Leaks</span></div>
+    </div>
+    <div class="session-end-actions"><button id="retry-leaks" type="button">Retry leaks</button><button class="primary" id="new-session" type="button">New session</button></div>
+  </section>
+  <details class="train-primer">
+    <summary>New to poker? Read the 30-second primer</summary>
+    <p>You get two private cards and share up to five board cards. Make the best five-card hand you can. Check passes, Bet puts chips in, Call matches a bet, Raise increases it, and Fold gives up the hand. Acting last gives you more information.</p>
+  </details>
 
   <details class="coach" id="coach">
     <summary>💬 Ask a coach about this hand<span class="byok">your API key</span></summary>
@@ -420,15 +542,17 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 
   <section class="view" id="v-progress">
     <div class="phead"><div class="ptitle">Progress</div></div>
-    <div class="big-stat"><b class="acc" id="acc">—</b><span>overall accuracy</span></div>
+    <div class="big-stat"><b class="acc" id="acc">—</b><span>decision quality</span></div>
+    <p class="progress-note" id="progress-note">Play five hands to start building a reliable read.</p>
     <div class="statrow">
       <div class="stat"><b id="n">0</b><span>Played</span></div>
-      <div class="stat"><b class="cSolid" id="solid">0</b><span>Solid</span></div>
-      <div class="stat"><b class="cOk" id="ok">0</b><span>OK</span></div>
-      <div class="stat"><b class="cLeak" id="leak">0</b><span>Leak</span></div>
+      <div class="stat"><b class="cSolid" id="solid">0</b><span>Strong</span></div>
+      <div class="stat"><b class="cOk" id="ok">0</b><span>Playable</span></div>
+      <div class="stat"><b class="cLeak" id="leak">0</b><span>Leaks</span></div>
     </div>
     <div class="prow-h">Mastery by street</div>
     <div id="mastery"></div>
+    <div class="terms-progress">Terms learned: <b id="terms-learned">0 / 17</b></div>
   </section>
 
   <section class="view" id="v-settings">
@@ -455,8 +579,10 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
         starts in plain words and <b>teaches you the poker terms as you play them well</b>.</p>
     </details>
     <div class="s-sec">About</div>
+    <details class="tech">
+      <summary>Solver and data details</summary>
     <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>842d493</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>e0867cc</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
     <span class="demo">Turn / river</span> spots are now full-range solver output too, but
@@ -464,7 +590,8 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
     and facing-a-bet there is Fold/Call — the raise pass on those streets is the next depth work.
     Pre-flop spots are calibrated ranges (solver-approximate, tuned to standard frequencies).<br>
     Prefer to review the answers at a glance? See the <a href="preview.html">content gallery</a>.
-  </div>
+    </div>
+    </details>
   <div class="s-sec">Poker terms</div>
   <details class="glossary">
     <summary>Poker terms — tap to learn the lingo</summary>
@@ -707,11 +834,22 @@ const TERMS = {
     ev:"EV",boardcap:{flop:"Flop (first 3 shared cards)",turn:"Turn (4th card)",river:"River (5th card)"},
     herocap:"Your hand (your 2 private cards)"}
 };
-let order=[], pos=0, answered=false, cur=null, chosen=null, stats={n:0,solid:0,ok:0,leak:0,street:{}};
+const SESSION_SIZE=10;
+function freshStats(){return {n:0,solid:0,ok:0,leak:0,street:{}};}
+function loadLifetime(){try{
+  const x=JSON.parse(localStorage.getItem("trainer-progress")||"null");
+  return x&&typeof x.n==="number"?x:freshStats();
+}catch(e){return freshStats();}}
+let order=[], pos=0, answered=false, cur=null, chosen=null, stats=freshStats(), lifetime=loadLifetime();
+let sessionMisses=[];
 // Hand history so you can step BACK and re-read a hand you already answered (with its
 // result), then step forward again. hist = [{qi, pick}] in the order shown; hidx = cursor.
 let hist=[], hidx=-1;
-function trackStreet(hit){const k=qcat(cur);const s=stats.street[k]||(stats.street[k]={n:0,hit:0});s.n++;if(hit)s.hit++;}
+function trackStreet(bucket,hit){const k=qcat(cur);const s=bucket.street[k]||(bucket.street[k]={n:0,hit:0});s.n++;if(hit)s.hit++;}
+function recordGrade(bucket,tier,hit){
+  bucket.n++;bucket[tier]++;trackStreet(bucket,hit);
+}
+function saveLifetime(){try{localStorage.setItem("trainer-progress",JSON.stringify(lifetime));}catch(e){}}
 let mode=(function(){try{const m=localStorage.getItem("lang");return (m==="poker"||m==="learning"||m==="plain"||m==="progressive")?m:"progressive";}catch(e){return "progressive";}})();
 // Which part to train (pre-flop / flop / turn / river / all).
 let cat=(function(){try{const c=localStorage.getItem("cat");return ["all","preflop","flop","turn","river"].includes(c)?c:"all";}catch(e){return "all";}})();
@@ -733,6 +871,21 @@ function actLabel(a){const m=eff("positions");
 // labels like "Check (pass, no bet)" are for the buttons, not for prose).
 const ACT_SHORT={check:"Check",bet:"Bet",fold:"Fold",call:"Call",raise:"Raise"};
 function shortAct(a){return ACT_SHORT[a]||a;}
+function actionPrimary(a){
+  return {fold:"Fold",check:"Check",call:"Call",bet:"Bet",raise:"Raise",
+    open:"Raise","3bet":"3-bet","4bet":"4-bet"}[a]||a;
+}
+function actionSecondary(a){
+  if(a==="fold")return "Give up";
+  if(a==="check")return "Pass";
+  if(a==="call")return "Match the bet";
+  if(a==="open")return "Open the pot";
+  if(a==="3bet"||a==="4bet")return "Re-raise";
+  const sized=cur&&cur.labels&&cur.labels[a]?cur.labels[a].replace(/^(Bet|Raise)\s*/,""):"";
+  if(a==="bet")return sized?"Put chips in · "+sized:"Put chips in";
+  if(a==="raise")return sized?"Bet more · "+sized:"Bet more";
+  return "";
+}
 function fmtEv(v){return (v>=0?"+":"")+v;}
 function reasonLabel(r){return (TERMS[eff("reason:"+r)].reason[r]||r);}
 // Beginner "why": explains the LOGIC of the play in plain words, not just names the
@@ -912,40 +1065,53 @@ function pfSituation(q){
   if(q.ctx==="vs3bet")return "You opened from "+pfPos(q.pos)+", and "+pfPos(q.tbettor)+" 3-bets. Back on you.";
   return "You're on "+pfPos(q.pos)+". It folds to you.";   // rfi
 }
+function pfHeadline(q){
+  if(q.ctx==="def")return (q.opener||"Opponent")+" opens";
+  if(q.ctx==="vs3bet")return (q.tbettor||"Opponent")+" 3-bets";
+  return "Action folds to you";
+}
+function addActionButton(box,a,i){
+  const b=document.createElement("button");b.className="act";b.dataset.a=a;
+  const l=document.createElement("span");l.className="al";l.textContent=actionPrimary(a);
+  const sub=document.createElement("span");sub.className="asub";sub.textContent=actionSecondary(a);
+  const k=document.createElement("span");k.className="k";k.textContent=String(i+1);
+  b.appendChild(l);if(sub.textContent)b.appendChild(sub);b.appendChild(k);
+  b.onclick=()=>answer(a);box.appendChild(b);
+}
 function renderPreflop(q){
   const posEl=document.getElementById("pos");posEl.textContent=q.pos;posEl.className="pos "+q.pos;
-  document.getElementById("sit").textContent=pfSituation(q);
+  document.getElementById("sit").textContent=pfHeadline(q);
+  document.getElementById("sitcontext").textContent="You are "+q.pos+" · Preflop";
   const bd=document.getElementById("demotag");bd.hidden=false;bd.textContent="Preflop";
   document.getElementById("boardcap").style.display="none";document.getElementById("board").style.display="none";
   document.getElementById("herocap").textContent="Your hand";
   render(q.hand,document.getElementById("hero"));
-  const box=document.getElementById("acts");box.innerHTML="";
-  q.actions.forEach((a,i)=>{const b=document.createElement("button");b.className="act";b.dataset.a=a;
-    const l=document.createElement("span");l.textContent=pfActLabel(a);const k=document.createElement("span");k.className="k";k.textContent=String(i+1);
-    b.appendChild(l);b.appendChild(k);b.onclick=()=>answer(a);box.appendChild(b);});
+  const box=document.getElementById("acts");box.innerHTML="";box.className="acts n-"+q.actions.length;
+  q.actions.forEach((a,i)=>addActionButton(box,a,i));
   setHint(q.actions.length);renderSeats(q);
-  document.getElementById("prog").style.width=(100*pos/Math.max(1,order.length))+"%";
+  document.getElementById("prog").style.width=(100*(pos+1)/Math.max(1,order.length))+"%";
+}
+function decisionHeadline(q){
+  const villain=q.villain||"Opponent",node=q.node||"";
+  if(node.endsWith("_vs_check"))return villain+" checks";
+  if(node.endsWith("_vs_bet"))return villain+" bets";
+  return "Your action";
 }
 function renderQuestion(q){
   if(q.preflop)return renderPreflop(q);
   document.getElementById("boardcap").style.display="";document.getElementById("board").style.display="";
   const posEl=document.getElementById("pos");posEl.textContent=posLabel(q);posEl.className="pos "+(q.is_oop?"oop":"ip");
-  document.getElementById("sit").textContent=situation(q);
+  document.getElementById("sit").textContent=decisionHeadline(q);
+  document.getElementById("sitcontext").textContent="You are "+q.acting_player+" · "+(q.is_oop?"Out of position":"In position")+" · "+cap1(q.street);
   const bd=document.getElementById("demotag");bd.hidden=!q.badge;bd.textContent=q.badge||"";
   document.getElementById("boardcap").textContent=(T().boardcap&&T().boardcap[q.street])||"Flop";
   document.getElementById("herocap").textContent=T().herocap;
   render(q.board,document.getElementById("board"));
   render(q.hero,document.getElementById("hero"));
-  const box=document.getElementById("acts");box.innerHTML="";
-  q.actions.forEach((a,i)=>{
-    const b=document.createElement("button");b.className="act";b.dataset.a=a;
-    const lab=document.createElement("span");lab.textContent=actLabel(a);
-    const k=document.createElement("span");k.className="k";k.textContent=String(i+1);
-    b.appendChild(lab);b.appendChild(k);
-    b.onclick=()=>answer(a);box.appendChild(b);
-  });
+  const box=document.getElementById("acts");box.innerHTML="";box.className="acts n-"+q.actions.length;
+  q.actions.forEach((a,i)=>addActionButton(box,a,i));
   setHint(q.actions.length);renderSeats(q);
-  document.getElementById("prog").style.width=(100*pos/Math.max(1,order.length))+"%";
+  document.getElementById("prog").style.width=(100*(pos+1)/Math.max(1,order.length))+"%";
 }
 function setHint(n){const el=document.getElementById("hint");if(!el)return;
   let ks="";for(let i=1;i<=n;i++)ks+="<kbd>"+i+"</kbd>";
@@ -969,22 +1135,14 @@ function ringTable(q){
   let oppAct="",ok="wait";
   if(node.endsWith("_vs_check")){oppAct="checked";ok="check";}
   else if(node.endsWith("_vs_bet")){oppAct="bet";ok="bet";}
-  const start=Math.max(0,RING_ORDER.indexOf(hero));
-  const seats=[];for(var i=0;i<6;i++)seats.push(RING_ORDER[(start+i)%6]);
   const D='<span class="dbtn" title="dealer button">D</span>';
-  let html="";
-  seats.forEach(function(pos,i){
-    const x=RING_SLOTS[i][0],y=RING_SLOTS[i][1],above=RING_SLOTS[i][2];
-    const role=pos===hero?"you":pos===villain?"opp":"fold";
-    const btn=(pos==="BTN")?D:"";
-    let inner='<div class="av">'+btn+'</div>';
-    if(role==="you")inner+='<div class="nm">You</div><div class="ps">'+(RING_SHORT[pos]||pos)+'</div><div class="turn">&#9679; your move</div>';
-    else if(role==="opp")inner+='<div class="nm">Opponent</div><div class="ps">'+(RING_SHORT[pos]||pos)+'</div>';
-    else inner+='<div class="nm">'+pos+'</div>';
-    html+='<div class="tvs '+role+(above?" ab":"")+'" style="left:'+x+'%;top:'+y+'%">'+inner+'</div>';
-  });
+  const heroBtn=hero==="BTN"?D:"",villainBtn=villain==="BTN"?D:"";
+  let html='<div class="tvs opp"><div class="av">'+villainBtn+'</div><div class="nm">Opponent</div><div class="ps">'+
+    (RING_SHORT[villain]||villain)+'</div></div>';
+  html+='<div class="tvs you ab"><div class="av">'+heroBtn+'</div><div class="nm">You</div><div class="ps">'+
+    (RING_SHORT[hero]||hero)+'</div><div class="turn">&#9679; your move</div></div>';
   html+='<div class="tvmid">'+(ok!=="wait"?'<span class="oppchip a-'+ok+'">'+oppAct+'</span>':'')+'<span class="potlab">pot</span></div>';
-  const w=document.createElement("div");w.className="tv";w.innerHTML=html;return w;
+  const w=document.createElement("div");w.className="tv duel";w.innerHTML=html;return w;
 }
 function preflopRing(q){
   // same 6-max ring as postflop, so preflop position is spatial too: you + the raiser
@@ -1012,7 +1170,14 @@ function preflopRing(q){
 }
 function renderHand(){                                  // draw the current history entry
   const e=hist[hidx];answered=false;chosen=null;cur=e.q;
+  document.getElementById("play-card").hidden=false;
+  document.getElementById("session-end").hidden=true;
+  document.getElementById("session-step").textContent=String(Math.min(pos+1,order.length));
+  document.getElementById("session-total").textContent=String(order.length);
+  document.getElementById("hint").hidden=false;
   document.getElementById("fb").className="fb";sheetOpen(false);
+  document.getElementById("learn").open=false;
+  document.getElementById("coach").hidden=true;
   renderQuestion(cur);coachReset();
   if(e.pick!=null)replayAnswer(e.pick);                 // already answered -> show its result again
   updateNav();
@@ -1331,11 +1496,11 @@ function renderFeedback(q,a,gained){
   // Key off the GRADE, not a===pref: a co-best action (graded "best" but not the
   // single top-EV one) must still read as correct, not as a leak.
   let vmsg;
-  if(g==="best")vmsg=(a===pref)?"✓ "+you+" — the best play here.":"✓ "+you+" — also a top play here.";
-  else if(q.mixed&&(g==="good"||g==="acceptable"))vmsg="✓ "+you+" — close enough; any play is fine here.";
-  else if(g==="good")vmsg="✓ "+you+" works — "+best+" is only a touch better.";
-  else if(g==="acceptable")vmsg="~ "+you+" is OK, but "+best+" is the better play.";
-  else vmsg="✗ You picked "+you+" — "+(g==="major_error"?"a big mistake":"a costly leak")+". The play is "+best+".";
+  if(g==="best")vmsg=(a===pref)?"✓ "+you+" is strongest here.":"✓ "+you+" is also a top play here.";
+  else if(q.mixed&&(g==="good"||g==="acceptable"))vmsg="✓ Your "+you+" is strong — this is a genuinely mixed spot.";
+  else if(g==="good")vmsg="✓ Your "+you+" is strong. "+best+" is only marginally stronger.";
+  else if(g==="acceptable")vmsg="~ Your "+you+" is playable. "+best+" is strongest over time.";
+  else vmsg="✗ Your "+you+" is "+(g==="major_error"?"a major leak. ":"costly. ")+best+" is strongest here.";
   v.appendChild(document.createTextNode(vmsg));
   // Ground the explanation in the actual holding: "You held a pair of Jacks — the
   // Ace on the board outranks it." Beginners can't read their own hand yet, so this
@@ -1400,7 +1565,9 @@ function renderFeedback(q,a,gained){
     const li=document.createElement("li");li.textContent=clean;dl.appendChild(li);});}
   const ut=document.getElementById("unlock");
   if(gained&&gained.length){ut.hidden=false;ut.innerHTML="";
-    gained.forEach(t=>{const d=document.createElement("div");d.className="ul-row";d.textContent="🔓 New term learned — "+unlockText(t);ut.appendChild(d);});
+    const d=document.createElement("div");d.className="ul-row";
+    d.textContent="🔓 "+gained.length+" new term"+(gained.length===1?"":"s")+" learned — see them in Progress.";
+    ut.appendChild(d);
   }else{ut.hidden=true;}
   // The solver's mixed-strategy FREQUENCY (e.g. "Raise 14%") is a game-theory
   // balancing concept, and it can flatly contradict the grade ("14% · major error")
@@ -1415,7 +1582,7 @@ function renderFeedback(q,a,gained){
   const bars=document.getElementById("bars");bars.innerHTML="";
   const maxf=Math.max(1,...q.actions.map(x=>q.freq[x]));
   const GW={best:100,good:82,acceptable:58,costly:32,major_error:12};   // bar = how good
-  const VW={best:"Best",good:"Fine",acceptable:"Playable",costly:"Loses money",major_error:"Big mistake"};
+  const VW={best:"Strongest",good:"Strong",acceptable:"Playable",costly:"Costly",major_error:"Major leak"};
   const ordered=payoffView?q.actions.slice().sort((x,y)=>q.ev[y]-q.ev[x])
                           :q.actions.slice().sort((x,y)=>q.freq[y]-q.freq[x]);
   ordered.forEach(x=>{
@@ -1424,7 +1591,7 @@ function renderFeedback(q,a,gained){
     if(rec)row.classList.add("best-row");
     if(you)row.classList.add("you-row");
     const rlab=document.createElement("div");rlab.className="rlab";
-    const nm=document.createElement("span");nm.className="nm";nm.textContent=actLabel(x)+" ";
+    const nm=document.createElement("span");nm.className="nm";nm.textContent=(payoffView?actionPrimary(x):actLabel(x))+" ";
     if(rec){const st=document.createElement("span");st.className="star";st.textContent="★";st.title="Best EV (recommended)";nm.appendChild(st);nm.appendChild(document.createTextNode(" "));}
     if(you){const yp=document.createElement("span");yp.className="you";yp.textContent="YOUR PICK";nm.appendChild(yp);}
     const num=document.createElement("span");num.className="num";
@@ -1452,26 +1619,36 @@ function renderFeedback(q,a,gained){
   });
   document.getElementById("fb").className="fb on";sheetOpen(true);
 }
+function qualityScore(s){return s.n?Math.round(100*(s.solid+0.6*s.ok)/s.n):0;}
+function syncStatsUI(){
+  document.getElementById("n").textContent=lifetime.n;
+  document.getElementById("solid").textContent=lifetime.solid;
+  document.getElementById("ok").textContent=lifetime.ok;
+  document.getElementById("leak").textContent=lifetime.leak;
+  document.getElementById("acc").textContent=lifetime.n<5?"—":qualityScore(lifetime)+"%";
+  document.getElementById("progress-note").textContent=lifetime.n<5
+    ?"Play "+(5-lifetime.n)+" more hand"+(5-lifetime.n===1?"":"s")+" to start building a reliable read."
+    :"Weighted toward strong decisions · "+lifetime.n+" hands played.";
+}
 function answer(a){
   if(answered)return;answered=true;chosen=a;if(hist[hidx])hist[hidx].pick=a;updateNav();
+  document.getElementById("coach").hidden=false;
   if(cur.preflop){
     const correct=a===cur.answer, closeOk=!correct&&cur.mixed&&a===cur.alt;
-    stats.n++; if(correct||closeOk)stats.solid++; else stats.leak++;
-    trackStreet(correct||closeOk);
-    document.getElementById("n").textContent=stats.n;document.getElementById("solid").textContent=stats.solid;
-    document.getElementById("ok").textContent=stats.ok;document.getElementById("leak").textContent=stats.leak;
-    document.getElementById("acc").textContent=Math.round(100*(stats.solid+stats.ok)/stats.n)+"%";
+    const hit=correct||closeOk,tier=hit?"solid":"leak";
+    recordGrade(stats,tier,hit);recordGrade(lifetime,tier,hit);saveLifetime();
+    if(!hit)sessionMisses.push(cur);
+    syncStatsUI();
     renderFeedback(cur,a,[]);
     document.getElementById("next").focus({preventScroll:true});
     return;
   }
   const g=cur.grades[a];
-  stats.n++;
-  if(g==="best"||g==="good")stats.solid++;else if(g==="acceptable")stats.ok++;else stats.leak++;
-  trackStreet(g!=="costly"&&g!=="major_error");
-  document.getElementById("n").textContent=stats.n;document.getElementById("solid").textContent=stats.solid;
-  document.getElementById("ok").textContent=stats.ok;document.getElementById("leak").textContent=stats.leak;
-  document.getElementById("acc").textContent=Math.round(100*(stats.solid+stats.ok)/stats.n)+"%";
+  const tier=(g==="best"||g==="good")?"solid":g==="acceptable"?"ok":"leak";
+  const hit=tier!=="leak";
+  recordGrade(stats,tier,hit);recordGrade(lifetime,tier,hit);saveLifetime();
+  if(!hit)sessionMisses.push(cur);
+  syncStatsUI();
   const gained=tryUnlock(cur,g);
   // Don't re-render the question on unlock — swapping the button labels mid-answer
   // shifts the layout under the user's cursor. The feedback already reflects the new
@@ -1480,9 +1657,36 @@ function answer(a){
   // preventScroll: focusing Next must not yank the viewport to the bottom of the card.
   document.getElementById("next").focus({preventScroll:true});
 }
+function showSessionEnd(){
+  closeSheet();
+  document.getElementById("play-card").hidden=true;
+  document.getElementById("session-end").hidden=false;
+  document.getElementById("coach").hidden=true;
+  document.getElementById("hint").hidden=true;
+  document.getElementById("fwd").disabled=true;
+  document.getElementById("session-solid").textContent=stats.solid;
+  document.getElementById("session-ok").textContent=stats.ok;
+  document.getElementById("session-leak").textContent=stats.leak;
+  const retry=document.getElementById("retry-leaks");retry.disabled=!sessionMisses.length;
+  document.getElementById("session-summary").textContent=sessionMisses.length
+    ?sessionMisses.length+" decision"+(sessionMisses.length===1?" needs":"s need")+" another look."
+    :"Clean session — every decision was strong or playable.";
+  window.scrollTo(0,0);
+}
+function resetSession(){
+  stats=freshStats();sessionMisses=[];buildOrder();newHand();
+}
+function retryLeakSession(){
+  if(!sessionMisses.length)return;
+  const ids=sessionMisses.map(q=>Q.indexOf(q)).filter(i=>i>=0);
+  stats=freshStats();sessionMisses=[];order=shuffle(ids);pos=0;hist=[];hidx=-1;
+  document.getElementById("catcount").textContent=order.length+"-hand leak review";
+  newHand();
+}
 function next(){
-  if(hidx<hist.length-1){hidx++;renderHand();}          // stepping forward through review
-  else{pos=(pos+1)%order.length;if(pos===0)order=shuffle(order.slice());newHand();}
+  if(hidx<hist.length-1){hidx++;renderHand();return;}    // stepping forward through review
+  if(pos>=order.length-1){showSessionEnd();return;}
+  pos++;newHand();
 }
 // ---- result as a slide-up bottom sheet: verdict + why rise over the hand; swipe down,
 // tap the dimmer, or hit Next to deal the next one. ----
@@ -1527,7 +1731,8 @@ function unlockText(t){
 }
 function updateVocab(){const v=document.getElementById("vocab");
   v.hidden=(mode!=="progressive");
-  v.textContent="🔓 "+learned.size+" / "+VOCAB_TOTAL+" terms";}
+  v.textContent="🔓 "+learned.size+" / "+VOCAB_TOTAL+" terms";
+  const p=document.getElementById("terms-learned");if(p)p.textContent=learned.size+" / "+VOCAB_TOTAL;}
 const LEVEL_HINT={
   progressive:"Starts in plain words; poker terms unlock as you play them well.",
   plain:"Plain English — no poker jargon.",
@@ -1542,12 +1747,16 @@ document.querySelectorAll("#lang button").forEach(b=>b.onclick=()=>setMode(b.dat
 // --- train-category selector: filter the deck to one street (or all) ---
 function qcat(q){return q.preflop?"preflop":(q.street||"flop");}
 function catCounts(){const c={all:Q.length,preflop:0,flop:0,turn:0,river:0};Q.forEach(q=>{const k=qcat(q);c[k]=(c[k]||0)+1;});return c;}
-function buildOrder(){order=shuffle([...Q.keys()].filter(i=>cat==="all"||qcat(Q[i])===cat));pos=0;hist=[];hidx=-1;
-  const cc=catCounts();document.getElementById("catcount").textContent=(cat==="all"?Q.length:(cc[cat]||0))+" spots";}
+function buildOrder(){
+  const pool=shuffle([...Q.keys()].filter(i=>cat==="all"||qcat(Q[i])===cat));
+  order=pool.slice(0,Math.min(SESSION_SIZE,pool.length));pos=0;hist=[];hidx=-1;
+  document.getElementById("catcount").textContent=order.length+"-hand "+(cat==="all"?"mixed":cat.replace("preflop","preflop"))+" session";
+}
 function applyCatUI(){const cc=catCounts();
   document.querySelectorAll("#cats button").forEach(b=>{b.classList.toggle("on",b.dataset.c===cat);
     const n=b.dataset.c==="all"?Q.length:(cc[b.dataset.c]||0);b.disabled=n===0;b.style.opacity=n===0?"0.4":"";});}
-function setCat(c){cat=c;try{localStorage.setItem("cat",c);}catch(e){}applyCatUI();buildOrder();newHand();}
+function setCat(c){cat=c;try{localStorage.setItem("cat",c);}catch(e){}
+  stats=freshStats();sessionMisses=[];applyCatUI();buildOrder();newHand();}
 document.querySelectorAll("#cats button").forEach(b=>b.onclick=()=>setCat(b.dataset.c));
 // intro: open by default, remember if the reader dismisses it
 const intro=document.getElementById("intro");
@@ -1735,18 +1944,20 @@ function coachReset(){coachGen++;coachMsgs=[];coachErr=null;coachBusy=false;coac
 function renderProgress(){
   const el=document.getElementById("mastery");if(!el)return;el.innerHTML="";
   [["preflop","Preflop","c-pre"],["flop","Flop","c-flop"],["turn","Turn","c-turn"],["river","River","c-river"]].forEach(function(r){
-    const s=stats.street[r[0]]||{n:0,hit:0};const pct=s.n?Math.round(100*s.hit/s.n):0;
+    const s=lifetime.street[r[0]]||{n:0,hit:0};const pct=s.n?Math.round(100*s.hit/s.n):0;
     const row=document.createElement("div");row.className="prow";
     const nm=document.createElement("span");nm.className="pn";nm.textContent=r[1];
     const bar=document.createElement("span");bar.className="pbar";
-    const i=document.createElement("i");i.className=r[2];i.style.width=pct+"%";bar.appendChild(i);
-    const v=document.createElement("span");v.className="pv";v.textContent=s.n?pct+"%":"—";
+    const i=document.createElement("i");i.className=r[2];i.style.width=(s.n<5?0:pct)+"%";bar.appendChild(i);
+    const v=document.createElement("span");v.className="pv";v.textContent=!s.n?"—":s.n<5?s.n+" hand"+(s.n===1?"":"s"):pct+"%";
     row.appendChild(nm);row.appendChild(bar);row.appendChild(v);el.appendChild(row);
   });
+  syncStatsUI();
 }
 function setView(v){
   document.querySelectorAll(".view").forEach(function(s){s.classList.toggle("on",s.id==="v-"+v);});
   document.querySelectorAll("#tabbar button").forEach(function(b){b.classList.toggle("on",b.dataset.v===v);});
+  document.querySelector(".pager").hidden=v!=="train";
   if(v==="progress")renderProgress();
   window.scrollTo(0,0);
   try{localStorage.setItem("view",v);}catch(e){}
@@ -1759,9 +1970,15 @@ function applyMotion(){document.documentElement.classList.toggle("no-motion",mot
 document.getElementById("tog-motion").onclick=function(){motionOff=!motionOff;try{localStorage.setItem("motion",motionOff?"off":"on");}catch(e){}applyMotion();};
 document.getElementById("reset-btn").onclick=function(){
   if(!confirm("Reset your progress and learned terms?"))return;
-  try{localStorage.removeItem("learned");localStorage.removeItem("cat");}catch(e){}location.reload();};
+  try{localStorage.removeItem("learned");localStorage.removeItem("cat");localStorage.removeItem("trainer-progress");}catch(e){}location.reload();};
 applyMotion();
-try{setView(localStorage.getItem("view")||"train");}catch(e){setView("train");}
+setView("train");
 
-coachInit();applyModeUI();updateVocab();updateLevelHint();applyCatUI();buildOrder();newHand();
+document.getElementById("new-session").onclick=resetSession;
+document.getElementById("retry-leaks").onclick=retryLeakSession;
+document.getElementById("coach-open").onclick=function(){
+  closeSheet();const c=document.getElementById("coach");c.hidden=false;c.open=true;
+  requestAnimationFrame(()=>c.scrollIntoView({behavior:"smooth",block:"start"}));
+};
+coachInit();applyModeUI();updateVocab();updateLevelHint();syncStatsUI();applyCatUI();buildOrder();newHand();
 </script>
