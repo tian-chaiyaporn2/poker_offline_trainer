@@ -125,6 +125,21 @@ SITUATION = {
 ALAB = {"check": "Check", "bet": "Bet 66%", "fold": "Fold", "call": "Call", "raise": "Raise 3×"}
 
 
+def _bet_pct_from_pack(path: str) -> int:
+    """Read the modeled bet size so UI copy never drifts from a pack."""
+    conn = None
+    try:
+        conn = sqlite3.connect(path)
+        meta = dict(conn.execute("SELECT key, value FROM pack_meta"))
+        cfg = json.loads(meta.get("config") or "{}")
+        return int(cfg.get("bet_pct_pot", 66))
+    except (OSError, sqlite3.Error, TypeError, ValueError, json.JSONDecodeError):
+        return 66
+    finally:
+        if conn is not None:
+            conn.close()
+
+
 def _raise_label_from_pack(path: str) -> str:
     """Derive raise button label from pack config.raise_x when present."""
     try:
@@ -164,7 +179,7 @@ def _ip_pos(rows, oop):
     return "BTN" if oop != "BTN" else "BB"
 
 
-def _to_q(d, oop_pos="BB", ip_pos=None):
+def _to_q(d, oop_pos="BB", ip_pos=None, bet_pct=66):
     from pokertrainer.explanations import freq_pct_ints
     acts = json.loads(d["actions"])
     board = [d["board"][i:i+2] for i in range(0, len(d["board"]), 2)]
@@ -184,7 +199,9 @@ def _to_q(d, oop_pos="BB", ip_pos=None):
         # every matchup (not just BTN/SB-vs-BB): villain = the seat that isn't the hero.
         "villain": (ip_pos or ("BTN" if oop_pos != "BTN" else "BB"))
         if d["acting_player"] == oop_pos else oop_pos,
-        "actions": acts, "labels": {a: ALAB.get(a, a) for a in acts},
+        "actions": acts, "labels": {
+            a: (f"Bet {bet_pct}%" if a == "bet" else ALAB.get(a, a)) for a in acts
+        }, "bet_pct": bet_pct,
         "ev": {k: round(v, 2) for k, v in json.loads(d["ev"]).items()},
         # Largest-remainder ints so the Pro frequency mix always sums to 100.
         "freq": freq_pct_ints(freq_raw, order=acts),
@@ -213,7 +230,8 @@ def load_questions():
     groups = [g[:PER_REASON] for g in buckets.values()]
     picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:MAX_Q]
     oop = _oop_pos(picked); ip = _ip_pos(picked, oop)
-    return meta, [_to_q(d, oop, ip) for d in picked]
+    bet_pct = _bet_pct_from_pack(DB)
+    return meta, [_to_q(d, oop, ip, bet_pct) for d in picked]
 
 
 def load_raise(n=RAISE_Q, required=True):
@@ -240,7 +258,8 @@ def load_raise(n=RAISE_Q, required=True):
     picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
     oop = _oop_pos(picked); ip = _ip_pos(picked, oop)
     out = []
-    for q in (_to_q(d, oop, ip) for d in picked):
+    bet_pct = _bet_pct_from_pack(RAISE_DB)
+    for q in (_to_q(d, oop, ip, bet_pct) for d in picked):
         q["labels"] = {**q["labels"], "raise": raise_lab}
         q["badge"] = "raise demo"     # flag so the UI can note the reduced-range source
         out.append(q)
@@ -278,7 +297,8 @@ def load_turnriver(n=TR_Q, required=True):
     picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
     oop = _oop_pos(picked); ip = _ip_pos(picked, oop)
     out = []
-    for q in (_to_q(d, oop, ip) for d in picked):
+    bet_pct = _bet_pct_from_pack(TR_DB)
+    for q in (_to_q(d, oop, ip, bet_pct) for d in picked):
         q["badge"] = q["street"]
         out.append(q)
     streets = {q["street"] for q in out}
@@ -307,7 +327,8 @@ def load_scenario(db, badge, n):
     groups = [g[:2] for g in buckets.values()]
     picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
     out = []
-    for q in (_to_q(d, oop, ip) for d in picked):
+    bet_pct = _bet_pct_from_pack(db)
+    for q in (_to_q(d, oop, ip, bet_pct) for d in picked):
         q["badge"] = badge
         out.append(q)
     return out
@@ -357,7 +378,7 @@ def load_contrast_pool(per_bucket=2):
         dicts = [dict(zip(COLS, r)) for r in
                  c.execute(f"SELECT {','.join(COLS)} FROM flop_decision").fetchall()]
         c.close()
-        oop = _oop_pos(dicts); ip = _ip_pos(dicts, oop)
+        oop = _oop_pos(dicts); ip = _ip_pos(dicts, oop); bet_pct = _bet_pct_from_pack(db)
         for d in dicts:
             cs = parse_cards(d["board"]) + parse_cards(d["hand"])
             if len(cs) < 5:
@@ -379,7 +400,7 @@ def load_contrast_pool(per_bucket=2):
             if buckets[key] >= per_bucket or k2 in seen:
                 continue
             seen.add(k2); buckets[key] += 1
-            q = _to_q(d, oop, ip)
+            q = _to_q(d, oop, ip, bet_pct)
             q["badge"] = q["street"] if badge == "street" else badge
             out.append(q)
     return out
@@ -718,6 +739,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .s-sec{font-family:var(--label);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;margin:20px 0 8px}
 .seg{display:flex;background:var(--panel2);border-radius:11px;padding:3px;gap:2px;border:1px solid var(--line)}
 .seg button{flex:1;appearance:none;border:none;text-align:center;font-family:var(--label);font-size:9px;text-transform:uppercase;letter-spacing:.02em;padding:9px 2px;border-radius:8px;color:var(--muted);font-weight:700;cursor:pointer;background:none}
+.seg button{min-height:44px}
 .seg button.on{background:var(--brass);color:#0b0c10}
 .s-row{display:flex;align-items:center;justify-content:space-between;padding:12px 2px;border-bottom:1px solid var(--line);font-size:13px}
 .tog{appearance:none;width:40px;height:23px;border-radius:12px;background:var(--line);position:relative;border:none;cursor:pointer;flex:none}
@@ -858,7 +880,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
   .view{padding-left:14px;padding-right:14px}
   .acts{padding-left:12px;padding-right:12px}
   .act .al{font-size:13.5px}
-  .act .asub{font-size:9px}
+  .act .asub{font-size:10px}
 }
 @media(max-width:350px){
   #board .pc{width:42px;height:58px}
@@ -880,9 +902,9 @@ __SUITDEFS__
     </div>
     <span class="catcount" id="catcount"></span>
     <div class="session-hud"><span>Quick session</span><span>Hand <b id="session-step">1</b> of <b id="session-total">10</b></span></div>
-    <div class="bar-top"><i id="prog" style="width:0"></i></div>
+    <div class="bar-top" id="session-progress" role="progressbar" aria-label="Session progress" aria-valuemin="1" aria-valuemax="10" aria-valuenow="1"><i id="prog" style="width:0"></i></div>
 
-  <div class="card" id="play-card">
+  <div class="card" id="play-card" tabindex="-1">
     <div class="sit"><span class="pos" id="pos"></span><span class="sit-copy"><strong class="sit-main" id="sit"></strong><span class="sit-context" id="sitcontext"></span></span><span class="demo" id="demotag" hidden>raise demo</span></div>
     <div class="seats" id="seats" hidden></div>
     <div class="felt">
@@ -891,10 +913,10 @@ __SUITDEFS__
       <div class="hero"><div class="cap" id="herocap">Your hand</div><div class="cards" id="hero"></div></div>
     </div>
     <div class="acts" id="acts"></div>
-    <div class="fb" id="fb">
+    <div class="fb" id="fb" role="dialog" aria-modal="true" aria-labelledby="verdict">
       <div class="grab" aria-hidden="true"></div>
-      <div class="verdict" id="verdict"></div>
-      <div class="unlock" id="unlock" hidden></div>
+      <div class="verdict" id="verdict" aria-live="polite"></div>
+      <div class="unlock" id="unlock" aria-live="polite" hidden></div>
       <div class="fb-brief"><p class="head" id="head"></p></div>
       <div class="mix"><h4 id="mixhead"></h4><div id="bars"></div></div>
       <details class="learn" id="learn">
@@ -918,7 +940,7 @@ __SUITDEFS__
       <div class="fb-actions"><button class="coach-open" id="coach-open" type="button">Ask coach</button><button class="next" id="next">Next hand &nbsp;&#8629;</button></div>
     </div>
   </div>
-  <section class="session-end" id="session-end" hidden>
+  <section class="session-end" id="session-end" aria-live="polite" hidden>
     <h2>Session complete</h2>
     <p id="session-summary">Ten decisions. One clearer read of your game.</p>
     <div class="session-score">
@@ -1010,7 +1032,7 @@ __SUITDEFS__
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
     <span class="demo">Turn / river</span> spots are now full-range solver output too, but
     <b>unconditioned</b> (ranges are card-removal only, not filtered by a prior check/check line),
-    and facing-a-bet there is Fold/Call — the raise pass on those streets is the next depth work.
+    with Fold/Call/Raise available on facing-a-bet nodes.
     Pre-flop spots are calibrated ranges (solver-approximate, tuned to standard frequencies).<br>
     Prefer to review the answers at a glance? See the <a href="preview.html">content gallery</a>.
     </div>
@@ -1066,14 +1088,14 @@ __SUITDEFS__
   </div>
   <div class="fb-scrim" id="fb-scrim" hidden></div>
   <div class="hd-scrim" id="hd-scrim" hidden></div>
-  <div class="hd" id="handdetail">
-    <div class="hd-topbar"><button class="hd-back" id="hd-back" type="button">&#8249; Back</button><span class="hd-title">Hand strength &amp; odds</span></div>
+  <div class="hd" id="handdetail" role="dialog" aria-modal="true" aria-labelledby="handdetail-title">
+    <div class="hd-topbar"><button class="hd-back" id="hd-back" type="button">&#8249; Back</button><span class="hd-title" id="handdetail-title">Hand strength &amp; odds</span></div>
     <div class="hd-body" id="hd-body"></div>
   </div>
-  <nav class="tabbar" id="tabbar">
-    <button data-v="train" class="on"><svg class="ti"><use href="#so-spade"/></svg>Train</button>
-    <button data-v="progress"><span class="ti">&#9636;</span>Progress</button>
-    <button data-v="settings"><span class="ti">&#9776;</span>Settings</button>
+  <nav class="tabbar" id="tabbar" aria-label="Primary">
+    <button data-v="train" class="on" type="button"><svg class="ti"><use href="#so-spade"/></svg>Train</button>
+    <button data-v="progress" type="button"><span class="ti">&#9636;</span>Progress</button>
+    <button data-v="settings" type="button"><span class="ti">&#9776;</span>Settings</button>
   </nav>
 </div>
 <script>
@@ -1259,9 +1281,22 @@ const TERMS = {
 };
 const SESSION_SIZE=10;
 function freshStats(){return {n:0,solid:0,ok:0,leak:0,street:{}};}
+function safeCount(v){return Number.isFinite(v)&&v>=0?Math.floor(v):0;}
+function normalizeStats(x){
+  const out=freshStats();if(!x||typeof x!=="object")return out;
+  ["n","solid","ok","leak"].forEach(k=>out[k]=safeCount(x[k]));
+  const streets=x.street&&typeof x.street==="object"?x.street:{};
+  ["preflop","flop","turn","river"].forEach(k=>{
+    const s=streets[k];if(!s||typeof s!=="object")return;
+    const n=safeCount(s.n),hit=Math.min(n,safeCount(s.hit));out.street[k]={n:n,hit:hit};
+  });
+  // Repair stale or partial totals rather than allowing NaN progress after an upgrade.
+  const classified=out.solid+out.ok+out.leak;if(out.n<classified)out.n=classified;
+  return out;
+}
 function loadLifetime(){try{
   const x=JSON.parse(localStorage.getItem("trainer-progress")||"null");
-  return x&&typeof x.n==="number"?x:freshStats();
+  return normalizeStats(x);
 }catch(e){return freshStats();}}
 let order=[], pos=0, answered=false, cur=null, chosen=null, stats=freshStats(), lifetime=loadLifetime();
 let sessionMisses=[];
@@ -1442,13 +1477,15 @@ function situation(q){
     if(first) return "It's your turn, and you go first — you decide before your opponent does.";
     if(vscheck) return "Your opponent passed (checked) to you. It's your turn.";
     return q.actions.indexOf("raise")>=0
-      ? "Your opponent just put chips in (bet). It's on you — match it, put in even more, or give up?"
-      : "Your opponent just put chips in (bet). It's on you — match it, or give up?";
+      ? "Your opponent bet "+(q.bet_pct||66)+"% of the pot. It's on you — match it, put in even more, or give up?"
+      : "Your opponent bet "+(q.bet_pct||66)+"% of the pot. It's on you — match it, or give up?";
   }
   const pre=q.street==="turn"?"On the turn, ":q.street==="river"?"On the river, ":"On the flop, ";
   // vs_bet: an OOP player checked and now faces a bet; an IP player faces an opponent
   // lead — not their own c-bet. (Same distinction the pack server already makes.)
-  const betRole=q.is_oop?" — you checked and now face a bet.":" — they led into you.";
+  const betRole=q.is_oop
+    ?" — you checked and now face a "+(q.bet_pct||66)+"% pot bet."
+    :" — they led into you for "+(q.bet_pct||66)+"% of the pot.";
   if(sm==="learning"){
     // Seat role from is_oop (SB-vs-BB flips BB to IP); node suffix carries the line.
     const who="you're the "+q.acting_player+" (you act "+(q.is_oop?"first":"last")+")";
@@ -1494,7 +1531,7 @@ function pfHeadline(q){
   return "Action folds to you";
 }
 function addActionButton(box,a,i){
-  const b=document.createElement("button");b.className="act";b.dataset.a=a;
+  const b=document.createElement("button");b.type="button";b.className="act";b.dataset.a=a;
   const l=document.createElement("span");l.className="al";l.textContent=actionPrimary(a);
   const sub=document.createElement("span");sub.className="asub";sub.textContent=actionSecondary(a);
   const k=document.createElement("span");k.className="k";k.textContent=String(i+1);
@@ -1517,7 +1554,7 @@ function renderPreflop(q){
 function decisionHeadline(q){
   const villain=q.villain||"Opponent",node=q.node||"";
   if(node.endsWith("_vs_check"))return villain+" checks";
-  if(node.endsWith("_vs_bet"))return villain+" bets";
+  if(node.endsWith("_vs_bet"))return villain+" bets "+(q.bet_pct||66)+"% pot";
   return "Your action";
 }
 function renderQuestion(q){
@@ -1597,6 +1634,9 @@ function renderHand(){                                  // draw the current hist
   document.getElementById("session-end").hidden=true;
   document.getElementById("session-step").textContent=String(Math.min(pos+1,order.length));
   document.getElementById("session-total").textContent=String(order.length);
+  const sessionProgress=document.getElementById("session-progress");
+  sessionProgress.setAttribute("aria-valuemax",String(order.length));
+  sessionProgress.setAttribute("aria-valuenow",String(Math.min(pos+1,order.length)));
   document.getElementById("hint").hidden=false;
   document.getElementById("fb").className="fb";sheetOpen(false);
   document.getElementById("learn").open=false;
@@ -1790,11 +1830,16 @@ function renderHandDetail(q){
     p.textContent=cap1(d.threats.join("; "))+".";w.appendChild(p);}
   const st=sec("Where you stand");const p=document.createElement("p");p.className="hd-now";p.textContent=d.standing;st.appendChild(p);
 }
+let handDetailReturn=null;
 function openHandDetail(){if(!cur||cur.preflop||!(cur.board&&cur.board.length>=3))return;
+  handDetailReturn=document.activeElement;
   renderHandDetail(cur);document.getElementById("handdetail").className="hd on";
-  var s=document.getElementById("hd-scrim");if(s)s.hidden=false;}
+  var s=document.getElementById("hd-scrim");if(s)s.hidden=false;
+  document.getElementById("hd-back").focus({preventScroll:true});}
 function closeHandDetail(){document.getElementById("handdetail").className="hd";
-  var s=document.getElementById("hd-scrim");if(s)s.hidden=true;}
+  var s=document.getElementById("hd-scrim");if(s)s.hidden=true;
+  if(handDetailReturn&&document.contains(handDetailReturn))handDetailReturn.focus({preventScroll:true});
+  handDetailReturn=null;}
 // ===== "A similar hand plays the opposite way" — the same hand strength can call for
 // opposite plays (bet-for-value vs check-to-trap, bluff vs give-up, call vs fold, ...). Each
 // reason IS the rule of thumb, so a confusing twin = same hand tier + the paired opposite
@@ -2081,7 +2126,7 @@ function answer(a){
   document.getElementById("next").focus({preventScroll:true});
 }
 function showSessionEnd(){
-  closeSheet();
+  closeSheet(false);
   document.getElementById("play-card").hidden=true;
   document.getElementById("session-end").hidden=false;
   document.getElementById("coach").hidden=true;
@@ -2118,7 +2163,10 @@ function sheetOpen(b){const s=document.getElementById("fb-scrim");if(s)s.hidden=
 // Dismissing the sheet (scrim tap / swipe down) only CLOSES it — it never advances the hand.
 // Advancing is always an explicit Next (the sheet button, the app-bar Next, or Enter/->), so
 // dismissing a hand you stepped Back to review no longer skips you forward.
-function closeSheet(){document.getElementById("fb").className="fb";sheetOpen(false);}
+function closeSheet(restoreFocus=true){document.getElementById("fb").className="fb";sheetOpen(false);
+  if(restoreFocus&&document.getElementById("v-train").classList.contains("on")&&!document.getElementById("play-card").hidden){
+    document.getElementById("play-card").focus({preventScroll:true});
+  }}
 function reopenSheet(){if(answered){document.getElementById("fb").className="fb on";sheetOpen(true);}}
 (function(){const scrim=document.getElementById("fb-scrim"),fb=document.getElementById("fb");
   if(scrim)scrim.onclick=function(){closeSheet();};
@@ -2163,9 +2211,12 @@ const LEVEL_HINT={
   poker:"Full terminology and solver detail."};
 function updateLevelHint(){const el=document.getElementById("levelhint");if(el)el.textContent=LEVEL_HINT[mode]||"";}
 
-function applyModeUI(){document.querySelectorAll("#lang button").forEach(b=>b.classList.toggle("on",b.dataset.m===mode));}
+function applyModeUI(){document.querySelectorAll("#lang button").forEach(b=>{
+  const on=b.dataset.m===mode;b.classList.toggle("on",on);b.setAttribute("aria-pressed",String(on));
+});}
 function setMode(m){mode=m;try{localStorage.setItem("lang",m);}catch(e){}applyModeUI();updateVocab();updateLevelHint();
-  if(cur){renderQuestion(cur);if(answered)renderFeedback(cur,chosen,[]);}}
+  if(cur){renderQuestion(cur);if(answered){renderFeedback(cur,chosen,[]);
+    if(!document.getElementById("v-train").classList.contains("on"))closeSheet(false);}}}
 document.querySelectorAll("#lang button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
 // --- train-category selector: filter the deck to one street (or all) ---
 function qcat(q){return q.preflop?"preflop":(q.street||"flop");}
@@ -2176,7 +2227,8 @@ function buildOrder(){
   document.getElementById("catcount").textContent=order.length+"-hand "+(cat==="all"?"mixed":cat.replace("preflop","preflop"))+" session";
 }
 function applyCatUI(){const cc=catCounts();
-  document.querySelectorAll("#cats button").forEach(b=>{b.classList.toggle("on",b.dataset.c===cat);
+  document.querySelectorAll("#cats button").forEach(b=>{const on=b.dataset.c===cat;b.classList.toggle("on",on);
+    b.setAttribute("aria-pressed",String(on));
     const n=b.dataset.c==="all"?Q.length:(cc[b.dataset.c]||0);b.disabled=n===0;b.style.opacity=n===0?"0.4":"";});}
 function setCat(c){cat=c;try{localStorage.setItem("cat",c);}catch(e){}
   stats=freshStats();sessionMisses=[];applyCatUI();buildOrder();newHand();}
@@ -2379,7 +2431,8 @@ function renderProgress(){
 }
 function setView(v){
   document.querySelectorAll(".view").forEach(function(s){s.classList.toggle("on",s.id==="v-"+v);});
-  document.querySelectorAll("#tabbar button").forEach(function(b){b.classList.toggle("on",b.dataset.v===v);});
+  document.querySelectorAll("#tabbar button").forEach(function(b){const on=b.dataset.v===v;b.classList.toggle("on",on);
+    if(on)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current");});
   document.querySelector(".pager").hidden=v!=="train";
   if(v==="progress")renderProgress();
   window.scrollTo(0,0);
@@ -2389,7 +2442,7 @@ document.querySelectorAll("#tabbar button").forEach(function(b){b.onclick=functi
 // reduce-motion toggle
 let motionOff=false;try{motionOff=localStorage.getItem("motion")==="off";}catch(e){}
 function applyMotion(){document.documentElement.classList.toggle("no-motion",motionOff);
-  const t=document.getElementById("tog-motion");if(t)t.classList.toggle("on",motionOff);}
+  const t=document.getElementById("tog-motion");if(t){t.classList.toggle("on",motionOff);t.setAttribute("aria-pressed",String(motionOff));}}
 document.getElementById("tog-motion").onclick=function(){motionOff=!motionOff;try{localStorage.setItem("motion",motionOff?"off":"on");}catch(e){}applyMotion();};
 document.getElementById("reset-btn").onclick=function(){
   if(!confirm("Reset your progress and learned terms?"))return;
@@ -2400,8 +2453,9 @@ setView("train");
 document.getElementById("new-session").onclick=resetSession;
 document.getElementById("retry-leaks").onclick=retryLeakSession;
 document.getElementById("coach-open").onclick=function(){
-  closeSheet();const c=document.getElementById("coach");c.hidden=false;c.open=true;
-  requestAnimationFrame(()=>c.scrollIntoView({behavior:"smooth",block:"start"}));
+  closeSheet(false);const c=document.getElementById("coach");c.hidden=false;c.open=true;
+  const reduced=motionOff||(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  requestAnimationFrame(()=>c.scrollIntoView({behavior:reduced?"auto":"smooth",block:"start"}));
 };
 coachInit();applyModeUI();updateVocab();updateLevelHint();syncStatsUI();applyCatUI();buildOrder();newHand();
 </script>'''

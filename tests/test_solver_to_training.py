@@ -144,6 +144,13 @@ def test_acts_first_only_for_first_nodes():
     q3 = mod._to_q({**row, "acting_player": "BB", "node": "bb_vs_bet"},
                    oop_pos="SB", ip_pos="BB")
     assert q3["acts_first"] is False and q3["is_oop"] is False
+    q4 = mod._to_q({**row, "node": "bb_first", "actions": '["check","bet"]',
+                    "ev": '{"check":1.0,"bet":0.5}', "freq": '{"check":0.8,"bet":0.2}',
+                    "preferred_action": "check",
+                    "action_grades": '{"check":"best","bet":"costly"}',
+                    "reason": "pot_control"}, oop_pos="BB", ip_pos="BTN", bet_pct=42)
+    assert q4["bet_pct"] == 42
+    assert q4["labels"]["bet"] == "Bet 42%"
 
 
 def test_freq_pct_ints_sum_to_100():
