@@ -110,8 +110,7 @@ def test_refresh_backfills_pot_and_roles(tmp_path):
     assert pot == 5.5 and oop == "BB" and ip == "BTN"
 
 
-def test_acts_first_only_for_first_nodes():
-    """OOP facing a bet must not be labeled acts_first (regression from SB-vs-BB wiring)."""
+def test_to_q_tracks_seat_role_and_pack_bet_size():
     import importlib.util
     import sys
     from pathlib import Path
@@ -133,24 +132,19 @@ def test_acts_first_only_for_first_nodes():
         "mixed": 0,
     }
     q = mod._to_q(row, oop_pos="BB", ip_pos="BTN")
-    assert q["acts_first"] is False and q["is_oop"] is True
-    q2 = mod._to_q({**row, "node": "bb_first", "actions": '["check","bet"]',
-                    "ev": '{"check":1.0,"bet":0.5}', "freq": '{"check":0.8,"bet":0.2}',
-                    "preferred_action": "check",
-                    "action_grades": '{"check":"best","bet":"costly"}',
-                    "reason": "pot_control"}, oop_pos="BB", ip_pos="BTN")
-    assert q2["acts_first"] is True
-    # SB-vs-BB: BB is IP — still not acts_first on vs_bet, and is_oop False.
-    q3 = mod._to_q({**row, "acting_player": "BB", "node": "bb_vs_bet"},
+    assert q["is_oop"] is True
+    assert q["villain"] == "BTN"
+    q2 = mod._to_q({**row, "acting_player": "BB", "node": "bb_vs_bet"},
                    oop_pos="SB", ip_pos="BB")
-    assert q3["acts_first"] is False and q3["is_oop"] is False
-    q4 = mod._to_q({**row, "node": "bb_first", "actions": '["check","bet"]',
+    assert q2["is_oop"] is False
+    assert q2["villain"] == "SB"
+    q3 = mod._to_q({**row, "node": "bb_first", "actions": '["check","bet"]',
                     "ev": '{"check":1.0,"bet":0.5}', "freq": '{"check":0.8,"bet":0.2}',
                     "preferred_action": "check",
                     "action_grades": '{"check":"best","bet":"costly"}',
                     "reason": "pot_control"}, oop_pos="BB", ip_pos="BTN", bet_pct=42)
-    assert q4["bet_pct"] == 42
-    assert q4["labels"]["bet"] == "Bet 42%"
+    assert q3["bet_pct"] == 42
+    assert q3["labels"]["bet"] == "Bet 42%"
 
 
 def test_freq_pct_ints_sum_to_100():

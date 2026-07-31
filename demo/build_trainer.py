@@ -76,7 +76,6 @@ def _suitdefs():
     return d
 
 DB = "output/packs/flop_pack_v1_fullrange.db"
-RAISE_DB = "output/packs/flop_pack_v1_raise_demo.db"   # reduced-range, but HAS fold/call/raise
 TR_DB = "output/packs/flop_pack_turnriver_fullrange.db"  # turn/river decisions (full range; still unconditioned)
 SB_DB = "output/packs/flop_pack_sb_vs_bb.db"           # 2nd scenario: SB vs BB (full range)
 BTNSB_DB = "output/packs/flop_pack_btn_vs_sb.db"       # BTN vs SB single-raised pot
@@ -85,7 +84,6 @@ UTG_DB = "output/packs/flop_pack_utg_vs_bb.db"         # UTG vs BB single-raised
 HJ_DB = "output/packs/flop_pack_hj_vs_bb.db"           # HJ vs BB single-raised pot (pending)
 PER_REASON = 6          # cap questions per reason for variety
 MAX_Q = 60
-RAISE_Q = 12            # extra 3-action spots blended in to show the raise UX
 TR_Q = 16               # turn/river spots blended in
 SB_Q = 20               # SB-vs-BB spots blended in (2nd position)
 BTNSB_Q = 16            # BTN-vs-SB spots blended in
@@ -103,26 +101,6 @@ def _require_verified(path: str) -> dict:
     return verdict
 
 
-def _situation(node, actor, street):
-    if street == "flop":
-        return SITUATION.get(node, f"You're the {actor}, on the flop.")
-    # Unconditioned later-street demo — do not claim a check-through range.
-    pre = ("On the turn, " if street == "turn" else "On the river, ")
-    if node.endswith("_first"):
-        return pre + f"you're the {actor}, first to act."
-    if node.endswith("_vs_check"):
-        return pre + f"it's checked to you ({actor})."
-    return pre + f"you face a bet ({actor})."
-
-SITUATION = {
-    "bb_first": "You're the BB, first to act on the flop.",
-    "btn_vs_check": "You're the BTN — the BB checked to you.",
-    "bb_vs_bet": "You're the BB — you checked and the BTN bet 66% of the pot.",
-    "btn_vs_bet": "You're the BTN — the BB led into you for 66% of the pot.",
-    "sb_first": "You're the SB, first to act on the flop.",
-    "bb_vs_check": "You're the BB — the SB checked to you.",
-    "sb_vs_bet": "You're the SB — you checked and the BB bet 66% of the pot.",
-}
 ALAB = {"check": "Check", "bet": "Bet 66%", "fold": "Fold", "call": "Call", "raise": "Raise 3×"}
 
 
@@ -139,30 +117,6 @@ def _bet_pct_from_pack(path: str) -> int:
     finally:
         if conn is not None:
             conn.close()
-
-
-def _raise_label_from_pack(path: str) -> str:
-    """Derive raise button label from pack config.raise_x when present."""
-    conn = None
-    try:
-        conn = sqlite3.connect(path)
-        meta = dict(conn.execute("SELECT key, value FROM pack_meta"))
-        cfg = json.loads(meta.get("config") or "{}")
-        rx = cfg.get("raise_x")
-        if rx is None:
-            return "Raise 3×"
-        x = float(rx)
-        return f"Raise {x:g}×" if x != int(x) else f"Raise {int(x)}×"
-    except Exception:
-        return "Raise 3×"
-    finally:
-        if conn is not None:
-            conn.close()
-RLAB = {"value": "Value bet", "protection": "Protection", "bluff": "Bluff", "semi_bluff": "Semi-bluff",
-        "pot_control": "Pot control", "trap": "Trap", "realization": "Give up / realize equity",
-        "value_call": "Value call", "bluff_catch": "Bluff-catch", "call_odds": "Call on odds",
-        "raise_value": "Value raise", "raise_bluff": "Bluff raise", "raise_semibluff": "Semi-bluff raise",
-        "fold": "Fold", "mixed": "Mixed / close"}
 
 
 COLS = ("id board node acting_player hand actions ev freq preferred_action "
@@ -191,15 +145,10 @@ def _to_q(d, oop_pos="BB", ip_pos=None, bet_pct=66):
     board = [d["board"][i:i+2] for i in range(0, len(d["board"]), 2)]
     street = STREET.get(len(d["board"]), "flop")
     node = d["node"]
-    # First-to-act on THIS decision only — facing a check/bet is never "act first",
-    # even when hero is OOP (they already checked and now face a bet). Seat role
-    # (OOP/IP) lives in is_oop; plain "You act first/last" badges use is_oop so
-    # SB-vs-BB still flips correctly (BB is IP there).
-    acts_first = node.endswith("_first")
     freq_raw = {k: float(v) for k, v in json.loads(d["freq"]).items()}
     return {
         "board": board, "hero": [d["hand"][0:2], d["hand"][2:4]], "street": street,
-        "node": node, "acting_player": d["acting_player"], "acts_first": acts_first,
+        "node": node, "acting_player": d["acting_player"],
         "is_oop": d["acting_player"] == oop_pos,
         # the opponent's actual seat, so the table graphic labels it correctly for
         # every matchup (not just BTN/SB-vs-BB): villain = the seat that isn't the hero.
@@ -212,7 +161,7 @@ def _to_q(d, oop_pos="BB", ip_pos=None, bet_pct=66):
         # Largest-remainder ints so the Pro frequency mix always sums to 100.
         "freq": freq_pct_ints(freq_raw, order=acts),
         "preferred": d["preferred_action"], "grades": json.loads(d["action_grades"]),
-        "reason": d["reason"], "reason_label": RLAB.get(d["reason"], d["reason"]),
+        "reason": d["reason"],
         "headline": d["headline"], "detail": json.loads(d["detail"]),
         # Near-indifferent spots: let feedback treat them as ties, not a punished pick.
         "mixed": bool(d.get("mixed")),
@@ -238,40 +187,6 @@ def load_questions():
     oop = _oop_pos(picked); ip = _ip_pos(picked, oop)
     bet_pct = _bet_pct_from_pack(DB)
     return meta, [_to_q(d, oop, ip, bet_pct) for d in picked]
-
-
-def load_raise(n=RAISE_Q, required=True):
-    """A few real fold/call/raise spots from the raise-enabled (reduced-range) pack,
-    so the trainer demonstrates the 3-action UX until the full-range raise run lands."""
-    if not os.path.exists(RAISE_DB):
-        msg = f"optional raise pack missing ({RAISE_DB})"
-        if required:
-            raise SystemExit(msg + " — pass --allow-missing-demo-packs to skip")
-        print(f"  warn: {msg} — skipping")
-        return []
-    _require_verified(RAISE_DB)
-    raise_lab = _raise_label_from_pack(RAISE_DB)
-    c = sqlite3.connect(RAISE_DB)
-    rows = c.execute(f"SELECT {','.join(COLS)} FROM flop_decision "
-                     "WHERE actions LIKE '%raise%'").fetchall()
-    c.close()
-    by_reason = defaultdict(list)
-    for r in rows:
-        d = dict(zip(COLS, r))
-        by_reason[d["reason"]].append(d)
-    from itertools import zip_longest
-    groups = [g[:3] for g in by_reason.values()]
-    picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
-    oop = _oop_pos(picked); ip = _ip_pos(picked, oop)
-    out = []
-    bet_pct = _bet_pct_from_pack(RAISE_DB)
-    for q in (_to_q(d, oop, ip, bet_pct) for d in picked):
-        q["labels"] = {**q["labels"], "raise": raise_lab}
-        q["badge"] = "raise demo"     # flag so the UI can note the reduced-range source
-        out.append(q)
-    if required and len(out) < 3:
-        raise SystemExit(f"raise pack produced only {len(out)} spots (need ≥3)")
-    return out
 
 
 def load_turnriver(n=TR_Q, required=True):
@@ -450,7 +365,8 @@ def build(allow_missing_demo_packs=False):
           f"pack {meta.get('version')} ({meta.get('record_count')} recs) | build {commit}")
 
 
-TEMPLATE = r'''<style>
+TEMPLATE = r'''<link rel="icon" href="data:,">
+<style>
 __FONTFACE__
 /* Locked dark visual design — one committed dark world (Rye + Space Mono + folded suits). */
 :root, :root[data-theme="light"], :root[data-theme="dark"]{
@@ -465,18 +381,9 @@ __FONTFACE__
 }
 *{box-sizing:border-box}
 body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
-.wrap{max-width:640px;margin:0 auto;padding:20px 16px 56px}
-header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .brand{font-family:var(--disp);font-weight:600;font-size:19px}
 .brand .sp{color:var(--brass)}
-.score{display:flex;gap:10px;align-items:baseline}
-.score .acc{font-family:var(--mono);font-size:18px;color:var(--brass);font-weight:700;font-variant-numeric:tabular-nums}
-.score .sbits{font-size:11.5px;color:var(--muted)}
-.score .sbits b{font-variant-numeric:tabular-nums}
 .cSolid{color:var(--best)}.cOk{color:var(--accept)}.cLeak{color:var(--costly)}
-.controls{margin-bottom:14px}
-.level{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
-.lvl-cap{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
 .lvl-hint{margin:9px 0 0;font-size:12px;color:var(--muted);line-height:1.45}
 .bar-top{height:4px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:9px}
 .bar-top>i{display:block;height:100%;background:var(--brass);transition:width .3s}
@@ -644,11 +551,6 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .foot code{font-family:var(--mono)}.foot a{color:var(--brass)}
 .hint{font-size:11px;color:var(--muted);text-align:center;margin-top:10px}
 kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--ink) 8%,transparent);border:1px solid var(--line);border-radius:4px;padding:0 4px}
-.lang{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;font-size:11.5px;flex:none}
-.lang button{appearance:none;border:none;background:transparent;color:var(--muted);padding:5px 11px;cursor:pointer;font-family:var(--sans);font-weight:600;white-space:nowrap}
-.lang button.on{background:var(--brass);color:#fff}
-.lang button:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
-.vocab{font-family:var(--mono);font-size:11.5px;color:var(--brass);font-weight:700;flex:none}
 .unlock{margin:0 18px 4px;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--brass) 12%,var(--panel));border:1px solid var(--brass-soft)}
 .unlock .ul-row{font-size:12.5px;color:var(--ink);line-height:1.45}
 .unlock .ul-row+.ul-row{margin-top:6px}
@@ -710,7 +612,6 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .revbtn:hover:not(:disabled){border-color:var(--brass);background:color-mix(in srgb,var(--brass) 10%,var(--panel2))}
 .revbtn:disabled{opacity:.3;cursor:default}
 .appbar .brand{white-space:nowrap}
-.appbar .vocab{margin-left:auto}
 .appbar .brand{font-size:18px}
 .views{flex:1;padding-bottom:72px}
 .view{display:none;padding:14px 15px 8px}
@@ -726,7 +627,6 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .street-seg button{appearance:none;flex:none;font-family:var(--label);font-size:11px;text-transform:uppercase;letter-spacing:.03em;font-weight:700;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:7px 13px;cursor:pointer}
 .street-seg button.on{background:var(--brass);color:#0b0c10;border-color:var(--brass)}
 .street-seg button:disabled{opacity:.4}
-.catcount{display:block;font-family:var(--mono);font-size:10.5px;color:var(--muted);margin:0 2px 5px}
 /* progress view */
 .phead{margin-bottom:12px}.ptitle{font-family:var(--disp);font-size:26px}
 .big-stat{display:flex;align-items:baseline;gap:9px;margin-bottom:14px}
@@ -821,10 +721,10 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .act .asub{font-size:10px;color:var(--muted);font-weight:500;line-height:1.2;text-align:center}
 .act .k{margin-top:2px;font-size:9px}
 /* Postflop is heads-up: only the two players, their roles, and the action matter. */
-.tv.duel{height:116px;border-radius:86px/45px}
+.tv.duel{height:152px;border-radius:100px/58px}
 .tv.duel .tvs{width:105px}
-.tv.duel .tvs.opp{left:50%;top:15%}
-.tv.duel .tvs.you{left:50%;top:85%}
+.tv.duel .tvs.opp{left:50%;top:16%}
+.tv.duel .tvs.you{left:50%;top:84%}
 .tv.duel .tvs.opp .av,.tv.duel .tvs.you .av{width:25px;height:25px}
 .tv.duel .tvs.opp .ps,.tv.duel .tvs.you .ps{font-size:8px}
 .tv.duel .tvmid{top:50%;gap:4px}
@@ -874,10 +774,8 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .tech>summary::before{content:"＋ "}
 .tech[open]>summary::before{content:"－ "}
 .tech .foot{padding-bottom:13px}
-.catcount{display:none}
 .pager[hidden]{display:none!important}
 .revbtn{width:44px;height:44px}
-.appbar .vocab{display:none}
 .street-seg button{min-height:44px}
 .prow .pv{width:58px}
 @media(max-width:390px){
@@ -906,14 +804,12 @@ __SUITDEFS__
   <div class="appbar">
     <div class="pager"><button class="revbtn" id="prev" type="button" disabled aria-label="Back to the previous hand" title="Previous hand">&#8249;</button><button class="revbtn" id="fwd" type="button" disabled aria-label="Forward to the next hand" title="Next hand">&#8250;</button></div>
     <div class="brand"><span class="sp">&spades;</span> Hold'em Trainer</div>
-    <span class="vocab" id="vocab" hidden></span>
   </div>
   <div class="views">
   <section class="view on" id="v-train">
     <div class="street-seg" id="cats" role="group" aria-label="Which part to train">
       <button data-c="all" type="button">All</button><button data-c="preflop" type="button">Pre-flop</button><button data-c="flop" type="button">Flop</button><button data-c="turn" type="button">Turn</button><button data-c="river" type="button">River</button>
     </div>
-    <span class="catcount" id="catcount"></span>
     <div class="session-hud"><span id="session-kind">Quick session</span><span id="session-counter">Hand <b id="session-step">1</b> of <b id="session-total">10</b></span><span id="session-bonus" hidden>Bonus hand</span></div>
     <div class="bar-top" id="session-progress" role="progressbar" aria-label="Session progress" aria-valuemin="1" aria-valuemax="10" aria-valuenow="1"><i id="prog" style="width:0"></i></div>
 
@@ -1365,7 +1261,6 @@ function actionSecondary(a){
   return "";
 }
 function fmtEv(v){return (v>=0?"+":"")+v;}
-function reasonLabel(r){return (TERMS[eff("reason:"+r)].reason[r]||r);}
 // Beginner "why": explains the LOGIC of the play in plain words, not just names the
 // action. Replaces the generic per-reason phrase for plain mode; Learning keeps the
 // term-tagged phrase, Pro keeps the solver's baked headline.
@@ -1452,7 +1347,7 @@ function plainHead(q){
       return "The board is coordinated — a straight or flush is very possible — so your made hand is vulnerable. Betting here is thin: you often get called by the hands that beat you and fold out the ones you beat.";
     }
     let s="The board is coordinated — a straight or flush is very possible — so your hand is more of a bluff-catcher than a monster. Check to keep the pot small and take a cheap showdown rather than bet into the hands that beat you.";
-    // vs_check only — do not key off !acts_first (that also matches facing-a-bet).
+    // Checked-to decisions are distinct from facing-a-bet decisions.
     if((q.node||"").indexOf("_vs_check")>=0)s+=" It was checked to you, but on a board this connected a check doesn't rule out a straight — strong hands often check to trap — so betting mostly folds out the hands you beat and gets called by the ones that beat you.";
     return s;}
   if(q.street==="river"&&RIVER_PLAIN[q.reason])return RIVER_PLAIN[q.reason];
@@ -1608,7 +1503,6 @@ function renderSeats(q){
   el.innerHTML="";el.hidden=false;
   el.appendChild(q.preflop?preflopRing(q):ringTable(q));
 }
-const POS_PLAIN={BTN:"on the button",BB:"in the big blind",SB:"in the small blind",CO:"in the cutoff",HJ:"in the hijack",UTG:"first to act"};
 // full 6-max ring so position is spatial: clockwise seating + fixed screen slots.
 const RING_ORDER=["BTN","SB","BB","UTG","HJ","CO"];
 const RING_SLOTS=[[50,85,1],[15,67,1],[15,33,0],[50,15,0],[85,33,0],[85,67,1]]; // x%,y%,labelAbove
@@ -2195,7 +2089,6 @@ function retryLeakSession(){
   if(!sessionMisses.length)return;
   const ids=sessionMisses.map(q=>Q.indexOf(q)).filter(i=>i>=0);
   stats=freshStats();sessionMisses=[];order=shuffle(ids);pos=0;hist=[];hidx=-1;
-  document.getElementById("catcount").textContent=order.length+"-hand leak review";
   newHand();
   document.getElementById("play-card").focus({preventScroll:true});
 }
@@ -2252,14 +2145,7 @@ function tryUnlockPreflop(){
   try{localStorage.setItem("learned",JSON.stringify([...learned]));}catch(e){}
   updateVocab();return ["positions"];
 }
-function unlockText(t){
-  if(t==="positions")return "Positions — who acts when. In position (IP) acts last (usually the Button); out of position (OOP) acts first. In blind-vs-blind, the BB is IP.";
-  if(t==="streets")return "Flop, turn, river — the shared cards come in stages (3, then a 4th, then a 5th).";
-  return (TERMS.poker.reason[t.slice(7)]||"")+" — "+(TERMS.learning.reason[t.slice(7)]||"").replace(/^[^—]*— /,"");
-}
-function updateVocab(){const v=document.getElementById("vocab");
-  v.hidden=(mode!=="progressive");
-  v.textContent="🔓 "+learned.size+" / "+VOCAB_TOTAL+" terms";
+function updateVocab(){
   const p=document.getElementById("terms-learned");if(p)p.textContent=learned.size+" / "+VOCAB_TOTAL;}
 const LEVEL_HINT={
   progressive:"Starts in plain words; poker terms unlock as you play them well.",
@@ -2281,7 +2167,6 @@ function catCounts(){const c={all:Q.length,preflop:0,flop:0,turn:0,river:0};Q.fo
 function buildOrder(){
   const pool=shuffle([...Q.keys()].filter(i=>cat==="all"||qcat(Q[i])===cat));
   order=pool.slice(0,Math.min(SESSION_SIZE,pool.length));pos=0;hist=[];hidx=-1;
-  document.getElementById("catcount").textContent=order.length+"-hand "+(cat==="all"?"mixed":cat.replace("preflop","preflop"))+" session";
 }
 function applyCatUI(){const cc=catCounts();
   document.querySelectorAll("#cats button").forEach(b=>{const on=b.dataset.c===cat;b.classList.toggle("on",on);

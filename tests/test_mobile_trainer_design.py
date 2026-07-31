@@ -103,6 +103,8 @@ def test_generated_question_data_is_internally_consistent():
             cards = q["hand"] if q.get("preflop") else q["board"] + q["hero"]
             assert len(cards) == len(set(cards))
             if not q.get("preflop"):
+                assert "acts_first" not in q
+                assert "reason_label" not in q
                 assert len(q["board"]) == street_cards[q["street"]]
                 assert set(actions) <= set(q["ev"])
                 assert set(actions) <= set(q["freq"])
@@ -167,14 +169,6 @@ def test_correct_preflop_answers_unlock_position_language():
     source = SOURCE.read_text()
     assert "const gained=hit?tryUnlockPreflop():[]" in source
     assert "function tryUnlockPreflop()" in source
-
-
-def test_generator_closes_resources_and_writes_unicode_explicitly():
-    source = SOURCE.read_text()
-    assert 'with open(p, "rb") as font_file:' in source
-    assert 'with open("demo/trainer_demo.html", "w", encoding="utf-8")' in source
-    assert 'with open("index.html", "w", encoding="utf-8")' in source
-    assert "if conn is not None:" in source
 
 
 def test_settings_language_change_does_not_open_feedback_over_settings():
