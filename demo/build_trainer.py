@@ -370,12 +370,13 @@ __FONTFACE__
 /* Locked dark visual design — one committed dark world (Rye + Space Mono + folded suits). */
 :root{
   --bg:#0b0c10; --panel:#16171d; --panel2:#1d1f27; --ink:#f2f1ea; --muted:#888e9b; --line:#2a2c35;
-  --brass:#8aa0ff; --brass-soft:#5b74ff;
+  --brass:#e0b24e; --brass-soft:#c8933a;   /* brass accent on the cool modern base */
   --best:#2fd08a; --good:#5ee7a8; --accept:#ffc24d; --costly:#ff8a6e; --major:#e0341a;
+  --felt:#173a30; --felt-lo:#0e2119;   /* deep cool table green */
   --disp:"Rye","Iowan Old Style",Georgia,serif;
   --sans:"Avenir Next","Avenir",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,sans-serif;
   --mono:"Space Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
-  --label:"Space Mono",ui-monospace,Menlo,monospace;
+  --label:var(--sans);   /* UI chrome is proportional sans, not monospace (mono = card ranks only) */
 }
 *{box-sizing:border-box}
 body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
@@ -385,7 +386,8 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 .lvl-hint{margin:9px 0 0;font-size:12px;color:var(--muted);line-height:1.45}
 .bar-top{height:4px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:9px}
 .bar-top>i{display:block;height:100%;background:var(--brass);transition:width .3s}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.card{background:linear-gradient(180deg,color-mix(in srgb,var(--panel) 92%,#fff),var(--panel));border:1px solid rgba(255,255,255,.05);border-radius:20px;overflow:hidden;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 18px 40px -20px rgba(0,0,0,.85),0 2px 8px -4px rgba(0,0,0,.5)}
 .sit{padding:7px 15px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px;font-family:var(--sans);font-size:13.5px;line-height:1.3}
 .pos{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.05em;padding:2px 8px;border-radius:6px;flex:none}
 .pos.BB,.pos.SB,.pos.UTG,.pos.HJ,.pos.CO{background:color-mix(in srgb,var(--brass) 20%,transparent);color:var(--brass)}
@@ -395,8 +397,32 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 .pos.ip{background:color-mix(in srgb,var(--best) 20%,transparent);color:var(--best)}
 .pos.oop{background:color-mix(in srgb,var(--accept) 22%,transparent);color:var(--accept)}
 .demo{margin-left:auto;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accept);border:1px solid color-mix(in srgb,var(--accept) 45%,var(--line));border-radius:6px;padding:1px 6px}
-.felt{background:radial-gradient(120% 130% at 50% -10%,color-mix(in srgb,var(--best) 20%,var(--panel)),var(--panel));padding:8px 16px 8px;text-align:center}
-.cap{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.tablewrap{padding:10px 14px 4px}
+/* unified poker table: opponent on top, the board on the felt, your hand at your seat */
+/* position shown as an abstract constellation of seats; cards sit cleanly below it */
+.stage{display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px 12px 8px}
+.posdial{display:flex;flex-direction:column;align-items:center;gap:7px}
+.cnst{width:148px;height:92px;overflow:visible;display:block}
+.cn-link{fill:none;stroke:color-mix(in srgb,var(--ink) 13%,transparent);stroke-width:1}
+.cn-dim{fill:color-mix(in srgb,var(--ink) 24%,transparent)}
+.cn-opp{fill:var(--brass)}
+.cn-you{fill:var(--best)}
+.cn-btn{fill:none;stroke:#efe7d6;stroke-width:1.4}
+.pos-cap{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center}
+.pos-cap b{font-weight:700}.pos-cap .you{color:var(--best)}.pos-cap .opp{color:var(--brass)}
+.t-mid{display:flex;flex-direction:column;align-items:center;gap:3px}
+.t-opp,.t-you{display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.12;text-align:center}
+.t-seatline{display:flex;align-items:center;gap:6px;justify-content:center}
+.t-seatline .nm{font-size:11.5px;font-weight:700;color:var(--ink)}
+.t-you .t-seatline .nm{color:var(--best)}.t-opp .t-seatline .nm{color:var(--brass)}
+.t-ps{font-size:9.5px;color:color-mix(in srgb,#eaf5ef 52%,transparent)}
+.dchip{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;background:#f5f0e7;color:#15171e;
+  font-family:var(--mono);font-weight:700;font-size:9px;box-shadow:0 1px 2px rgba(0,0,0,.55)}
+.t-move{font-family:var(--label);font-size:10px;font-weight:600;letter-spacing:.005em;color:var(--best)}
+.t-board,.t-you{width:100%}
+.t-board .cards,.t-you .cards{display:flex;justify-content:center}
+.cap{font-family:var(--sans);font-size:10.5px;font-weight:600;letter-spacing:.01em;color:var(--muted);margin-bottom:4px;text-align:center}
+.ftable .cap{color:color-mix(in srgb,#eaf5ef 62%,transparent)}
 .cards{display:flex;gap:8px;justify-content:center}
 /* folded-suit playing cards: corner rank (Space Mono) + centered paper-craft suit */
 .pc{position:relative;background:linear-gradient(160deg,#f5f0e7,#e7e1d3);border-radius:7px;width:40px;height:54px;
@@ -414,12 +440,15 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 .hero{margin-top:5px}
 .hero .cap{color:var(--brass);font-weight:600}
 .acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;padding:10px 16px}
-.act{appearance:none;font-family:var(--sans);font-size:15px;font-weight:600;color:var(--ink);background:var(--panel2);
-  border:1px solid var(--line);border-radius:11px;padding:10px 10px;cursor:pointer;transition:.12s;display:flex;flex-direction:column;gap:2px;align-items:center}
+.act{appearance:none;font-family:var(--sans);font-size:15px;font-weight:650;color:var(--ink);
+  background:linear-gradient(180deg,#2a2d38,#1e2029);
+  border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:11px 10px;cursor:pointer;transition:.14s ease;display:flex;flex-direction:column;gap:2px;align-items:center;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 5px 12px -5px rgba(0,0,0,.6),0 2px 3px -1px rgba(0,0,0,.5)}
 .act .k{font-family:var(--mono);font-size:10px;color:var(--muted);font-weight:400}
-.act:hover:not(:disabled){border-color:var(--brass);background:color-mix(in srgb,var(--brass) 8%,var(--panel2));transform:translateY(-1px)}
+.act:hover:not(:disabled){border-color:color-mix(in srgb,var(--brass) 55%,transparent);background:linear-gradient(180deg,#31343f,#24262f);transform:translateY(-1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 8px 18px -6px rgba(0,0,0,.65)}
+.act:active:not(:disabled){transform:translateY(1px);box-shadow:inset 0 2px 5px rgba(0,0,0,.55)}
 .act:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
-.act:disabled{cursor:default;opacity:.9}
+.act:disabled{cursor:default;opacity:.92}
 .act.chosen{box-shadow:inset 0 0 0 2px var(--gc,var(--brass))}
 .act.g-best{--gc:var(--best)}.act.g-good{--gc:var(--good)}.act.g-acceptable{--gc:var(--accept)}
 .act.g-costly{--gc:var(--costly)}.act.g-major_error{--gc:var(--major)}
@@ -611,18 +640,21 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .revbtn:disabled{opacity:.3;cursor:default}
 .appbar .brand{white-space:nowrap}
 .appbar .brand{font-size:18px}
-.views{flex:1;padding-bottom:72px}
+.views{flex:1;padding-bottom:72px;display:flex;flex-direction:column;min-height:0}
 .view{display:none;padding:14px 15px 8px}
-.view.on{display:block;animation:viewin .24s ease}
+.view.on{display:flex;flex-direction:column;flex:1;min-height:0;animation:viewin .24s ease}
+#v-train.view.on>*{flex:none}
+#play-card{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
+#play-card .stage{flex:1 1 auto;justify-content:center}
 @keyframes viewin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .no-motion *{animation:none!important;transition:none!important}
 .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:440px;z-index:30;display:flex;background:color-mix(in srgb,var(--panel) 94%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
-.tabbar button{flex:1;appearance:none;border:none;background:none;color:var(--muted);font-family:var(--label);font-size:9px;letter-spacing:.05em;text-transform:uppercase;font-weight:700;padding:9px 4px 11px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
+.tabbar button{flex:1;appearance:none;border:none;background:none;color:var(--muted);font-family:var(--label);font-size:11px;letter-spacing:.01em;font-weight:600;padding:9px 4px 11px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
 .tabbar button .ti{width:19px;height:19px;font-size:16px;line-height:1;display:grid;place-items:center;color:currentColor}
 .tabbar button.on{color:var(--brass)}
 .street-seg{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:6px;scrollbar-width:none}
 .street-seg::-webkit-scrollbar{display:none}
-.street-seg button{appearance:none;flex:none;font-family:var(--label);font-size:11px;text-transform:uppercase;letter-spacing:.03em;font-weight:700;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:7px 13px;cursor:pointer}
+.street-seg button{appearance:none;flex:none;font-family:var(--label);font-size:12.5px;letter-spacing:0;font-weight:600;color:var(--muted);background:linear-gradient(180deg,#20222c,#191b22);border:1px solid rgba(255,255,255,.05);border-radius:999px;padding:7px 15px;cursor:pointer;transition:.14s;box-shadow:0 2px 5px -2px rgba(0,0,0,.5)}
 .street-seg button.on{background:var(--brass);color:#0b0c10;border-color:var(--brass)}
 .street-seg button:disabled{opacity:.4}
 /* progress view */
@@ -658,9 +690,19 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .seats{padding:6px 14px 2px}
 /* 6-max ring seen from above: all seats, folded ones dimmed, button on its seat */
 .tv{position:relative;height:146px;max-width:320px;margin:0 auto;
-  background:radial-gradient(120% 130% at 50% 46%, color-mix(in srgb,var(--best) 15%,var(--panel2)) 0%, color-mix(in srgb,var(--best) 4%,var(--panel)) 60%, var(--panel) 100%);
-  border:1px solid color-mix(in srgb,var(--best) 22%,var(--line));border-radius:118px/56px;
-  box-shadow:inset 0 2px 16px rgba(0,0,0,.35), inset 0 0 0 6px color-mix(in srgb,var(--best) 6%,transparent)}
+  background:radial-gradient(120% 130% at 50% 40%, color-mix(in srgb,var(--felt) 84%,#000) 0%, color-mix(in srgb,var(--felt) 62%,#000) 60%, var(--felt-lo) 100%);
+  border:1px solid rgba(255,255,255,.05);border-radius:118px/56px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.03),inset 0 10px 30px rgba(0,0,0,.5)}
+.tv.ring6{height:212px;max-width:340px;border-radius:134px/82px}
+.tv.ring6 .tvmid{top:58%;gap:2px}   /* sit the hand low-centre so a top-seat opponent can't overlap it */
+.pf-hand{display:flex;flex-direction:column;align-items:center}
+.pf-hand .cap{color:color-mix(in srgb,#eaf5ef 60%,transparent);margin-bottom:3px}
+.pf-hand .t-seatline{margin-top:3px}.pf-hand .nm.you{color:var(--best)}
+.tv.ring6 #hero{gap:7px}
+.tv.ring6 #hero .pc{width:46px;height:62px;border-radius:7px}
+.tv.ring6 #hero .pc::after{inset:3px;border-radius:5px}
+.tv.ring6 #hero .pc .ix b{font-size:12px}
+.tv.ring6 #hero .pc .center .psuit{width:24px;height:24px}
 .tvs{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:1px;width:72px;text-align:center;line-height:1.12}
 .tvs.ab{flex-direction:column-reverse}
 .av{width:21px;height:21px;border-radius:50%;position:relative;
@@ -685,13 +727,13 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .tvmid{position:absolute;top:46%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:6px}
 .potlab{font-family:var(--label);font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
   border:1px dashed color-mix(in srgb,var(--muted) 40%,transparent);border-radius:999px;padding:3px 13px}
-.oppchip{font-family:var(--label);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;
-  padding:4px 11px;border-radius:999px;border:1px solid transparent}
+.oppchip{font-family:var(--label);font-size:11px;font-weight:650;letter-spacing:0;
+  padding:4px 12px;border-radius:999px;border:1px solid transparent}
 .oppchip.a-check{background:color-mix(in srgb,var(--accept) 16%,transparent);color:var(--accept);border-color:color-mix(in srgb,var(--accept) 40%,var(--line))}
 .oppchip.a-bet{background:color-mix(in srgb,var(--costly) 16%,transparent);color:var(--costly);border-color:color-mix(in srgb,var(--costly) 40%,var(--line))}
 /* ===== mobile-first player loop ===== */
 .session-hud{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 2px 7px;
-  font-family:var(--label);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+  font-family:var(--label);font-size:11.5px;letter-spacing:0;color:var(--muted)}
 .session-hud b{color:var(--ink);font-variant-numeric:tabular-nums}
 .session-hud .skip-bonus{appearance:none;margin-left:auto;border:1px solid var(--line);border-radius:999px;
   background:var(--panel2);color:var(--brass);font:inherit;letter-spacing:.05em;text-transform:uppercase;
@@ -705,11 +747,11 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 .felt{padding:7px 12px 10px}
 #board{gap:6px}
 #hero{gap:8px}
-#board .pc{width:46px;height:62px}
+#board .pc{width:52px;height:70px}
 #board .pc .ix b{font-size:13px}
 #board .pc .ix .mini{width:9px;height:9px}
 #board .pc .center .psuit{width:25px;height:25px}
-#hero .pc{width:60px;height:82px;border-radius:9px}
+#hero .pc{width:68px;height:92px;border-radius:9px}
 #hero .pc::after{inset:4px;border-radius:6px}
 #hero .pc .ix{top:4px;left:5px}
 #hero .pc .ix b{font-size:16px}
@@ -796,8 +838,8 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
   .hint,.act .k{display:none}
 }
 @media(max-width:350px){
-  #board .pc{width:42px;height:58px}
-  #hero .pc{width:56px;height:76px}
+  #board .pc{width:50px;height:67px}
+  #hero .pc{width:64px;height:86px}
   .act .asub{display:none}
 }
 </style>
@@ -817,12 +859,7 @@ __SUITDEFS__
 
   <div class="card" id="play-card" tabindex="-1">
     <div class="sit"><span class="pos" id="pos"></span><span class="sit-copy"><strong class="sit-main" id="sit"></strong><span class="sit-context" id="sitcontext"></span></span><span class="demo" id="demotag" hidden></span></div>
-    <div class="seats" id="seats" hidden></div>
-    <div class="felt">
-      <div class="cap" id="boardcap">Flop</div>
-      <div class="cards" id="board"></div>
-      <div class="hero"><div class="cap" id="herocap">Your hand</div><div class="cards" id="hero"></div></div>
-    </div>
+    <div class="tablewrap" id="seats"></div>
     <div class="acts" id="acts"></div>
     <div class="fb" id="fb" role="dialog" aria-modal="true" aria-labelledby="verdict">
       <div class="grab" aria-hidden="true"></div>
@@ -1464,12 +1501,12 @@ function renderPreflop(q){
   document.getElementById("sit").textContent=pfHeadline(q);
   document.getElementById("sitcontext").textContent="You are "+q.pos+" · Preflop";
   const bd=document.getElementById("demotag");bd.hidden=false;bd.textContent="Preflop";
-  document.getElementById("boardcap").style.display="none";document.getElementById("board").style.display="none";
+  renderSeats(q);   // build the 6-max ring first (creates the centred #hero slot)
   document.getElementById("herocap").textContent="Your hand";
   render(q.hand,document.getElementById("hero"));
   const box=document.getElementById("acts");box.innerHTML="";box.className="acts n-"+q.actions.length;
   q.actions.forEach((a,i)=>addActionButton(box,a,i));
-  setHint(q.actions.length);renderSeats(q);
+  setHint(q.actions.length);
   document.getElementById("prog").style.width=(100*(shownStep()+1)/Math.max(1,order.length))+"%";
 }
 function decisionHeadline(q){
@@ -1480,19 +1517,19 @@ function decisionHeadline(q){
 }
 function renderQuestion(q){
   if(q.preflop)return renderPreflop(q);
-  document.getElementById("boardcap").style.display="";document.getElementById("board").style.display="";
   const posEl=document.getElementById("pos");posEl.textContent=posLabel(q);posEl.className="pos "+(q.is_oop?"oop":"ip");
   document.getElementById("sit").textContent=decisionHeadline(q);
   // Position is already the coloured lead label; keep the supporting line compact on phones.
   document.getElementById("sitcontext").textContent="You are "+q.acting_player+" · "+cap1(q.street);
   const bd=document.getElementById("demotag");bd.hidden=!q.badge;bd.textContent=q.badge||"";
+  renderSeats(q);   // build the unified felt table first (creates the #board/#hero slots)
   document.getElementById("boardcap").textContent=(T().boardcap&&T().boardcap[q.street])||"Flop";
   document.getElementById("herocap").textContent=T().herocap;
   render(q.board,document.getElementById("board"));
   render(q.hero,document.getElementById("hero"));
   const box=document.getElementById("acts");box.innerHTML="";box.className="acts n-"+q.actions.length;
   q.actions.forEach((a,i)=>addActionButton(box,a,i));
-  setHint(q.actions.length);renderSeats(q);
+  setHint(q.actions.length);
   document.getElementById("prog").style.width=(100*(shownStep()+1)/Math.max(1,order.length))+"%";
 }
 function setHint(n){const el=document.getElementById("hint");if(!el)return;
@@ -1509,43 +1546,51 @@ function renderSeats(q){
 const RING_ORDER=["BTN","SB","BB","UTG","HJ","CO"];
 const RING_SLOTS=[[50,85,1],[15,67,1],[15,33,0],[50,15,0],[85,33,0],[85,67,1]]; // x%,y%,labelAbove
 const RING_SHORT={BTN:"the button",BB:"big blind",SB:"small blind",CO:"cutoff",HJ:"hijack",UTG:"under the gun"};
+// Abstract "constellation": the six seats as small nodes (you at the bottom), the live
+// opponent(s) highlighted, the button ringed, faint links between seats. Position at a glance.
+function constellation(hero,villain){
+  const start=Math.max(0,RING_ORDER.indexOf(hero));
+  const seats=[];for(var i=0;i<6;i++)seats.push(RING_ORDER[(start+i)%6]);
+  const W=148,H=90;
+  const pts=RING_SLOTS.map(s=>[+(s[0]/100*W).toFixed(1),+(s[1]/100*H).toFixed(1)]);
+  const poly=pts.map(p=>p[0]+","+p[1]).join(" ");
+  let dots="";
+  seats.forEach(function(p,i){
+    const x=pts[i][0],y=pts[i][1];
+    const isHero=p===hero,isV=p===villain;
+    const cls=isHero?"cn-you":isV?"cn-opp":"cn-dim";
+    const r=isHero?7:isV?6.5:4;
+    if(p==="BTN")dots+='<circle class="cn-btn" cx="'+x+'" cy="'+y+'" r="'+(r+3.5)+'"/>';
+    dots+='<circle class="'+cls+'" cx="'+x+'" cy="'+y+'" r="'+r+'"/>';
+  });
+  return '<svg viewBox="-8 -8 '+(W+16)+' '+(H+16)+'" class="cnst" aria-hidden="true">'
+    +'<polygon points="'+poly+'" class="cn-link"/>'+dots+'</svg>';
+}
 function ringTable(q){
+  // Heads-up postflop: constellation for position, cards on the clean ground below it.
   const hero=q.acting_player||"BB";
   const villain=q.villain||(hero==="BTN"?"BB":"BTN");
   const node=q.node||"";
   let oppAct="",ok="wait";
-  if(node.endsWith("_vs_check")){oppAct="checked";ok="check";}
-  else if(node.endsWith("_vs_bet")){oppAct="bet "+(q.bet_pct||66)+"%";ok="bet";}
-  const D='<span class="dbtn" title="dealer button">D</span>';
-  const heroBtn=hero==="BTN"?D:"",villainBtn=villain==="BTN"?D:"";
-  let html='<div class="tvs opp"><div class="av">'+villainBtn+'</div><div class="nm">Opponent</div><div class="ps">'+
-    (RING_SHORT[villain]||villain)+'</div></div>';
-  html+='<div class="tvs you ab"><div class="av">'+heroBtn+'</div><div class="nm">You</div><div class="ps">'+
-    (RING_SHORT[hero]||hero)+'</div><div class="turn">&#9679; your move</div></div>';
-  html+='<div class="tvmid">'+(ok!=="wait"?'<span class="oppchip a-'+ok+'">'+oppAct+'</span>':'')+'<span class="potlab">pot</span></div>';
-  const w=document.createElement("div");w.className="tv duel";w.innerHTML=html;return w;
+  if(node.endsWith("_vs_check")){oppAct="Checked";ok="check";}
+  else if(node.endsWith("_vs_bet")){oppAct="Bets "+(q.bet_pct||66)+"%";ok="bet";}
+  let html='<div class="posdial">'+constellation(hero,villain)
+    +'<div class="pos-cap"><span>You <b class="you">'+(RING_SHORT[hero]||hero)+'</b></span>'
+    +'<span>Opponent <b class="opp">'+(RING_SHORT[villain]||villain)+'</b></span>'
+    +(ok!=="wait"?'<span class="oppchip a-'+ok+'">'+oppAct+'</span>':'')+'</div></div>';
+  html+='<div class="t-mid"><div class="cap" id="boardcap">Flop</div><div class="cards" id="board"></div>'
+    +'<div class="cap" id="herocap">Your hand</div><div class="cards" id="hero"></div></div>';
+  const w=document.createElement("div");w.className="stage duel";w.innerHTML=html;return w;
 }
 function preflopRing(q){
-  // 6-max ring: you + the raiser highlighted, the button on its seat, everyone else dimmed.
-  const hero=q.pos, opener=q.opener||null, tb=q.tbettor||null;
-  const start=Math.max(0,RING_ORDER.indexOf(hero));
-  const seats=[];for(var i=0;i<6;i++)seats.push(RING_ORDER[(start+i)%6]);
-  const D='<span class="dbtn" title="dealer button">D</span>';
-  let html="";
-  seats.forEach(function(pos,i){
-    const x=RING_SLOTS[i][0],y=RING_SLOTS[i][1],above=RING_SLOTS[i][2];
-    const isHero=pos===hero, isTb=pos===tb&&!isHero, isOpener=pos===opener&&!isHero&&!isTb;
-    const role=isHero?"you":(isTb||isOpener)?"opp":"fold";
-    const btn=(pos==="BTN")?D:"";
-    let inner='<div class="av">'+btn+'</div>';
-    if(isHero)inner+='<div class="nm">You</div><div class="ps">'+(RING_SHORT[pos]||pos)+'</div><div class="turn">&#9679; your move</div>';
-    else if(isTb)inner+='<div class="nm">Opponent</div><div class="ps">'+(RING_SHORT[pos]||pos)+'</div><div class="oppchip a-bet">3-bets</div>';
-    else if(isOpener)inner+='<div class="nm">Opponent</div><div class="ps">'+(RING_SHORT[pos]||pos)+'</div><div class="oppchip a-bet">opens</div>';
-    else inner+='<div class="nm">'+pos+'</div>';
-    html+='<div class="tvs '+role+(above?" ab":"")+'" style="left:'+x+'%;top:'+y+'%">'+inner+'</div>';
-  });
-  html+='<div class="tvmid"><span class="potlab">blinds</span></div>';
-  const w=document.createElement("div");w.className="tv";w.innerHTML=html;return w;
+  const hero=q.pos, villain=q.tbettor||q.opener||null;
+  const act=q.tbettor?"3-bets":q.opener?"opens":"";
+  let html='<div class="posdial">'+constellation(hero,villain)
+    +'<div class="pos-cap"><span>You <b class="you">'+(RING_SHORT[hero]||hero)+'</b></span>'
+    +(villain?'<span>Opponent <b class="opp">'+(RING_SHORT[villain]||villain)+'</b></span>':'')
+    +(act?'<span class="oppchip a-bet">'+act+'</span>':'')+'</div></div>';
+  html+='<div class="t-mid"><div class="cap" id="herocap">Your hand</div><div class="cards" id="hero"></div></div>';
+  const w=document.createElement("div");w.className="stage";w.innerHTML=html;return w;
 }
 function renderHand(){                                  // draw the current history entry
   const e=hist[hidx];answered=false;chosen=null;cur=e.q;
