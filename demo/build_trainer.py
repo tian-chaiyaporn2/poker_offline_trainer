@@ -1614,8 +1614,8 @@ function renderPreflopFeedback(q,a,gained){
     v.textContent="≈ Close — "+pfActLabel(a).toLowerCase()+" is fine; "+pfActLabel(q.answer).toLowerCase()+" is the small favourite.";}
   else{v.className="verdict v-major_error";v.textContent="✗ Not quite — the play is "+pfActLabel(q.answer)+".";}
   document.getElementById("learn-summary").textContent=(correct||closeOk)
-    ?"Why "+actionPrimary(a)+" works here"
-    :"Why "+actionPrimary(q.answer)+" is stronger";
+    ?"Why "+pfActLabel(a)+" works here"
+    :"Why "+pfActLabel(q.answer)+" is stronger";
   const rd=document.getElementById("read");rd.hidden=false;rd.innerHTML="";rd.appendChild(document.createTextNode("You held "));
   const bc=document.createElement("b");bc.textContent=q.read;rd.appendChild(bc);rd.appendChild(document.createTextNode("."));
   document.getElementById("reason").style.display="none";
@@ -2100,6 +2100,9 @@ function showSessionEnd(){
   document.getElementById("coach").hidden=true;
   document.getElementById("hint").hidden=true;
   document.getElementById("fwd").disabled=true;
+  document.getElementById("prev").disabled=true;
+  // Freeze street filters so changing All/Flop/… can't wipe the completion summary / leak list.
+  document.querySelectorAll("#cats button").forEach(b=>{b.disabled=true;});
   document.getElementById("session-solid").textContent=stats.solid;
   document.getElementById("session-ok").textContent=stats.ok;
   document.getElementById("session-leak").textContent=stats.leak;
@@ -2111,20 +2114,22 @@ function showSessionEnd(){
   document.getElementById("session-end").focus({preventScroll:true});
 }
 function resetSession(){
-  stats=freshStats();sessionMisses=[];buildOrder();newHand();
+  stats=freshStats();sessionMisses=[];applyCatUI();buildOrder();newHand();
   document.getElementById("play-card").focus({preventScroll:true});
 }
 function retryLeakSession(){
   if(!sessionMisses.length)return;
   const ids=sessionMisses.map(q=>Q.indexOf(q)).filter(i=>i>=0);
   stats=freshStats();sessionMisses=[];order=shuffle(ids);pos=0;hist=[];hidx=-1;
-  newHand();
+  applyCatUI();newHand();
   document.getElementById("play-card").focus({preventScroll:true});
 }
 function next(){
+  // Unanswered compare-practice is optional — Forward and Next both dismiss it,
+  // including when it sits mid-history after a review insert.
+  if(hist[hidx]&&hist[hidx].bonus&&!answered){skipBonus();return;}
   if(hidx<hist.length-1){hidx++;renderHand();
     if(!answered)document.getElementById("play-card").focus({preventScroll:true});return;}    // stepping forward through review
-  if(hist[hidx]&&hist[hidx].bonus&&!answered){skipBonus();return;}
   if(pos>=order.length-1){showSessionEnd();return;}
   pos++;newHand();document.getElementById("play-card").focus({preventScroll:true});
 }
@@ -2202,7 +2207,9 @@ function applyCatUI(){const cc=catCounts();
   document.querySelectorAll("#cats button").forEach(b=>{const on=b.dataset.c===cat;b.classList.toggle("on",on);
     b.setAttribute("aria-pressed",String(on));
     const n=b.dataset.c==="all"?Q.length:(cc[b.dataset.c]||0);b.disabled=n===0;b.style.opacity=n===0?"0.4":"";});}
-function setCat(c){cat=c;try{localStorage.setItem("cat",c);}catch(e){}
+function setCat(c){
+  if(!document.getElementById("session-end").hidden)return;
+  cat=c;try{localStorage.setItem("cat",c);}catch(e){}
   stats=freshStats();sessionMisses=[];applyCatUI();buildOrder();newHand();}
 document.querySelectorAll("#cats button").forEach(b=>b.onclick=()=>setCat(b.dataset.c));
 // intro: open by default, remember if the reader dismisses it
@@ -2246,7 +2253,11 @@ document.addEventListener("keydown",e=>{
   if((e.key==="Enter"||e.key===" ")&&e.target.closest&&e.target.closest("button"))return;
   const tv=document.getElementById("v-train");if(tv&&!tv.classList.contains("on"))return;  // only the Train view takes hotkeys
   if(e.key==="ArrowLeft"){e.preventDefault();prev();return;}   // step back to review
-  if(!answered){const i=parseInt(e.key);if(cur&&i>=1&&i<=cur.actions.length)answer(cur.actions[i-1]);}
+  if(!answered){
+    const i=parseInt(e.key);if(cur&&i>=1&&i<=cur.actions.length)answer(cur.actions[i-1]);
+    else if((e.key==="Enter"||e.key===" "||e.key==="ArrowRight")&&hist[hidx]&&hist[hidx].bonus){
+      e.preventDefault();skipBonus();}
+  }
   else if(e.key==="Enter"||e.key===" "||e.key==="ArrowRight"){e.preventDefault();next();}
 });
 // ===== Ask-a-coach — bring-your-own-key. Transport seam: web fetch today, native
@@ -2430,6 +2441,7 @@ function renderProgress(){
   syncStatsUI();
 }
 function setView(v){
+  closeSheet(false);
   document.querySelectorAll(".view").forEach(function(s){s.classList.toggle("on",s.id==="v-"+v);});
   document.querySelectorAll("#tabbar button").forEach(function(b){const on=b.dataset.v===v;b.classList.toggle("on",on);
     if(on)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current");});
