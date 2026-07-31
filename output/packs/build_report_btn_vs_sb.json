@@ -1,6 +1,6 @@
 {
-  "pack_id": "flop_srp_btn_bb_sb_vs_bb",
-  "version": "sb_vs_bb",
+  "pack_id": "flop_srp_btn_bb_btn_vs_sb",
+  "version": "btn_vs_sb",
   "config": {
     "positions": {
       "ip": "BTN",
@@ -13,7 +13,7 @@
     "solver_model": "full_street_cfr_plus"
   },
   "provenance": {
-    "git_commit": "3ab48e372da77fc2252285df18d19212f6b8170f",
+    "git_commit": "88832a9fc2f337b1fe9ad214d188a116fc44f29b",
     "solver_model": "full_street_cfr_plus"
   },
   "grade_thresholds_pct_pot": {
@@ -22,13 +22,13 @@
     "acceptable": 3.0,
     "costly": 10.0
   },
-  "record_count": "10681",
+  "record_count": "8267",
   "signing_scheme": "hmac-sha256-dev",
   "default_pot_bb": "5.5",
-  "content_hash": "1bc6ad8772a012882ec46b13a267bf457be83f5429ea6ed0e0a9c977076ffff6",
-  "signature": "b39015ff97eee08a6522b14bf51e27135149bb82b3ced6a81142acf269963382",
-  "db_bytes": 8515584,
-  "gz_bytes": 1653767,
-  "records_accepted": 21184,
-  "records_after_dedup": 10681
+  "content_hash": "fcfad5b616c8546935ee768ddc2dfc7b216514c296c6e60dd0e88f5cc7c8f33c",
+  "signature": "ceb50773631ccbd88bd4bab5f5479ebed0bd83f71a26d3279bcb6ac9b2883352",
+  "db_bytes": 6815744,
+  "gz_bytes": 1285110,
+  "records_accepted": 12234,
+  "records_after_dedup": 8267
 }
