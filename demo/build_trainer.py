@@ -402,14 +402,23 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 /* position shown as an abstract constellation of seats; cards sit cleanly below it */
 .stage{display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px 12px 8px}
 .posdial{display:flex;flex-direction:column;align-items:center;gap:7px}
-.cnst{width:148px;height:92px;overflow:visible;display:block}
+.cnst{width:204px;height:90px;overflow:visible;display:block}
 .cn-link{fill:none;stroke:color-mix(in srgb,var(--ink) 13%,transparent);stroke-width:1}
 .cn-dim{fill:color-mix(in srgb,var(--ink) 24%,transparent)}
 .cn-opp{fill:var(--brass)}
 .cn-you{fill:var(--best)}
 .cn-btn{fill:none;stroke:#efe7d6;stroke-width:1.4}
-.pos-cap{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center}
+.cnst-wrap{position:relative;width:204px;height:90px}
+.cn-flow{fill:none;stroke-width:2;stroke-linecap:round}
+.fl-bet{stroke:var(--costly)}
+.fl-check{stroke:color-mix(in srgb,var(--accept) 78%,transparent);stroke-dasharray:3.5 3.5}
+.ah-bet{fill:var(--costly)}.ah-check{fill:var(--accept)}
+.flowchip{position:absolute;transform:translate(-50%,-50%);font-family:var(--label);font-size:10px;font-weight:650;white-space:nowrap;padding:2px 8px;border-radius:999px;pointer-events:none;z-index:2}
+.flowchip.a-bet{background:color-mix(in srgb,var(--costly) 20%,var(--bg));color:var(--costly);border:1px solid color-mix(in srgb,var(--costly) 45%,transparent)}
+.flowchip.a-check{background:color-mix(in srgb,var(--accept) 18%,var(--bg));color:var(--accept);border:1px solid color-mix(in srgb,var(--accept) 40%,transparent)}
+.pos-cap{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:center}
 .pos-cap b{font-weight:700}.pos-cap .you{color:var(--best)}.pos-cap .opp{color:var(--brass)}
+.fl-arrow{color:var(--muted);font-weight:700}
 .t-mid{display:flex;flex-direction:column;align-items:center;gap:3px}
 .t-opp,.t-you{display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.12;text-align:center}
 .t-seatline{display:flex;align-items:center;gap:6px;justify-content:center}
@@ -1548,12 +1557,24 @@ const RING_SLOTS=[[50,85,1],[15,67,1],[15,33,0],[50,15,0],[85,33,0],[85,67,1]]; 
 const RING_SHORT={BTN:"the button",BB:"big blind",SB:"small blind",CO:"cutoff",HJ:"hijack",UTG:"under the gun"};
 // Abstract "constellation": the six seats as small nodes (you at the bottom), the live
 // opponent(s) highlighted, the button ringed, faint links between seats. Position at a glance.
-function constellation(hero,villain){
+function constellation(hero,villain,ok,oppAct){
   const start=Math.max(0,RING_ORDER.indexOf(hero));
   const seats=[];for(var i=0;i<6;i++)seats.push(RING_ORDER[(start+i)%6]);
-  const W=148,H=90;
+  const W=204,H=90,VBX=-8,VBY=-8,VBW=220,VBH=108;
   const pts=RING_SLOTS.map(s=>[+(s[0]/100*W).toFixed(1),+(s[1]/100*H).toFixed(1)]);
   const poly=pts.map(p=>p[0]+","+p[1]).join(" ");
+  const vi=villain?seats.indexOf(villain):-1;
+  // the action as a flow: an arrow from the opponent's node down to yours (bottom)
+  let flow="",chip="";
+  if(vi>=0&&ok&&ok!=="wait"){
+    const a=pts[vi],b=pts[0],dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy)||1,ux=dx/len,uy=dy/len;
+    const ax=(a[0]+ux*8).toFixed(1),ay=(a[1]+uy*8).toFixed(1),bx=(b[0]-ux*11).toFixed(1),by=(b[1]-uy*11).toFixed(1);
+    flow='<line class="cn-flow fl-'+ok+'" x1="'+ax+'" y1="'+ay+'" x2="'+bx+'" y2="'+by+'" marker-end="url(#cnar-'+ok+')"/>';
+    // chip biased toward the opponent end + nudged off the line, so short (adjacent-seat) arrows don't collide with your node
+    const cx=a[0]+(+bx-a[0])*0.42-uy*9,cy=a[1]+(+by-a[1])*0.42+ux*9;
+    const L=((cx-VBX)/VBW*100).toFixed(1),T=((cy-VBY)/VBH*100).toFixed(1);
+    chip='<span class="flowchip a-'+ok+'" style="left:'+L+'%;top:'+T+'%">'+oppAct+'</span>';
+  }
   let dots="";
   seats.forEach(function(p,i){
     const x=pts[i][0],y=pts[i][1];
@@ -1563,8 +1584,12 @@ function constellation(hero,villain){
     if(p==="BTN")dots+='<circle class="cn-btn" cx="'+x+'" cy="'+y+'" r="'+(r+3.5)+'"/>';
     dots+='<circle class="'+cls+'" cx="'+x+'" cy="'+y+'" r="'+r+'"/>';
   });
-  return '<svg viewBox="-8 -8 '+(W+16)+' '+(H+16)+'" class="cnst" aria-hidden="true">'
-    +'<polygon points="'+poly+'" class="cn-link"/>'+dots+'</svg>';
+  const defs='<defs>'
+    +'<marker id="cnar-bet" markerWidth="6" markerHeight="6" refX="4.4" refY="3" orient="auto"><path d="M0,0 L5,3 L0,6 z" class="ah-bet"/></marker>'
+    +'<marker id="cnar-check" markerWidth="6" markerHeight="6" refX="4.4" refY="3" orient="auto"><path d="M0,0 L5,3 L0,6 z" class="ah-check"/></marker>'
+    +'</defs>';
+  return '<div class="cnst-wrap"><svg viewBox="-8 -8 '+VBW+' '+VBH+'" class="cnst" aria-hidden="true">'
+    +defs+'<polygon points="'+poly+'" class="cn-link"/>'+flow+dots+'</svg>'+chip+'</div>';
 }
 function ringTable(q){
   // Heads-up postflop: constellation for position, cards on the clean ground below it.
@@ -1574,21 +1599,24 @@ function ringTable(q){
   let oppAct="",ok="wait";
   if(node.endsWith("_vs_check")){oppAct="Checked";ok="check";}
   else if(node.endsWith("_vs_bet")){oppAct="Bets "+(q.bet_pct||66)+"%";ok="bet";}
-  let html='<div class="posdial">'+constellation(hero,villain)
-    +'<div class="pos-cap"><span>You <b class="you">'+(RING_SHORT[hero]||hero)+'</b></span>'
-    +'<span>Opponent <b class="opp">'+(RING_SHORT[villain]||villain)+'</b></span>'
-    +(ok!=="wait"?'<span class="oppchip a-'+ok+'">'+oppAct+'</span>':'')+'</div></div>';
+  const vShort=RING_SHORT[villain]||villain,hShort=RING_SHORT[hero]||hero;
+  let html='<div class="posdial">'+constellation(hero,villain,ok,oppAct)
+    +'<div class="pos-cap">'+(ok!=="wait"
+      ? 'Opponent <b class="opp">'+vShort+'</b> <span class="fl-arrow">&#8594;</span> <b class="you">You</b> <span>'+hShort+'</span>'
+      : '<b class="you">You</b> <span>'+hShort+'</span> <span class="fl-arrow">·</span> vs <b class="opp">'+vShort+'</b>')
+    +'</div></div>';
   html+='<div class="t-mid"><div class="cap" id="boardcap">Flop</div><div class="cards" id="board"></div>'
     +'<div class="cap" id="herocap">Your hand</div><div class="cards" id="hero"></div></div>';
   const w=document.createElement("div");w.className="stage duel";w.innerHTML=html;return w;
 }
 function preflopRing(q){
   const hero=q.pos, villain=q.tbettor||q.opener||null;
-  const act=q.tbettor?"3-bets":q.opener?"opens":"";
-  let html='<div class="posdial">'+constellation(hero,villain)
-    +'<div class="pos-cap"><span>You <b class="you">'+(RING_SHORT[hero]||hero)+'</b></span>'
-    +(villain?'<span>Opponent <b class="opp">'+(RING_SHORT[villain]||villain)+'</b></span>':'')
-    +(act?'<span class="oppchip a-bet">'+act+'</span>':'')+'</div></div>';
+  const act=q.tbettor?"3-bets":q.opener?"Opens":"";
+  const ok=villain?"bet":"wait";
+  let html='<div class="posdial">'+constellation(hero,villain,ok,act)
+    +'<div class="pos-cap">'
+    +(villain?'Opponent <b class="opp">'+(RING_SHORT[villain]||villain)+'</b> <span class="fl-arrow">&#8594;</span> ':'')
+    +'<b class="you">You</b> <span>'+(RING_SHORT[hero]||hero)+'</span></div></div>';
   html+='<div class="t-mid"><div class="cap" id="herocap">Your hand</div><div class="cards" id="hero"></div></div>';
   const w=document.createElement("div");w.className="stage";w.innerHTML=html;return w;
 }
