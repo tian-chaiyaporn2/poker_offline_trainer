@@ -692,9 +692,13 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .oppchip.a-check{background:color-mix(in srgb,var(--accept) 16%,transparent);color:var(--accept);border-color:color-mix(in srgb,var(--accept) 40%,var(--line))}
 .oppchip.a-bet{background:color-mix(in srgb,var(--costly) 16%,transparent);color:var(--costly);border-color:color-mix(in srgb,var(--costly) 40%,var(--line))}
 /* ===== mobile-first player loop ===== */
-.session-hud{display:flex;align-items:center;justify-content:space-between;margin:0 2px 7px;
+.session-hud{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 2px 7px;
   font-family:var(--label);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
 .session-hud b{color:var(--ink);font-variant-numeric:tabular-nums}
+.session-hud .skip-bonus{appearance:none;margin-left:auto;border:1px solid var(--line);border-radius:999px;
+  background:var(--panel2);color:var(--brass);font:inherit;letter-spacing:.05em;text-transform:uppercase;
+  padding:5px 10px;cursor:pointer}
+html.sheet-open,html.sheet-open body{overflow:hidden}
 .sit{min-height:54px;padding:8px 13px;align-items:flex-start}
 .sit-copy{min-width:0;display:flex;flex-direction:column;gap:2px;line-height:1.25}
 .sit-main{font-size:14px;font-weight:700;color:var(--ink)}
@@ -810,7 +814,7 @@ __SUITDEFS__
     <div class="street-seg" id="cats" role="group" aria-label="Which part to train">
       <button data-c="all" type="button">All</button><button data-c="preflop" type="button">Pre-flop</button><button data-c="flop" type="button">Flop</button><button data-c="turn" type="button">Turn</button><button data-c="river" type="button">River</button>
     </div>
-    <div class="session-hud"><span id="session-kind">Quick session</span><span id="session-counter">Hand <b id="session-step">1</b> of <b id="session-total">10</b></span><span id="session-bonus" hidden>Bonus hand</span></div>
+    <div class="session-hud"><span id="session-kind">Quick session</span><span id="session-counter">Hand <b id="session-step">1</b> of <b id="session-total">10</b></span><span id="session-bonus" hidden>Bonus hand</span><button type="button" class="skip-bonus" id="skip-bonus" hidden>Skip</button></div>
     <div class="bar-top" id="session-progress" role="progressbar" aria-label="Session progress" aria-valuemin="1" aria-valuemax="10" aria-valuenow="1"><i id="prog" style="width:0"></i></div>
 
   <div class="card" id="play-card" tabindex="-1">
@@ -1450,8 +1454,10 @@ function pfHeadline(q){
 }
 function addActionButton(box,a,i){
   const b=document.createElement("button");b.type="button";b.className="act";b.dataset.a=a;
-  const l=document.createElement("span");l.className="al";l.textContent=actionPrimary(a);
-  const sub=document.createElement("span");sub.className="asub";sub.textContent=actionSecondary(a);
+  // Preflop buttons share the same labels as feedback (Open 2.5bb / 3-bet / …).
+  const preflop=!!(cur&&cur.preflop);
+  const l=document.createElement("span");l.className="al";l.textContent=preflop?pfActLabel(a):actionPrimary(a);
+  const sub=document.createElement("span");sub.className="asub";sub.textContent=preflop?"":actionSecondary(a);
   const k=document.createElement("span");k.className="k";k.textContent=String(i+1);
   b.appendChild(l);if(sub.textContent)b.appendChild(sub);b.appendChild(k);
   b.onclick=()=>answer(a);box.appendChild(b);
@@ -1555,6 +1561,7 @@ function renderHand(){                                  // draw the current hist
   document.getElementById("session-kind").textContent=bonus?"Compare practice":"Quick session";
   document.getElementById("session-counter").hidden=bonus;
   document.getElementById("session-bonus").hidden=!bonus;
+  document.getElementById("skip-bonus").hidden=!(bonus&&e.pick==null);
   document.getElementById("session-step").textContent=String(step);
   document.getElementById("session-total").textContent=String(order.length);
   const sessionProgress=document.getElementById("session-progress");
@@ -1574,9 +1581,24 @@ function replayAnswer(a){answered=true;chosen=a;renderFeedback(cur,a,[]);
 function prev(){if(hidx>0){hidx--;renderHand();}}
 // Forward is allowed when reviewing an earlier hand, or on the newest hand once it's answered
 // (so you can't skip a hand without answering it).
-function canFwd(){return hidx<hist.length-1||(hidx===hist.length-1&&answered);}
+function canFwd(){
+  if(hidx<hist.length-1)return true;
+  if(hidx===hist.length-1&&answered)return true;
+  // Unanswered compare-practice hands are optional — Forward skips them.
+  return !!(hidx===hist.length-1&&hist[hidx]&&hist[hidx].bonus&&!answered);
+}
 function updateNav(){const p=document.getElementById("prev"),f=document.getElementById("fwd");
   if(p)p.disabled=hidx<=0;if(f)f.disabled=!canFwd();}
+function skipBonus(){
+  const e=hist[hidx];
+  if(!e||!e.bonus||e.pick!=null)return;
+  hist.splice(hidx,1);
+  if(hidx<hist.length){
+    renderHand();document.getElementById("play-card").focus({preventScroll:true});return;}
+  hidx=hist.length-1;
+  if(pos>=order.length-1){showSessionEnd();return;}
+  pos++;newHand();document.getElementById("play-card").focus({preventScroll:true});
+}
 
 function renderPreflopFeedback(q,a,gained){
   const correct=a===q.answer, closeOk=q.mixed&&a===q.alt;
@@ -1872,8 +1894,14 @@ function renderContrast(q){
   why.innerHTML="<b>What flips it:</b> "+contrastWhy(q,rd,c.q,c.rd);
   const go=document.createElement("button");go.type="button";go.className="cmp-go";go.textContent="Play this hand →";
   // insert right AFTER the current hand (not at the end) so Back returns to this one even
-  // when the contrast is opened while reviewing an earlier hand.
-  go.onclick=function(){hist.splice(hidx+1,0,{q:c.q,pick:null,step:shownStep(),bonus:true});hidx++;renderHand();
+  // when the contrast is opened while reviewing an earlier hand. Re-clicks reuse an
+  // already-queued copy of the same contrast instead of stacking duplicates.
+  go.onclick=function(){
+    if(hist[hidx]&&hist[hidx].bonus&&hist[hidx].q===c.q)return;
+    const queued=hist[hidx+1];
+    if(queued&&queued.bonus&&queued.q===c.q){hidx++;renderHand();
+      document.getElementById("play-card").focus({preventScroll:true});return;}
+    hist.splice(hidx+1,0,{q:c.q,pick:null,step:shownStep(),bonus:true});hidx++;renderHand();
     document.getElementById("play-card").focus({preventScroll:true});};
   body.appendChild(l1);body.appendChild(l2);body.appendChild(why);body.appendChild(go);
 }
@@ -2068,6 +2096,7 @@ function showSessionEnd(){
   closeSheet(false);
   document.getElementById("play-card").hidden=true;
   document.getElementById("session-end").hidden=false;
+  document.getElementById("skip-bonus").hidden=true;
   document.getElementById("coach").hidden=true;
   document.getElementById("hint").hidden=true;
   document.getElementById("fwd").disabled=true;
@@ -2095,6 +2124,7 @@ function retryLeakSession(){
 function next(){
   if(hidx<hist.length-1){hidx++;renderHand();
     if(!answered)document.getElementById("play-card").focus({preventScroll:true});return;}    // stepping forward through review
+  if(hist[hidx]&&hist[hidx].bonus&&!answered){skipBonus();return;}
   if(pos>=order.length-1){showSessionEnd();return;}
   pos++;newHand();document.getElementById("play-card").focus({preventScroll:true});
 }
@@ -2199,13 +2229,21 @@ document.addEventListener("keydown",e=>{
   if(document.getElementById("handdetail").classList.contains("on")){
     if(e.key==="Tab")trapModalTab(document.getElementById("handdetail"),e);
     if(e.key==="ArrowLeft"||e.key==="Escape"){e.preventDefault();closeHandDetail();}return;}
+  // Session-complete owns Retry/New — never steal Enter/Space from those buttons.
+  if(!document.getElementById("session-end").hidden)return;
   if(document.getElementById("fb").classList.contains("on")){
     if(e.key==="Tab")trapModalTab(document.getElementById("fb"),e);
-    if(e.key==="Escape"){e.preventDefault();closeSheet();return;}}
+    if(e.key==="Escape"){e.preventDefault();closeSheet();return;}
+    // Focused sheet controls (Ask coach, Next, details) keep native activation.
+    if(e.target.closest&&e.target.closest("button,summary,a[href],input,select,textarea"))return;
+    if(e.key==="Enter"||e.key===" "||e.key==="ArrowRight"){e.preventDefault();next();return;}
+    if(e.key==="ArrowLeft"){e.preventDefault();return;}
+    return;}
   if(e.target.tagName==="SUMMARY")return;   // let details summaries handle their own Enter/Space
   if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;         // don't hijack typing in inputs
   if(e.target.closest&&e.target.closest("#coach"))return;              // coach panel owns its own keys (chips/send/input)
   if(e.target.closest&&e.target.closest("#compare"))return;            // let the compare summary / "Play this hand" handle Enter/Space themselves
+  if((e.key==="Enter"||e.key===" ")&&e.target.closest&&e.target.closest("button"))return;
   const tv=document.getElementById("v-train");if(tv&&!tv.classList.contains("on"))return;  // only the Train view takes hotkeys
   if(e.key==="ArrowLeft"){e.preventDefault();prev();return;}   // step back to review
   if(!answered){const i=parseInt(e.key);if(cur&&i>=1&&i<=cur.actions.length)answer(cur.actions[i-1]);}
@@ -2414,6 +2452,7 @@ setView("train");
 
 document.getElementById("new-session").onclick=resetSession;
 document.getElementById("retry-leaks").onclick=retryLeakSession;
+document.getElementById("skip-bonus").onclick=skipBonus;
 document.getElementById("coach-open").onclick=function(){
   closeSheet(false);const c=document.getElementById("coach");c.hidden=false;c.open=true;
   const reduced=motionOff||(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);

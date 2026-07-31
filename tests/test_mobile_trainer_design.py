@@ -62,6 +62,7 @@ def test_generated_trainers_include_mobile_session_and_feedback_controls():
         "session-end",
         "retry-leaks",
         "new-session",
+        "skip-bonus",
         "learn",
         "coach-open",
         "progress-note",
@@ -143,6 +144,9 @@ def test_session_history_and_comparison_practice_are_accounted_correctly():
     assert "const inSession=!(hist[hidx]&&hist[hidx].bonus)" in source
     assert "if(inSession)recordGrade(stats,tier,hit)" in source
     assert "if(inSession&&!hit)sessionMisses.push(cur)" in source
+    assert "function skipBonus()" in source
+    assert "queued&&queued.bonus&&queued.q===c.q" in source
+    assert 'id="skip-bonus"' in source
 
 
 def test_persisted_state_and_modal_escape_are_hardened():
@@ -163,12 +167,16 @@ def test_modal_and_view_transitions_restore_or_contain_focus():
     assert 'document.getElementById("session-end").focus' in source
     assert 'document.getElementById("next").focus({preventScroll:true});}  // review' in source
     assert 'fb.addEventListener("touchcancel"' in source
+    assert 'if(!document.getElementById("session-end").hidden)return;' in source
+    assert 'e.target.closest("button,summary,a[href],input,select,textarea"))return;' in source
+    assert "html.sheet-open,html.sheet-open body{overflow:hidden}" in source
 
 
 def test_correct_preflop_answers_unlock_position_language():
     source = SOURCE.read_text()
     assert "const gained=hit?tryUnlockPreflop():[]" in source
     assert "function tryUnlockPreflop()" in source
+    assert "preflop?pfActLabel(a):actionPrimary(a)" in source
 
 
 def test_settings_language_change_does_not_open_feedback_over_settings():
