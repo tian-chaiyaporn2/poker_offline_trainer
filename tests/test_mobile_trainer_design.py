@@ -58,6 +58,7 @@ def test_generated_trainers_include_mobile_session_and_feedback_controls():
         "coach-open",
         "progress-note",
         "terms-learned",
+        "learn-summary",
     }
     for path in GENERATED:
         parser = _IdCollector()
@@ -76,6 +77,18 @@ def test_generated_trainers_expose_accessible_state_and_modal_semantics():
         assert 'id="play-card" tabindex="-1"' in html
         assert 'document.getElementById("hd-back").focus' in html
         assert 'document.getElementById("play-card").focus' in html
+        assert 'e.setAttribute("role","img")' in html
+        assert '" of "+(SUIT_NAME[s]||"spades")' in html
+
+
+def test_mobile_ux_copy_and_compact_layout_contract():
+    source = SOURCE.read_text()
+    assert ".hint,.act .k{display:none}" in source
+    assert ".sit .demo{display:none}" in source
+    assert '"Why "+actionPrimary(pref)+" is stronger"' in source
+    assert '"How the choices compare"' in source
+    assert 'oppAct="bet "+(q.bet_pct||66)+"%"' in source
+    assert '"You are "+q.acting_player+" · "+cap1(q.street)' in source
 
 
 def test_settings_language_change_does_not_open_feedback_over_settings():

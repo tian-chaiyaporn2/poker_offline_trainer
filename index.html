@@ -380,11 +380,11 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 /* Postflop is heads-up: only the two players, their roles, and the action matter. */
 .tv.duel{height:116px;border-radius:86px/45px}
 .tv.duel .tvs{width:105px}
-.tv.duel .tvs.opp{left:50%;top:19%}
-.tv.duel .tvs.you{left:50%;top:82%}
+.tv.duel .tvs.opp{left:50%;top:15%}
+.tv.duel .tvs.you{left:50%;top:85%}
 .tv.duel .tvs.opp .av,.tv.duel .tvs.you .av{width:25px;height:25px}
 .tv.duel .tvs.opp .ps,.tv.duel .tvs.you .ps{font-size:8px}
-.tv.duel .tvmid{top:49%;gap:4px}
+.tv.duel .tvmid{top:50%;gap:4px}
 .tv.duel .oppchip{padding:3px 10px}
 .tv.duel .potlab{padding:2px 12px}
 .fb-brief{padding:0 18px 2px}
@@ -446,6 +446,11 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
   .acts{padding-left:12px;padding-right:12px}
   .act .al{font-size:13.5px}
   .act .asub{font-size:10px}
+  .sit .demo{display:none}
+}
+@media(max-width:440px){
+  /* Phone players tap; keyboard legends only add a faint, unreadable row of chrome. */
+  .hint,.act .k{display:none}
 }
 @media(max-width:350px){
   #board .pc{width:42px;height:58px}
@@ -485,7 +490,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
       <div class="fb-brief"><p class="head" id="head"></p></div>
       <div class="mix"><h4 id="mixhead"></h4><div id="bars"></div></div>
       <details class="learn" id="learn">
-        <summary>Learn why this play works</summary>
+        <summary id="learn-summary">Why the stronger play works</summary>
       <div class="why">
         <p class="read" id="read"></p>
         <span class="reason" id="reason"></span>
@@ -592,7 +597,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
     <details class="tech">
       <summary>Solver and data details</summary>
     <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>937c3bb</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>30141a1</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
     <span class="demo">Turn / river</span> spots are now full-range solver output too, but
@@ -1063,11 +1068,14 @@ function situation(q){
 
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 const SYM={h:"heart",d:"diam",c:"club",s:"spade"};
+const SUIT_NAME={h:"hearts",d:"diamonds",c:"clubs",s:"spades"};
+const RANK_NAME={A:"Ace",K:"King",Q:"Queen",J:"Jack",T:"Ten","9":"Nine","8":"Eight","7":"Seven","6":"Six","5":"Five","4":"Four","3":"Three","2":"Two"};
 function svgUse(cls,id){const NS="http://www.w3.org/2000/svg";
   const svg=document.createElementNS(NS,"svg");svg.setAttribute("class",cls);
   const u=document.createElementNS(NS,"use");u.setAttribute("href","#"+id);svg.appendChild(u);return svg;}
 function card(t){const r=t[0],s=(t[1]||"").toLowerCase(),sy=SYM[s]||"spade";
   const e=document.createElement("div");e.className="pc pc-"+sy;
+  e.setAttribute("role","img");e.setAttribute("aria-label",(RANK_NAME[r]||r)+" of "+(SUIT_NAME[s]||"spades"));
   const ix=document.createElement("span");ix.className="ix";
   const b=document.createElement("b");b.textContent=(r==="T"?"10":r);ix.appendChild(b);
   ix.appendChild(svgUse("mini","so-"+sy));
@@ -1127,7 +1135,8 @@ function renderQuestion(q){
   document.getElementById("boardcap").style.display="";document.getElementById("board").style.display="";
   const posEl=document.getElementById("pos");posEl.textContent=posLabel(q);posEl.className="pos "+(q.is_oop?"oop":"ip");
   document.getElementById("sit").textContent=decisionHeadline(q);
-  document.getElementById("sitcontext").textContent="You are "+q.acting_player+" · "+(q.is_oop?"Out of position":"In position")+" · "+cap1(q.street);
+  // Position is already the coloured lead label; keep the supporting line compact on phones.
+  document.getElementById("sitcontext").textContent="You are "+q.acting_player+" · "+cap1(q.street);
   const bd=document.getElementById("demotag");bd.hidden=!q.badge;bd.textContent=q.badge||"";
   document.getElementById("boardcap").textContent=(T().boardcap&&T().boardcap[q.street])||"Flop";
   document.getElementById("herocap").textContent=T().herocap;
@@ -1159,7 +1168,7 @@ function ringTable(q){
   const node=q.node||"";
   let oppAct="",ok="wait";
   if(node.endsWith("_vs_check")){oppAct="checked";ok="check";}
-  else if(node.endsWith("_vs_bet")){oppAct="bet";ok="bet";}
+  else if(node.endsWith("_vs_bet")){oppAct="bet "+(q.bet_pct||66)+"%";ok="bet";}
   const D='<span class="dbtn" title="dealer button">D</span>';
   const heroBtn=hero==="BTN"?D:"",villainBtn=villain==="BTN"?D:"";
   let html='<div class="tvs opp"><div class="av">'+villainBtn+'</div><div class="nm">Opponent</div><div class="ps">'+
@@ -1232,6 +1241,9 @@ function renderPreflopFeedback(q,a){
   else if(closeOk){v.className="verdict v-good";
     v.textContent="≈ Close — "+pfActLabel(a).toLowerCase()+" is fine; "+pfActLabel(q.answer).toLowerCase()+" is the small favourite.";}
   else{v.className="verdict v-major_error";v.textContent="✗ Not quite — the play is "+pfActLabel(q.answer)+".";}
+  document.getElementById("learn-summary").textContent=(correct||closeOk)
+    ?"Why "+actionPrimary(a)+" works here"
+    :"Why "+actionPrimary(q.answer)+" is stronger";
   const rd=document.getElementById("read");rd.hidden=false;rd.innerHTML="";rd.appendChild(document.createTextNode("You held "));
   const bc=document.createElement("b");bc.textContent=q.read;rd.appendChild(bc);rd.appendChild(document.createTextNode("."));
   document.getElementById("reason").style.display="none";
@@ -1520,6 +1532,9 @@ function renderFeedback(q,a,gained){
   });
   const g=q.grades[a],pref=q.preferred;
   const you=shortAct(a),best=shortAct(pref);
+  document.getElementById("learn-summary").textContent=(g==="best"||g==="good")
+    ?"Why "+actionPrimary(a)+" works here"
+    :"Why "+actionPrimary(pref)+" is stronger";
   // Break down the analytics by default on a MISTAKE; keep it tidy (collapsed) when you nailed it.
   const aw=document.getElementById("analytics");if(aw&&!aw.hidden)aw.open=!(g==="best"||g==="good");
   const v=document.getElementById("verdict");v.className="verdict v-"+g;
@@ -1610,7 +1625,7 @@ function renderFeedback(q,a,gained){
   // question a learner is actually asking.
   const payoffView=(mode!=="poker");
   document.getElementById("mixhead").textContent=payoffView
-    ?"What each play is worth"
+    ?"How the choices compare"
     :"Solver mix — how often the solver plays each action (★ = best EV), and its EV";
   const bars=document.getElementById("bars");bars.innerHTML="";
   const maxf=Math.max(1,...q.actions.map(x=>q.freq[x]));
