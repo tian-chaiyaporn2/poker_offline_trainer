@@ -471,7 +471,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
       <button data-c="all" type="button">All</button><button data-c="preflop" type="button">Pre-flop</button><button data-c="flop" type="button">Flop</button><button data-c="turn" type="button">Turn</button><button data-c="river" type="button">River</button>
     </div>
     <span class="catcount" id="catcount"></span>
-    <div class="session-hud"><span>Quick session</span><span>Hand <b id="session-step">1</b> of <b id="session-total">10</b></span></div>
+    <div class="session-hud"><span id="session-kind">Quick session</span><span id="session-counter">Hand <b id="session-step">1</b> of <b id="session-total">10</b></span><span id="session-bonus" hidden>Bonus hand</span></div>
     <div class="bar-top" id="session-progress" role="progressbar" aria-label="Session progress" aria-valuemin="1" aria-valuemax="10" aria-valuenow="1"><i id="prog" style="width:0"></i></div>
 
   <div class="card" id="play-card" tabindex="-1">
@@ -510,7 +510,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
       <div class="fb-actions"><button class="coach-open" id="coach-open" type="button">Ask coach</button><button class="next" id="next">Next hand &nbsp;&#8629;</button></div>
     </div>
   </div>
-  <section class="session-end" id="session-end" aria-live="polite" hidden>
+  <section class="session-end" id="session-end" tabindex="-1" aria-live="polite" hidden>
     <h2>Session complete</h2>
     <p id="session-summary">Ten decisions. One clearer read of your game.</p>
     <div class="session-score">
@@ -597,7 +597,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
     <details class="tech">
       <summary>Solver and data details</summary>
     <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>30141a1</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>c980388</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
     <span class="demo">Turn / river</span> spots are now full-range solver output too, but
@@ -855,13 +855,16 @@ function safeCount(v){return Number.isFinite(v)&&v>=0?Math.floor(v):0;}
 function normalizeStats(x){
   const out=freshStats();if(!x||typeof x!=="object")return out;
   ["n","solid","ok","leak"].forEach(k=>out[k]=safeCount(x[k]));
+  // Every recorded decision has exactly one grade. Trust those classified buckets over
+  // a stale/corrupt total so quality never uses phantom hands in its denominator.
+  const classified=out.solid+out.ok+out.leak;out.n=classified;
   const streets=x.street&&typeof x.street==="object"?x.street:{};
+  let remaining=out.n;
   ["preflop","flop","turn","river"].forEach(k=>{
     const s=streets[k];if(!s||typeof s!=="object")return;
-    const n=safeCount(s.n),hit=Math.min(n,safeCount(s.hit));out.street[k]={n:n,hit:hit};
+    const n=Math.min(remaining,safeCount(s.n)),hit=Math.min(n,safeCount(s.hit));
+    out.street[k]={n:n,hit:hit};remaining-=n;
   });
-  // Repair stale or partial totals rather than allowing NaN progress after an upgrade.
-  const classified=out.solid+out.ok+out.leak;if(out.n<classified)out.n=classified;
   return out;
 }
 function loadLifetime(){try{
@@ -883,8 +886,12 @@ let mode=(function(){try{const m=localStorage.getItem("lang");return (m==="poker
 let cat=(function(){try{const c=localStorage.getItem("cat");return ["all","preflop","flop","turn","river"].includes(c)?c:"all";}catch(e){return "all";}})();
 // Adaptive mode: each concept shows in plain words until you've EARNED it (played a
 // spot that uses it well); then it graduates to the poker term + its meaning.
-let learned=(function(){try{return new Set(JSON.parse(localStorage.getItem("learned")||"[]"));}catch(e){return new Set();}})();
-const VOCAB_TOTAL=2+Object.keys(TERMS.poker.reason).length;
+const VALID_TERMS=new Set(["positions","streets"].concat(Object.keys(TERMS.poker.reason).map(r=>"reason:"+r)));
+let learned=(function(){try{
+  const raw=JSON.parse(localStorage.getItem("learned")||"[]");
+  return new Set(Array.isArray(raw)?raw.filter(t=>VALID_TERMS.has(t)):[]);
+}catch(e){return new Set();}})();
+const VOCAB_TOTAL=VALID_TERMS.size;
 function eff(term){return mode!=="progressive"?mode:(learned.has(term)?"learning":"plain");}
 function T(){return TERMS[eff("streets")];}
 function posLabel(q){const m=eff("positions");
@@ -1111,6 +1118,7 @@ function addActionButton(box,a,i){
   b.appendChild(l);if(sub.textContent)b.appendChild(sub);b.appendChild(k);
   b.onclick=()=>answer(a);box.appendChild(b);
 }
+function shownStep(){const e=hist[hidx];return e&&Number.isInteger(e.step)?e.step:pos;}
 function renderPreflop(q){
   const posEl=document.getElementById("pos");posEl.textContent=q.pos;posEl.className="pos "+q.pos;
   document.getElementById("sit").textContent=pfHeadline(q);
@@ -1122,7 +1130,7 @@ function renderPreflop(q){
   const box=document.getElementById("acts");box.innerHTML="";box.className="acts n-"+q.actions.length;
   q.actions.forEach((a,i)=>addActionButton(box,a,i));
   setHint(q.actions.length);renderSeats(q);
-  document.getElementById("prog").style.width=(100*(pos+1)/Math.max(1,order.length))+"%";
+  document.getElementById("prog").style.width=(100*(shownStep()+1)/Math.max(1,order.length))+"%";
 }
 function decisionHeadline(q){
   const villain=q.villain||"Opponent",node=q.node||"";
@@ -1145,7 +1153,7 @@ function renderQuestion(q){
   const box=document.getElementById("acts");box.innerHTML="";box.className="acts n-"+q.actions.length;
   q.actions.forEach((a,i)=>addActionButton(box,a,i));
   setHint(q.actions.length);renderSeats(q);
-  document.getElementById("prog").style.width=(100*(pos+1)/Math.max(1,order.length))+"%";
+  document.getElementById("prog").style.width=(100*(shownStep()+1)/Math.max(1,order.length))+"%";
 }
 function setHint(n){const el=document.getElementById("hint");if(!el)return;
   let ks="";for(let i=1;i<=n;i++)ks+="<kbd>"+i+"</kbd>";
@@ -1206,11 +1214,15 @@ function renderHand(){                                  // draw the current hist
   const e=hist[hidx];answered=false;chosen=null;cur=e.q;
   document.getElementById("play-card").hidden=false;
   document.getElementById("session-end").hidden=true;
-  document.getElementById("session-step").textContent=String(Math.min(pos+1,order.length));
+  const step=Math.min(shownStep()+1,order.length),bonus=!!e.bonus;
+  document.getElementById("session-kind").textContent=bonus?"Compare practice":"Quick session";
+  document.getElementById("session-counter").hidden=bonus;
+  document.getElementById("session-bonus").hidden=!bonus;
+  document.getElementById("session-step").textContent=String(step);
   document.getElementById("session-total").textContent=String(order.length);
   const sessionProgress=document.getElementById("session-progress");
   sessionProgress.setAttribute("aria-valuemax",String(order.length));
-  sessionProgress.setAttribute("aria-valuenow",String(Math.min(pos+1,order.length)));
+  sessionProgress.setAttribute("aria-valuenow",String(step));
   document.getElementById("hint").hidden=false;
   document.getElementById("fb").className="fb";sheetOpen(false);
   document.getElementById("learn").open=false;
@@ -1219,8 +1231,9 @@ function renderHand(){                                  // draw the current hist
   if(e.pick!=null)replayAnswer(e.pick);                 // already answered -> show its result again
   updateNav();
 }
-function newHand(){hist.push({q:Q[order[pos]],pick:null});hidx=hist.length-1;renderHand();}
-function replayAnswer(a){answered=true;chosen=a;renderFeedback(cur,a,[]);}  // review: no stats change
+function newHand(){hist.push({q:Q[order[pos]],pick:null,step:pos,bonus:false});hidx=hist.length-1;renderHand();}
+function replayAnswer(a){answered=true;chosen=a;renderFeedback(cur,a,[]);
+  document.getElementById("next").focus({preventScroll:true});}  // review: no stats change
 function prev(){if(hidx>0){hidx--;renderHand();}}
 // Forward is allowed when reviewing an earlier hand, or on the newest hand once it's answered
 // (so you can't skip a hand without answering it).
@@ -1228,7 +1241,7 @@ function canFwd(){return hidx<hist.length-1||(hidx===hist.length-1&&answered);}
 function updateNav(){const p=document.getElementById("prev"),f=document.getElementById("fwd");
   if(p)p.disabled=hidx<=0;if(f)f.disabled=!canFwd();}
 
-function renderPreflopFeedback(q,a){
+function renderPreflopFeedback(q,a,gained){
   const correct=a===q.answer, closeOk=q.mixed&&a===q.alt;
   document.querySelectorAll("#acts .act").forEach(b=>{b.disabled=true;b.className="act";
     if(b.dataset.a===q.answer)b.classList.add("g-best","chosen");
@@ -1249,7 +1262,11 @@ function renderPreflopFeedback(q,a){
   document.getElementById("reason").style.display="none";
   document.getElementById("head").textContent=q.why;
   document.getElementById("cost").hidden=true;document.getElementById("det").innerHTML="";
-  document.getElementById("unlock").hidden=true;
+  const ut=document.getElementById("unlock");
+  if(gained&&gained.length){ut.hidden=false;ut.innerHTML="";
+    const d=document.createElement("div");d.className="ul-row";
+    d.textContent="🔓 Position language learned — see it in Progress.";ut.appendChild(d);
+  }else{ut.hidden=true;}
   const ruleEl=document.getElementById("rule");ruleEl.hidden=false;ruleEl.innerHTML="";
   const lb=document.createElement("b");lb.textContent="Rule of thumb";ruleEl.appendChild(lb);ruleEl.appendChild(document.createTextNode(q.rule));
   document.querySelector(".mix").style.display="none";
@@ -1519,12 +1536,13 @@ function renderContrast(q){
   const go=document.createElement("button");go.type="button";go.className="cmp-go";go.textContent="Play this hand →";
   // insert right AFTER the current hand (not at the end) so Back returns to this one even
   // when the contrast is opened while reviewing an earlier hand.
-  go.onclick=function(){hist.splice(hidx+1,0,{q:c.q,pick:null});hidx++;renderHand();};
+  go.onclick=function(){hist.splice(hidx+1,0,{q:c.q,pick:null,step:shownStep(),bonus:true});hidx++;renderHand();
+    document.getElementById("play-card").focus({preventScroll:true});};
   body.appendChild(l1);body.appendChild(l2);body.appendChild(why);body.appendChild(go);
 }
 function renderFeedback(q,a,gained){
   renderContrast(q);renderFactors(q);
-  if(q.preflop)return renderPreflopFeedback(q,a);
+  if(q.preflop)return renderPreflopFeedback(q,a,gained);
   document.querySelector(".mix").style.display="";
   document.querySelectorAll("#acts .act").forEach(b=>{
     b.disabled=true;const ga=q.grades[b.dataset.a];b.className="act g-"+ga;
@@ -1681,21 +1699,25 @@ function syncStatsUI(){
 function answer(a){
   if(answered)return;answered=true;chosen=a;if(hist[hidx])hist[hidx].pick=a;updateNav();
   document.getElementById("coach").hidden=false;
+  const inSession=!(hist[hidx]&&hist[hidx].bonus);
   if(cur.preflop){
     const correct=a===cur.answer, closeOk=!correct&&cur.mixed&&a===cur.alt;
     const hit=correct||closeOk,tier=hit?"solid":"leak";
-    recordGrade(stats,tier,hit);recordGrade(lifetime,tier,hit);saveLifetime();
-    if(!hit)sessionMisses.push(cur);
+    if(inSession)recordGrade(stats,tier,hit);
+    recordGrade(lifetime,tier,hit);saveLifetime();
+    if(inSession&&!hit)sessionMisses.push(cur);
     syncStatsUI();
-    renderFeedback(cur,a,[]);
+    const gained=hit?tryUnlockPreflop():[];
+    renderFeedback(cur,a,gained);
     document.getElementById("next").focus({preventScroll:true});
     return;
   }
   const g=cur.grades[a];
   const tier=(g==="best"||g==="good")?"solid":g==="acceptable"?"ok":"leak";
   const hit=tier!=="leak";
-  recordGrade(stats,tier,hit);recordGrade(lifetime,tier,hit);saveLifetime();
-  if(!hit)sessionMisses.push(cur);
+  if(inSession)recordGrade(stats,tier,hit);
+  recordGrade(lifetime,tier,hit);saveLifetime();
+  if(inSession&&!hit)sessionMisses.push(cur);
   syncStatsUI();
   const gained=tryUnlock(cur,g);
   // Don't re-render the question on unlock — swapping the button labels mid-answer
@@ -1720,9 +1742,11 @@ function showSessionEnd(){
     ?sessionMisses.length+" decision"+(sessionMisses.length===1?" needs":"s need")+" another look."
     :"Clean session — every decision was strong or playable.";
   window.scrollTo(0,0);
+  document.getElementById("session-end").focus({preventScroll:true});
 }
 function resetSession(){
   stats=freshStats();sessionMisses=[];buildOrder();newHand();
+  document.getElementById("play-card").focus({preventScroll:true});
 }
 function retryLeakSession(){
   if(!sessionMisses.length)return;
@@ -1730,11 +1754,13 @@ function retryLeakSession(){
   stats=freshStats();sessionMisses=[];order=shuffle(ids);pos=0;hist=[];hidx=-1;
   document.getElementById("catcount").textContent=order.length+"-hand leak review";
   newHand();
+  document.getElementById("play-card").focus({preventScroll:true});
 }
 function next(){
-  if(hidx<hist.length-1){hidx++;renderHand();return;}    // stepping forward through review
+  if(hidx<hist.length-1){hidx++;renderHand();
+    if(!answered)document.getElementById("play-card").focus({preventScroll:true});return;}    // stepping forward through review
   if(pos>=order.length-1){showSessionEnd();return;}
-  pos++;newHand();
+  pos++;newHand();document.getElementById("play-card").focus({preventScroll:true});
 }
 // ---- result as a slide-up bottom sheet: verdict + why rise over the hand; swipe down,
 // tap the dimmer, or hit Next to deal the next one. ----
@@ -1747,7 +1773,8 @@ function closeSheet(restoreFocus=true){document.getElementById("fb").className="
   if(restoreFocus&&document.getElementById("v-train").classList.contains("on")&&!document.getElementById("play-card").hidden){
     document.getElementById("play-card").focus({preventScroll:true});
   }}
-function reopenSheet(){if(answered){document.getElementById("fb").className="fb on";sheetOpen(true);}}
+function reopenSheet(){if(answered){document.getElementById("fb").className="fb on";sheetOpen(true);
+  document.getElementById("next").focus({preventScroll:true});}}
 (function(){const scrim=document.getElementById("fb-scrim"),fb=document.getElementById("fb");
   if(scrim)scrim.onclick=function(){closeSheet();};
   // tap the hand (once dismissed) to bring the result back up
@@ -1761,6 +1788,7 @@ function reopenSheet(){if(answered){document.getElementById("fb").className="fb 
     if(dy>0)fb.style.transform="translate(-50%,"+Math.min(dy,140)+"px)";},{passive:true});
   fb.addEventListener("touchend",function(e){if(y0==null)return;const dy=e.changedTouches[0].clientY-y0;y0=null;
     fb.style.transform="";if(dy>90)closeSheet();},{passive:true});
+  fb.addEventListener("touchcancel",function(){y0=null;fb.style.transform="";},{passive:true});
 })();
 
 // Adaptive unlock: play a spot well (best/good) and its concept graduates into
@@ -1774,6 +1802,12 @@ function tryUnlock(q,g){
   if(!learned.has(rt)){learned.add(rt);gained.push(rt);}
   if(gained.length){try{localStorage.setItem("learned",JSON.stringify([...learned]));}catch(e){}updateVocab();}
   return gained;
+}
+function tryUnlockPreflop(){
+  if(mode!=="progressive"||learned.has("positions"))return [];
+  learned.add("positions");
+  try{localStorage.setItem("learned",JSON.stringify([...learned]));}catch(e){}
+  updateVocab();return ["positions"];
 }
 function unlockText(t){
   if(t==="positions")return "Positions — who acts when. In position (IP) acts last (usually the Button); out of position (OOP) acts first. In blind-vs-blind, the BB is IP.";
@@ -1824,10 +1858,22 @@ document.getElementById("prev").onclick=prev;
 document.getElementById("fwd").onclick=next;
 document.getElementById("hd-back").onclick=closeHandDetail;
 document.getElementById("hd-scrim").onclick=closeHandDetail;
+function trapModalTab(root,e){
+  const items=[...root.querySelectorAll('button:not([disabled]),summary,a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')]
+    .filter(el=>el.offsetParent!==null);
+  if(!items.length){e.preventDefault();return;}
+  const first=items[0],last=items[items.length-1],active=document.activeElement;
+  if(e.shiftKey&&(active===first||!root.contains(active))){e.preventDefault();last.focus();}
+  else if(!e.shiftKey&&(active===last||!root.contains(active))){e.preventDefault();first.focus();}
+}
 document.addEventListener("keydown",e=>{
   // hand-strength panel is modal: Left/Escape closes it, everything else is swallowed
   if(document.getElementById("handdetail").classList.contains("on")){
+    if(e.key==="Tab")trapModalTab(document.getElementById("handdetail"),e);
     if(e.key==="ArrowLeft"||e.key==="Escape"){e.preventDefault();closeHandDetail();}return;}
+  if(document.getElementById("fb").classList.contains("on")){
+    if(e.key==="Tab")trapModalTab(document.getElementById("fb"),e);
+    if(e.key==="Escape"){e.preventDefault();closeSheet();return;}}
   if(e.target.tagName==="SUMMARY")return;   // let details summaries handle their own Enter/Space
   if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;         // don't hijack typing in inputs
   if(e.target.closest&&e.target.closest("#coach"))return;              // coach panel owns its own keys (chips/send/input)
@@ -1859,7 +1905,15 @@ const PROVIDERS={
     parse(j){return ((j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||"").trim();},
     emsg(j){return j&&j.error&&j.error.message;}},
 };
-function coachCfg(){try{return JSON.parse(localStorage.getItem("coach")||"{}");}catch(e){return {};}}
+function coachCfg(){try{
+  const c=JSON.parse(localStorage.getItem("coach")||"{}");
+  if(!c||typeof c!=="object"||Array.isArray(c))return {};
+  return {
+    provider:Object.prototype.hasOwnProperty.call(PROVIDERS,c.provider)?c.provider:"claude",
+    model:typeof c.model==="string"?c.model:"",
+    key:typeof c.key==="string"?c.key:""
+  };
+}catch(e){return {};}}
 function coachSaveCfg(c){try{localStorage.setItem("coach",JSON.stringify(c));}catch(e){}}
 let coachMsgs=[],coachBusy=false,coachErr=null,coachGen=0;
 

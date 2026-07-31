@@ -1,3 +1,5 @@
+import json
+import re
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -16,6 +18,12 @@ class _IdCollector(HTMLParser):
         attrs = dict(attrs)
         if attrs.get("id"):
             self.ids.append(attrs["id"])
+
+
+def _embedded_json(html, name):
+    match = re.search(rf"const {name} = (\[[^\n]+\]);", html)
+    assert match, f"missing embedded {name}"
+    return json.loads(match.group(1))
 
 
 def test_mobile_player_loop_contract_is_generated_from_source():
@@ -81,6 +89,39 @@ def test_generated_trainers_expose_accessible_state_and_modal_semantics():
         assert '" of "+(SUIT_NAME[s]||"spades")' in html
 
 
+def test_generated_question_data_is_internally_consistent():
+    street_cards = {"flop": 3, "turn": 4, "river": 5}
+    for path in GENERATED:
+        questions = _embedded_json(path.read_text(), "Q")
+        signatures = set()
+        for q in questions:
+            actions = q["actions"]
+            assert len(actions) >= 2
+            assert len(actions) == len(set(actions))
+            target = q["answer"] if q.get("preflop") else q["preferred"]
+            assert target in actions
+            cards = q["hand"] if q.get("preflop") else q["board"] + q["hero"]
+            assert len(cards) == len(set(cards))
+            if not q.get("preflop"):
+                assert len(q["board"]) == street_cards[q["street"]]
+                assert set(actions) <= set(q["ev"])
+                assert set(actions) <= set(q["freq"])
+                assert set(actions) <= set(q["grades"])
+                assert sum(q["freq"][action] for action in actions) == 100
+                assert 0 < q["bet_pct"] <= 500
+            signature = (
+                "preflop" if q.get("preflop") else q["street"],
+                q.get("node") or q.get("ctx"),
+                q.get("pos") or q.get("acting_player"),
+                q.get("villain"),
+                q.get("is_oop"),
+                tuple(cards),
+                tuple(actions),
+            )
+            assert signature not in signatures
+            signatures.add(signature)
+
+
 def test_mobile_ux_copy_and_compact_layout_contract():
     source = SOURCE.read_text()
     assert ".hint,.act .k{display:none}" in source
@@ -89,6 +130,51 @@ def test_mobile_ux_copy_and_compact_layout_contract():
     assert '"How the choices compare"' in source
     assert 'oppAct="bet "+(q.bet_pct||66)+"%"' in source
     assert '"You are "+q.acting_player+" · "+cap1(q.street)' in source
+
+
+def test_session_history_and_comparison_practice_are_accounted_correctly():
+    source = SOURCE.read_text()
+    assert "function shownStep()" in source
+    assert "step:pos,bonus:false" in source
+    assert "step:shownStep(),bonus:true" in source
+    assert 'document.getElementById("session-counter").hidden=bonus' in source
+    assert "const inSession=!(hist[hidx]&&hist[hidx].bonus)" in source
+    assert "if(inSession)recordGrade(stats,tier,hit)" in source
+    assert "if(inSession&&!hit)sessionMisses.push(cur)" in source
+
+
+def test_persisted_state_and_modal_escape_are_hardened():
+    source = SOURCE.read_text()
+    assert "const classified=out.solid+out.ok+out.leak;out.n=classified" in source
+    assert "const VALID_TERMS=new Set" in source
+    assert "raw.filter(t=>VALID_TERMS.has(t))" in source
+    assert 'typeof c!=="object"||Array.isArray(c)' in source
+    assert 'if(e.key==="Escape"){e.preventDefault();closeSheet();return;}' in source
+
+
+def test_modal_and_view_transitions_restore_or_contain_focus():
+    source = SOURCE.read_text()
+    assert 'id="session-end" tabindex="-1"' in source
+    assert "function trapModalTab(root,e)" in source
+    assert 'if(e.key==="Tab")trapModalTab(document.getElementById("handdetail"),e)' in source
+    assert 'if(e.key==="Tab")trapModalTab(document.getElementById("fb"),e)' in source
+    assert 'document.getElementById("session-end").focus' in source
+    assert 'document.getElementById("next").focus({preventScroll:true});}  // review' in source
+    assert 'fb.addEventListener("touchcancel"' in source
+
+
+def test_correct_preflop_answers_unlock_position_language():
+    source = SOURCE.read_text()
+    assert "const gained=hit?tryUnlockPreflop():[]" in source
+    assert "function tryUnlockPreflop()" in source
+
+
+def test_generator_closes_resources_and_writes_unicode_explicitly():
+    source = SOURCE.read_text()
+    assert 'with open(p, "rb") as font_file:' in source
+    assert 'with open("demo/trainer_demo.html", "w", encoding="utf-8")' in source
+    assert 'with open("index.html", "w", encoding="utf-8")' in source
+    assert "if conn is not None:" in source
 
 
 def test_settings_language_change_does_not_open_feedback_over_settings():
