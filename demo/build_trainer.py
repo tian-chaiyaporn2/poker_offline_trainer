@@ -388,7 +388,9 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 .bar-top>i{display:block;height:100%;background:var(--brass);transition:width .3s}
 .card{background:linear-gradient(180deg,color-mix(in srgb,var(--panel) 92%,#fff),var(--panel));border:1px solid rgba(255,255,255,.05);border-radius:20px;overflow:hidden;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 18px 40px -20px rgba(0,0,0,.85),0 2px 8px -4px rgba(0,0,0,.5)}
-.sit{padding:7px 15px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px;font-family:var(--sans);font-size:13.5px;line-height:1.3}
+.sit{padding:9px 15px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px;font-family:var(--sans);font-size:12.5px;line-height:1.3}
+.sit-street{color:var(--muted);font-weight:600}
+.sit .pos{margin-left:auto}
 .pos{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.05em;padding:2px 8px;border-radius:6px;flex:none}
 .pos.BB,.pos.SB,.pos.UTG,.pos.HJ,.pos.CO{background:color-mix(in srgb,var(--brass) 20%,transparent);color:var(--brass)}
 .pos.BTN{background:color-mix(in srgb,var(--best) 20%,transparent);color:var(--best)}
@@ -397,28 +399,34 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 .pos.ip{background:color-mix(in srgb,var(--best) 20%,transparent);color:var(--best)}
 .pos.oop{background:color-mix(in srgb,var(--accept) 22%,transparent);color:var(--accept)}
 .demo{margin-left:auto;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accept);border:1px solid color-mix(in srgb,var(--accept) 45%,var(--line));border-radius:6px;padding:1px 6px}
-.tablewrap{padding:10px 14px 4px}
+.tablewrap{padding:2px 14px 4px}
 /* unified poker table: opponent on top, the board on the felt, your hand at your seat */
 /* position shown as an abstract constellation of seats; cards sit cleanly below it */
 .stage{display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px 12px 8px}
 .posdial{display:flex;flex-direction:column;align-items:center;gap:7px}
-.cnst{width:204px;height:90px;overflow:visible;display:block}
+.cnst{width:206px;height:112px;overflow:visible;display:block}
+.cn-lbl{font-family:var(--sans);font-size:9px;font-weight:700}
+.cn-lbl-you{fill:var(--best)}.cn-lbl-opp{fill:var(--brass)}
 .cn-link{fill:none;stroke:color-mix(in srgb,var(--ink) 13%,transparent);stroke-width:1}
 .cn-dim{fill:color-mix(in srgb,var(--ink) 24%,transparent)}
 .cn-opp{fill:var(--brass)}
 .cn-you{fill:var(--best)}
 .cn-btn{fill:none;stroke:#efe7d6;stroke-width:1.4}
-.cnst-wrap{position:relative;width:204px;height:90px}
+.cnst-wrap{position:relative;width:206px;height:112px}
 .cn-flow{fill:none;stroke-width:2;stroke-linecap:round}
 .fl-bet{stroke:var(--costly)}
 .fl-check{stroke:color-mix(in srgb,var(--accept) 78%,transparent);stroke-dasharray:3.5 3.5}
 .ah-bet{fill:var(--costly)}.ah-check{fill:var(--accept)}
-.flowchip{position:absolute;transform:translate(-50%,-50%);font-family:var(--label);font-size:10px;font-weight:650;white-space:nowrap;padding:2px 8px;border-radius:999px;pointer-events:none;z-index:2}
+.flowchip{display:inline-block;font-family:var(--label);font-size:11px;font-weight:650;white-space:nowrap;padding:2px 9px;border-radius:999px}
 .flowchip.a-bet{background:color-mix(in srgb,var(--costly) 20%,var(--bg));color:var(--costly);border:1px solid color-mix(in srgb,var(--costly) 45%,transparent)}
 .flowchip.a-check{background:color-mix(in srgb,var(--accept) 18%,var(--bg));color:var(--accept);border:1px solid color-mix(in srgb,var(--accept) 40%,transparent)}
 .pos-cap{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:center}
 .pos-cap b{font-weight:700}.pos-cap .you{color:var(--best)}.pos-cap .opp{color:var(--brass)}
-.fl-arrow{color:var(--muted);font-weight:700}
+/* under the constellation: a quiet position legend, then the prominent action line */
+.pos-legend{margin-top:7px;text-align:center;font-size:11.5px;color:var(--muted)}
+.action-line{margin-top:3px;text-align:center;font-size:16px;font-weight:650;color:var(--ink);line-height:1.3}
+.hl-you{color:var(--best);font-weight:700}.hl-opp{color:var(--brass);font-weight:700}
+.fl-arrow,.fl-dot{color:color-mix(in srgb,var(--muted) 60%,transparent);font-weight:700}
 .t-mid{display:flex;flex-direction:column;align-items:center;gap:3px}
 .t-opp,.t-you{display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.12;text-align:center}
 .t-seatline{display:flex;align-items:center;gap:6px;justify-content:center}
@@ -448,6 +456,8 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 @media (prefers-reduced-motion:reduce){.pc{animation:none}}
 .hero{margin-top:5px}
 .hero .cap{color:var(--brass);font-weight:600}
+.move-cue{text-align:center;font-size:13px;font-weight:600;color:color-mix(in srgb,var(--ink) 80%,transparent);margin:4px 4px 7px}
+.move-cue::after{content:" ↓";color:var(--brass)}
 .acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;padding:10px 16px}
 .act{appearance:none;font-family:var(--sans);font-size:15px;font-weight:650;color:var(--ink);
   background:linear-gradient(180deg,#2a2d38,#1e2029);
@@ -654,7 +664,8 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .view.on{display:flex;flex-direction:column;flex:1;min-height:0;animation:viewin .24s ease}
 #v-train.view.on>*{flex:none}
 #play-card{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
-#play-card .stage{flex:1 1 auto;justify-content:center}
+#play-card .stage{flex:0 1 auto;justify-content:flex-start;padding-top:0}
+#play-card .move-cue{margin-top:auto}   /* pin the move prompt + buttons to the bottom; no void up top */
 @keyframes viewin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .no-motion *{animation:none!important;transition:none!important}
 .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:440px;z-index:30;display:flex;background:color-mix(in srgb,var(--panel) 94%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
@@ -748,7 +759,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
   background:var(--panel2);color:var(--brass);font:inherit;letter-spacing:.05em;text-transform:uppercase;
   padding:5px 10px;cursor:pointer}
 html.sheet-open,html.sheet-open body{overflow:hidden}
-.sit{min-height:54px;padding:8px 13px;align-items:flex-start}
+.sit{padding:9px 14px 11px}
 .sit-copy{min-width:0;display:flex;flex-direction:column;gap:2px;line-height:1.25}
 .sit-main{font-size:14px;font-weight:700;color:var(--ink)}
 .sit-context{font-size:11.5px;color:var(--muted)}
@@ -756,7 +767,7 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 .felt{padding:7px 12px 10px}
 #board{gap:6px}
 #hero{gap:8px}
-#board .pc{width:52px;height:70px}
+#board .pc{width:45px;height:61px}
 #board .pc .ix b{font-size:13px}
 #board .pc .ix .mini{width:9px;height:9px}
 #board .pc .center .psuit{width:25px;height:25px}
@@ -769,8 +780,8 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 .hero{margin-top:7px}
 .acts{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:11px 13px 13px}
 .acts.n-3{grid-template-columns:repeat(3,minmax(0,1fr))}
-.act{min-width:0;min-height:68px;padding:9px 5px;justify-content:center;gap:1px}
-.act .al{font-size:14.5px;font-weight:750;line-height:1.15}
+.act{min-width:0;min-height:52px;padding:8px 5px;justify-content:center;gap:1px}
+.act .al{font-size:14px;font-weight:700;line-height:1.15}
 .act .asub{font-size:10px;color:var(--muted);font-weight:500;line-height:1.2;text-align:center}
 .act .k{margin-top:2px;font-size:9px}
 /* Postflop is heads-up: only the two players, their roles, and the action matter. */
@@ -847,8 +858,8 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
   .hint,.act .k{display:none}
 }
 @media(max-width:350px){
-  #board .pc{width:50px;height:67px}
-  #hero .pc{width:64px;height:86px}
+  #board .pc{width:43px;height:58px}
+  #hero .pc{width:70px;height:95px}
   .act .asub{display:none}
 }
 </style>
@@ -867,8 +878,9 @@ __SUITDEFS__
     <div class="bar-top" id="session-progress" role="progressbar" aria-label="Session progress" aria-valuemin="1" aria-valuemax="10" aria-valuenow="1"><i id="prog" style="width:0"></i></div>
 
   <div class="card" id="play-card" tabindex="-1">
-    <div class="sit"><span class="pos" id="pos"></span><span class="sit-copy"><strong class="sit-main" id="sit"></strong><span class="sit-context" id="sitcontext"></span></span><span class="demo" id="demotag" hidden></span></div>
+    <div class="sit"><span class="sit-street" id="sitcontext"></span><span class="pos" id="pos"></span><span class="demo" id="demotag" hidden></span></div>
     <div class="tablewrap" id="seats"></div>
+    <div class="move-cue" id="movecue">Your move — tap what you'd do</div>
     <div class="acts" id="acts"></div>
     <div class="fb" id="fb" role="dialog" aria-modal="true" aria-labelledby="verdict">
       <div class="grab" aria-hidden="true"></div>
@@ -1507,9 +1519,8 @@ function addActionButton(box,a,i){
 function shownStep(){const e=hist[hidx];return e&&Number.isInteger(e.step)?e.step:pos;}
 function renderPreflop(q){
   const posEl=document.getElementById("pos");posEl.textContent=q.pos;posEl.className="pos "+q.pos;
-  document.getElementById("sit").textContent=pfHeadline(q);
-  document.getElementById("sitcontext").textContent="You are "+q.pos+" · Preflop";
-  const bd=document.getElementById("demotag");bd.hidden=false;bd.textContent="Preflop";
+  document.getElementById("sitcontext").textContent="Preflop";
+  const bd=document.getElementById("demotag");bd.hidden=true;
   renderSeats(q);   // build the 6-max ring first (creates the centred #hero slot)
   document.getElementById("herocap").textContent="Your hand";
   render(q.hand,document.getElementById("hero"));
@@ -1519,21 +1530,22 @@ function renderPreflop(q){
   document.getElementById("prog").style.width=(100*(shownStep()+1)/Math.max(1,order.length))+"%";
 }
 function decisionHeadline(q){
-  const villain=q.villain||"Opponent",node=q.node||"";
+  // Plain levels say "Opponent"; poker level names the seat (UTG / SB / ...).
+  const villain=(eff("positions")==="poker"?(q.villain||"Opponent"):"Opponent"),node=q.node||"";
   if(node.endsWith("_vs_check"))return villain+" checks";
   if(node.endsWith("_vs_bet"))return villain+" bets "+(q.bet_pct||66)+"% pot";
   return "Your action";
 }
 function renderQuestion(q){
+  var mc=document.getElementById("movecue");if(mc)mc.hidden=false;   // show the decision cue on a fresh hand
   if(q.preflop)return renderPreflop(q);
-  const posEl=document.getElementById("pos");posEl.textContent=posLabel(q);posEl.className="pos "+(q.is_oop?"oop":"ip");
-  document.getElementById("sit").textContent=decisionHeadline(q);
+  const posEl=document.getElementById("pos");posEl.textContent=q.is_oop?"Out of position":"In position";posEl.className="pos "+(q.is_oop?"oop":"ip");
   // Position is already the coloured lead label; keep the supporting line compact on phones.
-  document.getElementById("sitcontext").textContent="You are "+q.acting_player+" · "+cap1(q.street);
+  document.getElementById("sitcontext").textContent=cap1(q.street);
   const bd=document.getElementById("demotag");bd.hidden=!q.badge;bd.textContent=q.badge||"";
   renderSeats(q);   // build the unified felt table first (creates the #board/#hero slots)
-  document.getElementById("boardcap").textContent=(T().boardcap&&T().boardcap[q.street])||"Flop";
-  document.getElementById("herocap").textContent=T().herocap;
+  document.getElementById("boardcap").textContent="Board";
+  document.getElementById("herocap").textContent="Your hand";
   render(q.board,document.getElementById("board"));
   render(q.hero,document.getElementById("hero"));
   const box=document.getElementById("acts");box.innerHTML="";box.className="acts n-"+q.actions.length;
@@ -1554,42 +1566,38 @@ function renderSeats(q){
 // Seat helpers shared by the postflop heads-up duel and the preflop 6-max ring.
 const RING_ORDER=["BTN","SB","BB","UTG","HJ","CO"];
 const RING_SLOTS=[[50,85,1],[15,67,1],[15,33,0],[50,15,0],[85,33,0],[85,67,1]]; // x%,y%,labelAbove
-const RING_SHORT={BTN:"the button",BB:"big blind",SB:"small blind",CO:"cutoff",HJ:"hijack",UTG:"under the gun"};
+// Plain, beginner-friendly seat names by default; real poker terms only in "poker" level.
+const RING_POKER={BTN:"the button",BB:"the big blind",SB:"the small blind",CO:"the cutoff",HJ:"the hijack",UTG:"under the gun"};
+const RING_PLAIN={BTN:"the button",BB:"the big blind",SB:"the small blind",CO:"a late seat",HJ:"a middle seat",UTG:"an early seat"};
+function posName(p){return (eff("positions")==="poker"?RING_POKER:RING_PLAIN)[p]||p;}
+function posLine(hero,villain){   // header: where you and the opponent sit
+  var s='<span class="hl-you">You</span> '+posName(hero);
+  if(villain)s+=' <span class="fl-dot">·</span> <span class="hl-opp">Opponent</span> '+posName(villain);
+  return s;
+}
 // Abstract "constellation": the six seats as small nodes (you at the bottom), the live
 // opponent(s) highlighted, the button ringed, faint links between seats. Position at a glance.
-function constellation(hero,villain,ok,oppAct){
+function constellation(hero,villain){
   const start=Math.max(0,RING_ORDER.indexOf(hero));
   const seats=[];for(var i=0;i<6;i++)seats.push(RING_ORDER[(start+i)%6]);
-  const W=204,H=90,VBX=-8,VBY=-8,VBW=220,VBH=108;
+  const W=196,H=96,VBX=-26,VBY=-12,VBW=248,VBH=134;   // extra side padding for the You/Opp labels
   const pts=RING_SLOTS.map(s=>[+(s[0]/100*W).toFixed(1),+(s[1]/100*H).toFixed(1)]);
   const poly=pts.map(p=>p[0]+","+p[1]).join(" ");
-  const vi=villain?seats.indexOf(villain):-1;
-  // the action as a flow: an arrow from the opponent's node down to yours (bottom)
-  let flow="",chip="";
-  if(vi>=0&&ok&&ok!=="wait"){
-    const a=pts[vi],b=pts[0],dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy)||1,ux=dx/len,uy=dy/len;
-    const ax=(a[0]+ux*8).toFixed(1),ay=(a[1]+uy*8).toFixed(1),bx=(b[0]-ux*11).toFixed(1),by=(b[1]-uy*11).toFixed(1);
-    flow='<line class="cn-flow fl-'+ok+'" x1="'+ax+'" y1="'+ay+'" x2="'+bx+'" y2="'+by+'" marker-end="url(#cnar-'+ok+')"/>';
-    // chip biased toward the opponent end + nudged off the line, so short (adjacent-seat) arrows don't collide with your node
-    const cx=a[0]+(+bx-a[0])*0.42-uy*9,cy=a[1]+(+by-a[1])*0.42+ux*9;
-    const L=((cx-VBX)/VBW*100).toFixed(1),T=((cy-VBY)/VBH*100).toFixed(1);
-    chip='<span class="flowchip a-'+ok+'" style="left:'+L+'%;top:'+T+'%">'+oppAct+'</span>';
-  }
-  let dots="";
+  let dots="",labels="";
   seats.forEach(function(p,i){
     const x=pts[i][0],y=pts[i][1];
     const isHero=p===hero,isV=p===villain;
     const cls=isHero?"cn-you":isV?"cn-opp":"cn-dim";
-    const r=isHero?7:isV?6.5:4;
+    const r=isHero?8:isV?7.5:4.5;
     if(p==="BTN")dots+='<circle class="cn-btn" cx="'+x+'" cy="'+y+'" r="'+(r+3.5)+'"/>';
     dots+='<circle class="'+cls+'" cx="'+x+'" cy="'+y+'" r="'+r+'"/>';
+    if(isHero||isV){   // label the two live players so the graphic explains itself
+      const off=p==="BTN"?23:18,ox=x-W/2,oy=y-H*0.46,ol=Math.hypot(ox,oy)||1,lx=(x+ox/ol*off).toFixed(1),ly=(y+oy/ol*off+3.2).toFixed(1);
+      labels+='<text class="cn-lbl '+(isHero?"cn-lbl-you":"cn-lbl-opp")+'" x="'+lx+'" y="'+ly+'" text-anchor="middle">'+(isHero?"You":"Opp")+'</text>';
+    }
   });
-  const defs='<defs>'
-    +'<marker id="cnar-bet" markerWidth="6" markerHeight="6" refX="4.4" refY="3" orient="auto"><path d="M0,0 L5,3 L0,6 z" class="ah-bet"/></marker>'
-    +'<marker id="cnar-check" markerWidth="6" markerHeight="6" refX="4.4" refY="3" orient="auto"><path d="M0,0 L5,3 L0,6 z" class="ah-check"/></marker>'
-    +'</defs>';
-  return '<div class="cnst-wrap"><svg viewBox="-8 -8 '+VBW+' '+VBH+'" class="cnst" aria-hidden="true">'
-    +defs+'<polygon points="'+poly+'" class="cn-link"/>'+flow+dots+'</svg>'+chip+'</div>';
+  return '<div class="cnst-wrap"><svg viewBox="'+VBX+' '+VBY+' '+VBW+' '+VBH+'" class="cnst" aria-hidden="true">'
+    +'<polygon points="'+poly+'" class="cn-link"/>'+dots+labels+'</svg></div>';
 }
 function ringTable(q){
   // Heads-up postflop: constellation for position, cards on the clean ground below it.
@@ -1599,12 +1607,11 @@ function ringTable(q){
   let oppAct="",ok="wait";
   if(node.endsWith("_vs_check")){oppAct="Checked";ok="check";}
   else if(node.endsWith("_vs_bet")){oppAct="Bets "+(q.bet_pct||66)+"%";ok="bet";}
-  const vShort=RING_SHORT[villain]||villain,hShort=RING_SHORT[hero]||hero;
-  let html='<div class="posdial">'+constellation(hero,villain,ok,oppAct)
-    +'<div class="pos-cap">'+(ok!=="wait"
-      ? 'Opponent <b class="opp">'+vShort+'</b> <span class="fl-arrow">&#8594;</span> <b class="you">You</b> <span>'+hShort+'</span>'
-      : '<b class="you">You</b> <span>'+hShort+'</span> <span class="fl-arrow">·</span> vs <b class="opp">'+vShort+'</b>')
-    +'</div></div>';
+  const actLine=ok==="bet"?'<b class="hl-opp">Opponent</b> bets '+(q.bet_pct||66)+'% of the pot'
+    :ok==="check"?'<b class="hl-opp">Opponent</b> checks — it’s on you'
+    :'No bet yet — you act first';
+  let html='<div class="posdial">'+constellation(hero,villain)
+    +'<div class="action-line">'+actLine+'</div></div>';
   html+='<div class="t-mid"><div class="cap" id="boardcap">Flop</div><div class="cards" id="board"></div>'
     +'<div class="cap" id="herocap">Your hand</div><div class="cards" id="hero"></div></div>';
   const w=document.createElement("div");w.className="stage duel";w.innerHTML=html;return w;
@@ -1613,10 +1620,11 @@ function preflopRing(q){
   const hero=q.pos, villain=q.tbettor||q.opener||null;
   const act=q.tbettor?"3-bets":q.opener?"Opens":"";
   const ok=villain?"bet":"wait";
-  let html='<div class="posdial">'+constellation(hero,villain,ok,act)
-    +'<div class="pos-cap">'
-    +(villain?'Opponent <b class="opp">'+(RING_SHORT[villain]||villain)+'</b> <span class="fl-arrow">&#8594;</span> ':'')
-    +'<b class="you">You</b> <span>'+(RING_SHORT[hero]||hero)+'</span></div></div>';
+  const actLine=q.tbettor?'<b class="hl-opp">Opponent</b> 3-bets (re-raises)'
+    :q.opener?'<b class="hl-opp">Opponent</b> opens (raises first)'
+    :'It folds to you — you’re first to act';
+  let html='<div class="posdial">'+constellation(hero,villain)
+    +'<div class="action-line">'+actLine+'</div></div>';
   html+='<div class="t-mid"><div class="cap" id="herocap">Your hand</div><div class="cards" id="hero"></div></div>';
   const w=document.createElement("div");w.className="stage";w.innerHTML=html;return w;
 }
@@ -1976,6 +1984,7 @@ function renderContrast(q){
   body.appendChild(l1);body.appendChild(l2);body.appendChild(why);body.appendChild(go);
 }
 function renderFeedback(q,a,gained){
+  var mc=document.getElementById("movecue");if(mc)mc.hidden=true;   // decision made — hide the cue
   renderContrast(q);renderFactors(q);
   if(q.preflop)return renderPreflopFeedback(q,a,gained);
   document.querySelector(".mix").style.display="";
