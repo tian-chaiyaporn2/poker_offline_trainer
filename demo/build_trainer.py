@@ -1573,6 +1573,7 @@ function renderHand(){                                  // draw the current hist
 }
 function newHand(){hist.push({q:Q[order[pos]],pick:null,step:pos,bonus:false});hidx=hist.length-1;renderHand();}
 function replayAnswer(a){answered=true;chosen=a;renderFeedback(cur,a,[]);
+  document.getElementById("coach").hidden=false;                  // review: re-show the coach panel, same as a live answer
   document.getElementById("next").focus({preventScroll:true});}  // review: no stats change
 function prev(){if(hidx>0){hidx--;renderHand();}}
 // Forward is allowed when reviewing an earlier hand, or on the newest hand once it's answered
@@ -2191,7 +2192,8 @@ function applyModeUI(){document.querySelectorAll("#lang button").forEach(b=>{
   const on=b.dataset.m===mode;b.classList.toggle("on",on);b.setAttribute("aria-pressed",String(on));
 });}
 function setMode(m){mode=m;try{localStorage.setItem("lang",m);}catch(e){}applyModeUI();updateVocab();updateLevelHint();
-  if(cur){renderQuestion(cur);if(answered){renderFeedback(cur,chosen,[]);
+  // Skip the live-card re-render while the session-summary screen is up (no card is shown).
+  if(cur&&document.getElementById("session-end").hidden){renderQuestion(cur);if(answered){renderFeedback(cur,chosen,[]);
     if(!document.getElementById("v-train").classList.contains("on"))closeSheet(false);}}}
 document.querySelectorAll("#lang button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
 // --- train-category selector: filter the deck to one street (or all) ---
