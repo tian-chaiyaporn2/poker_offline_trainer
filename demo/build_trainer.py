@@ -2,7 +2,7 @@
 
 Samples real questions from a signed pack and emits a single HTML file that plays
 the actual end-user loop — deal a spot, pick an action, get graded + taught why —
-with no server. Writes demo/trainer_demo.html + trainer.html (Pages).
+with no server. Writes demo/trainer_demo.html + index.html (Pages).
 
 Run:  PYTHONPATH=src python demo/build_trainer.py
 """
@@ -31,7 +31,8 @@ def _fontface():
         p = os.path.join(_FONT_DIR, fn)
         if not os.path.exists(p):
             continue
-        b = base64.b64encode(open(p, "rb").read()).decode()
+        with open(p, "rb") as font_file:
+            b = base64.b64encode(font_file.read()).decode()
         out.append("@font-face{font-family:'%s';font-style:normal;font-weight:%d;"
                    "font-display:swap;src:url(data:font/ttf;base64,%s) format('truetype');}" % (fam, w, b))
     return "".join(out)
@@ -75,20 +76,20 @@ def _suitdefs():
     return d
 
 DB = "output/packs/flop_pack_v1_fullrange.db"
-RAISE_DB = "output/packs/flop_pack_v1_raise_demo.db"   # reduced-range, but HAS fold/call/raise
 TR_DB = "output/packs/flop_pack_turnriver_fullrange.db"  # turn/river decisions (full range; still unconditioned)
 SB_DB = "output/packs/flop_pack_sb_vs_bb.db"           # 2nd scenario: SB vs BB (full range)
 BTNSB_DB = "output/packs/flop_pack_btn_vs_sb.db"       # BTN vs SB single-raised pot
 CO_DB = "output/packs/flop_pack_co_vs_bb.db"           # CO vs BB single-raised pot (pending)
 UTG_DB = "output/packs/flop_pack_utg_vs_bb.db"         # UTG vs BB single-raised pot (pending)
 HJ_DB = "output/packs/flop_pack_hj_vs_bb.db"           # HJ vs BB single-raised pot (pending)
+BB3BET_DB = "output/packs/flop_pack_btn_bb_3bet.db"    # BB 3-bets, BTN calls — low-SPR 3-bet pot
 PER_REASON = 6          # cap questions per reason for variety
 MAX_Q = 60
-RAISE_Q = 12            # extra 3-action spots blended in to show the raise UX
 TR_Q = 16               # turn/river spots blended in
 SB_Q = 20               # SB-vs-BB spots blended in (2nd position)
 BTNSB_Q = 16            # BTN-vs-SB spots blended in
 CO_Q = 16               # CO-vs-BB spots blended in
+BB3BET_Q = 16           # 3-bet-pot spots blended in
 
 STREET = {6: "flop", 8: "turn", 10: "river"}       # by board-string length
 
@@ -102,46 +103,22 @@ def _require_verified(path: str) -> dict:
     return verdict
 
 
-def _situation(node, actor, street):
-    if street == "flop":
-        return SITUATION.get(node, f"You're the {actor}, on the flop.")
-    # Unconditioned later-street demo — do not claim a check-through range.
-    pre = ("On the turn, " if street == "turn" else "On the river, ")
-    if node.endswith("_first"):
-        return pre + f"you're the {actor}, first to act."
-    if node.endswith("_vs_check"):
-        return pre + f"it's checked to you ({actor})."
-    return pre + f"you face a bet ({actor})."
-
-SITUATION = {
-    "bb_first": "You're the BB, first to act on the flop.",
-    "btn_vs_check": "You're the BTN — the BB checked to you.",
-    "bb_vs_bet": "You're the BB — you checked and the BTN bet 66% of the pot.",
-    "btn_vs_bet": "You're the BTN — the BB led into you for 66% of the pot.",
-    "sb_first": "You're the SB, first to act on the flop.",
-    "bb_vs_check": "You're the BB — the SB checked to you.",
-    "sb_vs_bet": "You're the SB — you checked and the BB bet 66% of the pot.",
-}
-ALAB = {"check": "Check", "bet": "Bet 66%", "fold": "Fold", "call": "Call", "raise": "Raise 3×"}
+ALAB = {"check": "Check", "bet": "Bet", "fold": "Fold", "call": "Call", "raise": "Raise 3×"}
 
 
-def _raise_label_from_pack(path: str) -> str:
-    """Derive raise button label from pack config.raise_x when present."""
+def _bet_pct_from_pack(path: str) -> int:
+    """Read the modeled bet size so UI copy never drifts from a pack."""
+    conn = None
     try:
-        meta = dict(sqlite3.connect(path).execute("SELECT key, value FROM pack_meta"))
+        conn = sqlite3.connect(path)
+        meta = dict(conn.execute("SELECT key, value FROM pack_meta"))
         cfg = json.loads(meta.get("config") or "{}")
-        rx = cfg.get("raise_x")
-        if rx is None:
-            return "Raise 3×"
-        x = float(rx)
-        return f"Raise {x:g}×" if x != int(x) else f"Raise {int(x)}×"
-    except Exception:
-        return "Raise 3×"
-RLAB = {"value": "Value bet", "protection": "Protection", "bluff": "Bluff", "semi_bluff": "Semi-bluff",
-        "pot_control": "Pot control", "trap": "Trap", "realization": "Give up / realize equity",
-        "value_call": "Value call", "bluff_catch": "Bluff-catch", "call_odds": "Call on odds",
-        "raise_value": "Value raise", "raise_bluff": "Bluff raise", "raise_semibluff": "Semi-bluff raise",
-        "fold": "Fold", "mixed": "Mixed / close"}
+        return int(cfg.get("bet_pct_pot", 66))
+    except (OSError, sqlite3.Error, TypeError, ValueError, json.JSONDecodeError):
+        return 66
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 COLS = ("id board node acting_player hand actions ev freq preferred_action "
@@ -164,32 +141,29 @@ def _ip_pos(rows, oop):
     return "BTN" if oop != "BTN" else "BB"
 
 
-def _to_q(d, oop_pos="BB", ip_pos=None):
+def _to_q(d, oop_pos="BB", ip_pos=None, bet_pct=66):
     from pokertrainer.explanations import freq_pct_ints
     acts = json.loads(d["actions"])
     board = [d["board"][i:i+2] for i in range(0, len(d["board"]), 2)]
     street = STREET.get(len(d["board"]), "flop")
     node = d["node"]
-    # First-to-act on THIS decision only — facing a check/bet is never "act first",
-    # even when hero is OOP (they already checked and now face a bet). Seat role
-    # (OOP/IP) lives in is_oop; plain "You act first/last" badges use is_oop so
-    # SB-vs-BB still flips correctly (BB is IP there).
-    acts_first = node.endswith("_first")
     freq_raw = {k: float(v) for k, v in json.loads(d["freq"]).items()}
     return {
         "board": board, "hero": [d["hand"][0:2], d["hand"][2:4]], "street": street,
-        "node": node, "acting_player": d["acting_player"], "acts_first": acts_first,
+        "node": node, "acting_player": d["acting_player"],
         "is_oop": d["acting_player"] == oop_pos,
         # the opponent's actual seat, so the table graphic labels it correctly for
         # every matchup (not just BTN/SB-vs-BB): villain = the seat that isn't the hero.
         "villain": (ip_pos or ("BTN" if oop_pos != "BTN" else "BB"))
         if d["acting_player"] == oop_pos else oop_pos,
-        "actions": acts, "labels": {a: ALAB.get(a, a) for a in acts},
+        "actions": acts, "labels": {
+            a: (f"Bet {bet_pct}%" if a == "bet" else ALAB.get(a, a)) for a in acts
+        }, "bet_pct": bet_pct,
         "ev": {k: round(v, 2) for k, v in json.loads(d["ev"]).items()},
         # Largest-remainder ints so the Pro frequency mix always sums to 100.
         "freq": freq_pct_ints(freq_raw, order=acts),
         "preferred": d["preferred_action"], "grades": json.loads(d["action_grades"]),
-        "reason": d["reason"], "reason_label": RLAB.get(d["reason"], d["reason"]),
+        "reason": d["reason"],
         "headline": d["headline"], "detail": json.loads(d["detail"]),
         # Near-indifferent spots: let feedback treat them as ties, not a punished pick.
         "mixed": bool(d.get("mixed")),
@@ -213,40 +187,8 @@ def load_questions():
     groups = [g[:PER_REASON] for g in buckets.values()]
     picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:MAX_Q]
     oop = _oop_pos(picked); ip = _ip_pos(picked, oop)
-    return meta, [_to_q(d, oop, ip) for d in picked]
-
-
-def load_raise(n=RAISE_Q, required=True):
-    """A few real fold/call/raise spots from the raise-enabled (reduced-range) pack,
-    so the trainer demonstrates the 3-action UX until the full-range raise run lands."""
-    if not os.path.exists(RAISE_DB):
-        msg = f"optional raise pack missing ({RAISE_DB})"
-        if required:
-            raise SystemExit(msg + " — pass --allow-missing-demo-packs to skip")
-        print(f"  warn: {msg} — skipping")
-        return []
-    _require_verified(RAISE_DB)
-    raise_lab = _raise_label_from_pack(RAISE_DB)
-    c = sqlite3.connect(RAISE_DB)
-    rows = c.execute(f"SELECT {','.join(COLS)} FROM flop_decision "
-                     "WHERE actions LIKE '%raise%'").fetchall()
-    c.close()
-    by_reason = defaultdict(list)
-    for r in rows:
-        d = dict(zip(COLS, r))
-        by_reason[d["reason"]].append(d)
-    from itertools import zip_longest
-    groups = [g[:3] for g in by_reason.values()]
-    picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
-    oop = _oop_pos(picked); ip = _ip_pos(picked, oop)
-    out = []
-    for q in (_to_q(d, oop, ip) for d in picked):
-        q["labels"] = {**q["labels"], "raise": raise_lab}
-        q["badge"] = "raise demo"     # flag so the UI can note the reduced-range source
-        out.append(q)
-    if required and len(out) < 3:
-        raise SystemExit(f"raise pack produced only {len(out)} spots (need ≥3)")
-    return out
+    bet_pct = _bet_pct_from_pack(DB)
+    return meta, [_to_q(d, oop, ip, bet_pct) for d in picked]
 
 
 def load_turnriver(n=TR_Q, required=True):
@@ -278,7 +220,8 @@ def load_turnriver(n=TR_Q, required=True):
     picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
     oop = _oop_pos(picked); ip = _ip_pos(picked, oop)
     out = []
-    for q in (_to_q(d, oop, ip) for d in picked):
+    bet_pct = _bet_pct_from_pack(TR_DB)
+    for q in (_to_q(d, oop, ip, bet_pct) for d in picked):
         q["badge"] = q["street"]
         out.append(q)
     streets = {q["street"] for q in out}
@@ -307,14 +250,11 @@ def load_scenario(db, badge, n):
     groups = [g[:2] for g in buckets.values()]
     picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
     out = []
-    for q in (_to_q(d, oop, ip) for d in picked):
+    bet_pct = _bet_pct_from_pack(db)
+    for q in (_to_q(d, oop, ip, bet_pct) for d in picked):
         q["badge"] = badge
         out.append(q)
     return out
-
-
-def load_sb(n=SB_Q, required=False):
-    return load_scenario(SB_DB, "SB vs BB", n)
 
 
 PF_Q = 16   # pre-flop spots blended in ("Chapter 0")
@@ -344,7 +284,8 @@ def load_contrast_pool(per_bucket=2):
     from pokertrainer.cards import parse_cards, card_rank
     from pokertrainer.evaluator import evaluate, category_name
     specs = [(DB, None), (SB_DB, "SB vs BB"), (BTNSB_DB, "BTN vs SB"),
-             (CO_DB, "CO vs BB"), (UTG_DB, "UTG vs BB"), (HJ_DB, "HJ vs BB"), (TR_DB, "street")]
+             (CO_DB, "CO vs BB"), (UTG_DB, "UTG vs BB"), (HJ_DB, "HJ vs BB"),
+             (BB3BET_DB, "3-bet pot"), (TR_DB, "street")]
     buckets, seen, out = defaultdict(int), set(), []
     for db, badge in specs:
         if not os.path.exists(db):
@@ -357,7 +298,7 @@ def load_contrast_pool(per_bucket=2):
         dicts = [dict(zip(COLS, r)) for r in
                  c.execute(f"SELECT {','.join(COLS)} FROM flop_decision").fetchall()]
         c.close()
-        oop = _oop_pos(dicts); ip = _ip_pos(dicts, oop)
+        oop = _oop_pos(dicts); ip = _ip_pos(dicts, oop); bet_pct = _bet_pct_from_pack(db)
         for d in dicts:
             cs = parse_cards(d["board"]) + parse_cards(d["hand"])
             if len(cs) < 5:
@@ -379,29 +320,29 @@ def load_contrast_pool(per_bucket=2):
             if buckets[key] >= per_bucket or k2 in seen:
                 continue
             seen.add(k2); buckets[key] += 1
-            q = _to_q(d, oop, ip)
+            q = _to_q(d, oop, ip, bet_pct)
             q["badge"] = q["street"] if badge == "street" else badge
             out.append(q)
     return out
 
 
 def build(allow_missing_demo_packs=False):
-    # The full-range pack now includes Fold/Call/Raise on facing-a-bet nodes (FR-011
-    # landed), so the reduced-range raise-demo blend is retired.
     meta, qs = load_questions()
     tr_qs = load_turnriver(required=not allow_missing_demo_packs)
-    sb_qs = load_sb()
+    sb_qs = load_scenario(SB_DB, "SB vs BB", SB_Q)
     btnsb_qs = load_scenario(BTNSB_DB, "BTN vs SB", BTNSB_Q)
     co_qs = load_scenario(CO_DB, "CO vs BB", CO_Q)
     utg_qs = load_scenario(UTG_DB, "UTG vs BB", CO_Q)
     hj_qs = load_scenario(HJ_DB, "HJ vs BB", CO_Q)
+    bb3bet_qs = load_scenario(BB3BET_DB, "3-bet pot", BB3BET_Q)
     pf_qs = load_preflop()
-    qs = qs + tr_qs + sb_qs + btnsb_qs + co_qs + utg_qs + hj_qs + pf_qs
+    qs = qs + tr_qs + sb_qs + btnsb_qs + co_qs + utg_qs + hj_qs + bb3bet_qs + pf_qs
     cpool = load_contrast_pool()
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
                             capture_output=True, text=True).stdout.strip() or "local"
     print(f"  ({len(tr_qs)} turn/river + {len(sb_qs)} SB-vs-BB + {len(btnsb_qs)} BTN-vs-SB + "
           f"{len(co_qs)} CO-vs-BB + {len(utg_qs)} UTG-vs-BB + {len(hj_qs)} HJ-vs-BB + "
+          f"{len(bb3bet_qs)} 3-bet-pot + "
           f"{len(pf_qs)} pre-flop spots blended in; {len(cpool)} contrast-pool spots)")
     # Escape </script> so pack strings cannot break out of the inline script.
     data = json.dumps(qs, separators=(",", ":")).replace("<", "\\u003c")
@@ -410,25 +351,27 @@ def build(allow_missing_demo_packs=False):
                    .replace("__RECORDS__", html.escape(str(meta.get("record_count", "")))).replace("__COMMIT__", html.escape(commit)) \
                    .replace("__FONTFACE__", _fontface()).replace("__SUITDEFS__", _suitdefs())
     os.makedirs("demo", exist_ok=True)
-    open("demo/trainer_demo.html", "w").write(body)
+    with open("demo/trainer_demo.html", "w", encoding="utf-8") as demo_file:
+        demo_file.write(body)
     doc = ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
            '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
            '<title>Full-Street Flop Trainer</title>\n'
            '<meta name="description" content="Interactive GTO flop trainer — pick an action, '
            'get graded, learn why.">\n</head>\n<body>\n' + body + '\n</body>\n</html>\n')
-    open("index.html", "w").write(doc)     # Pages landing = the interactive trainer
+    with open("index.html", "w", encoding="utf-8") as index_file:
+        index_file.write(doc)     # Pages landing = the interactive trainer
     print(f"wrote demo/trainer_demo.html + index.html | {len(qs)} questions | "
           f"pack {meta.get('version')} ({meta.get('record_count')} recs) | build {commit}")
 
 
-TEMPLATE = r'''<style>
+TEMPLATE = r'''<link rel="icon" href="data:,">
+<style>
 __FONTFACE__
 /* Locked dark visual design — one committed dark world (Rye + Space Mono + folded suits). */
-:root, :root[data-theme="light"], :root[data-theme="dark"]{
+:root{
   --bg:#0b0c10; --panel:#16171d; --panel2:#1d1f27; --ink:#f2f1ea; --muted:#888e9b; --line:#2a2c35;
   --brass:#8aa0ff; --brass-soft:#5b74ff;
   --best:#2fd08a; --good:#5ee7a8; --accept:#ffc24d; --costly:#ff8a6e; --major:#e0341a;
-  --pc-bg:#f5f0e7; --pc-ink:#15171e; --pc-red:#cf1a2c; --pc-line:#e3ddcf;
   --disp:"Rye","Iowan Old Style",Georgia,serif;
   --sans:"Avenir Next","Avenir",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,sans-serif;
   --mono:"Space Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
@@ -436,18 +379,9 @@ __FONTFACE__
 }
 *{box-sizing:border-box}
 body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
-.wrap{max-width:640px;margin:0 auto;padding:20px 16px 56px}
-header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .brand{font-family:var(--disp);font-weight:600;font-size:19px}
 .brand .sp{color:var(--brass)}
-.score{display:flex;gap:10px;align-items:baseline}
-.score .acc{font-family:var(--mono);font-size:18px;color:var(--brass);font-weight:700;font-variant-numeric:tabular-nums}
-.score .sbits{font-size:11.5px;color:var(--muted)}
-.score .sbits b{font-variant-numeric:tabular-nums}
 .cSolid{color:var(--best)}.cOk{color:var(--accept)}.cLeak{color:var(--costly)}
-.controls{margin-bottom:14px}
-.level{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
-.lvl-cap{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
 .lvl-hint{margin:9px 0 0;font-size:12px;color:var(--muted);line-height:1.45}
 .bar-top{height:4px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:9px}
 .bar-top>i{display:block;height:100%;background:var(--brass);transition:width .3s}
@@ -615,11 +549,6 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 .foot code{font-family:var(--mono)}.foot a{color:var(--brass)}
 .hint{font-size:11px;color:var(--muted);text-align:center;margin-top:10px}
 kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--ink) 8%,transparent);border:1px solid var(--line);border-radius:4px;padding:0 4px}
-.lang{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;font-size:11.5px;flex:none}
-.lang button{appearance:none;border:none;background:transparent;color:var(--muted);padding:5px 11px;cursor:pointer;font-family:var(--sans);font-weight:600;white-space:nowrap}
-.lang button.on{background:var(--brass);color:#fff}
-.lang button:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
-.vocab{font-family:var(--mono);font-size:11.5px;color:var(--brass);font-weight:700;flex:none}
 .unlock{margin:0 18px 4px;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--brass) 12%,var(--panel));border:1px solid var(--brass-soft)}
 .unlock .ul-row{font-size:12.5px;color:var(--ink);line-height:1.45}
 .unlock .ul-row+.ul-row{margin-top:6px}
@@ -681,7 +610,6 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .revbtn:hover:not(:disabled){border-color:var(--brass);background:color-mix(in srgb,var(--brass) 10%,var(--panel2))}
 .revbtn:disabled{opacity:.3;cursor:default}
 .appbar .brand{white-space:nowrap}
-.appbar .vocab{margin-left:auto}
 .appbar .brand{font-size:18px}
 .views{flex:1;padding-bottom:72px}
 .view{display:none;padding:14px 15px 8px}
@@ -697,7 +625,6 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .street-seg button{appearance:none;flex:none;font-family:var(--label);font-size:11px;text-transform:uppercase;letter-spacing:.03em;font-weight:700;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:7px 13px;cursor:pointer}
 .street-seg button.on{background:var(--brass);color:#0b0c10;border-color:var(--brass)}
 .street-seg button:disabled{opacity:.4}
-.catcount{display:block;font-family:var(--mono);font-size:10.5px;color:var(--muted);margin:0 2px 5px}
 /* progress view */
 .phead{margin-bottom:12px}.ptitle{font-family:var(--disp);font-size:26px}
 .big-stat{display:flex;align-items:baseline;gap:9px;margin-bottom:14px}
@@ -718,6 +645,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .s-sec{font-family:var(--label);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;margin:20px 0 8px}
 .seg{display:flex;background:var(--panel2);border-radius:11px;padding:3px;gap:2px;border:1px solid var(--line)}
 .seg button{flex:1;appearance:none;border:none;text-align:center;font-family:var(--label);font-size:9px;text-transform:uppercase;letter-spacing:.02em;padding:9px 2px;border-radius:8px;color:var(--muted);font-weight:700;cursor:pointer;background:none}
+.seg button{min-height:44px}
 .seg button.on{background:var(--brass);color:#0b0c10}
 .s-row{display:flex;align-items:center;justify-content:space-between;padding:12px 2px;border-bottom:1px solid var(--line);font-size:13px}
 .tog{appearance:none;width:40px;height:23px;border-radius:12px;background:var(--line);position:relative;border:none;cursor:pointer;flex:none}
@@ -761,24 +689,134 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
   padding:4px 11px;border-radius:999px;border:1px solid transparent}
 .oppchip.a-check{background:color-mix(in srgb,var(--accept) 16%,transparent);color:var(--accept);border-color:color-mix(in srgb,var(--accept) 40%,var(--line))}
 .oppchip.a-bet{background:color-mix(in srgb,var(--costly) 16%,transparent);color:var(--costly);border-color:color-mix(in srgb,var(--costly) 40%,var(--line))}
+/* ===== mobile-first player loop ===== */
+.session-hud{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 2px 7px;
+  font-family:var(--label);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.session-hud b{color:var(--ink);font-variant-numeric:tabular-nums}
+.session-hud .skip-bonus{appearance:none;margin-left:auto;border:1px solid var(--line);border-radius:999px;
+  background:var(--panel2);color:var(--brass);font:inherit;letter-spacing:.05em;text-transform:uppercase;
+  padding:5px 10px;cursor:pointer}
+html.sheet-open,html.sheet-open body{overflow:hidden}
+.sit{min-height:54px;padding:8px 13px;align-items:flex-start}
+.sit-copy{min-width:0;display:flex;flex-direction:column;gap:2px;line-height:1.25}
+.sit-main{font-size:14px;font-weight:700;color:var(--ink)}
+.sit-context{font-size:11.5px;color:var(--muted)}
+.sit .demo{align-self:center}
+.felt{padding:7px 12px 10px}
+#board{gap:6px}
+#hero{gap:8px}
+#board .pc{width:46px;height:62px}
+#board .pc .ix b{font-size:13px}
+#board .pc .ix .mini{width:9px;height:9px}
+#board .pc .center .psuit{width:25px;height:25px}
+#hero .pc{width:60px;height:82px;border-radius:9px}
+#hero .pc::after{inset:4px;border-radius:6px}
+#hero .pc .ix{top:4px;left:5px}
+#hero .pc .ix b{font-size:16px}
+#hero .pc .ix .mini{width:10px;height:10px}
+#hero .pc .center .psuit{width:32px;height:32px}
+.hero{margin-top:7px}
+.acts{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:11px 13px 13px}
+.acts.n-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.act{min-width:0;min-height:68px;padding:9px 5px;justify-content:center;gap:1px}
+.act .al{font-size:14.5px;font-weight:750;line-height:1.15}
+.act .asub{font-size:10px;color:var(--muted);font-weight:500;line-height:1.2;text-align:center}
+.act .k{margin-top:2px;font-size:9px}
+/* Postflop is heads-up: only the two players, their roles, and the action matter. */
+.tv.duel{height:152px;border-radius:100px/58px}
+.tv.duel .tvs{width:105px}
+.tv.duel .tvs.opp{left:50%;top:16%}
+.tv.duel .tvs.you{left:50%;top:84%}
+.tv.duel .tvs.opp .av,.tv.duel .tvs.you .av{width:25px;height:25px}
+.tv.duel .tvs.opp .ps,.tv.duel .tvs.you .ps{font-size:8px}
+.tv.duel .tvmid{top:50%;gap:4px}
+.tv.duel .oppchip{padding:3px 10px}
+.tv.duel .potlab{padding:2px 12px}
+.fb-brief{padding:0 18px 2px}
+.fb-brief .head{font-size:14px;line-height:1.45;margin:0}
+.learn{margin:8px 18px 2px;border:1px solid var(--line);border-radius:12px;
+  background:color-mix(in srgb,var(--panel2) 45%,transparent);overflow:hidden}
+.learn>summary{list-style:none;cursor:pointer;padding:11px 13px;font-family:var(--label);font-size:10.5px;
+  font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--brass);
+  display:flex;align-items:center;justify-content:space-between}
+.learn>summary::-webkit-details-marker{display:none}
+.learn>summary::after{content:"＋";font-size:14px}
+.learn[open]>summary{border-bottom:1px solid var(--line)}
+.learn[open]>summary::after{content:"－"}
+.learn .why{padding:10px 13px 4px}
+.learn .analytics{margin-top:0}
+.fb-actions{position:sticky;bottom:0;z-index:3;display:flex;gap:8px;padding:10px 18px calc(12px + env(safe-area-inset-bottom));
+  background:linear-gradient(180deg,transparent,var(--panel) 18%,var(--panel));border-top:1px solid var(--line)}
+.fb-actions .next{flex:1;width:auto;margin:0;min-height:50px}
+.coach-open{appearance:none;flex:none;border:1px solid var(--line);border-radius:11px;background:var(--panel2);
+  color:var(--brass);font-family:var(--label);font-size:10px;font-weight:700;padding:0 12px;cursor:pointer}
+.session-end{padding:20px 16px 26px;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:16px}
+.session-end h2{font-family:var(--disp);font-size:26px;margin:0 0 5px}
+.session-end>p{font-size:13px;color:var(--muted);margin:0 0 16px}
+.session-score{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.session-score div{padding:10px 5px;border:1px solid var(--line);border-radius:11px;background:var(--panel2)}
+.session-score b{display:block;font-family:var(--mono);font-size:20px}
+.session-score span{font-family:var(--label);font-size:8px;text-transform:uppercase;color:var(--muted)}
+.session-end-actions{display:flex;gap:8px}
+.session-end-actions button{flex:1;min-height:48px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);
+  color:var(--ink);font-family:var(--sans);font-weight:700;cursor:pointer}
+.session-end-actions .primary{background:var(--brass);color:#0b0c10;border-color:var(--brass)}
+.progress-note{font-size:12px;color:var(--muted);margin:-7px 0 16px}
+.terms-progress{margin-top:20px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.terms-progress b{font-family:var(--mono);color:var(--brass)}
+.train-primer{margin-top:12px;border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:0 14px}
+.train-primer>summary{list-style:none;cursor:pointer;padding:11px 0;font-size:12px;font-weight:700;color:var(--brass)}
+.train-primer>summary::-webkit-details-marker{display:none}
+.train-primer>summary::after{content:"＋";float:right}
+.train-primer[open]>summary::after{content:"－"}
+.train-primer p{font-size:12.5px;line-height:1.55;color:var(--muted);margin:0 0 12px}
+.tech{margin-top:8px;border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:0 14px}
+.tech>summary{list-style:none;cursor:pointer;padding:12px 0;font-size:12.5px;font-weight:700;color:var(--brass)}
+.tech>summary::-webkit-details-marker{display:none}
+.tech>summary::before{content:"＋ "}
+.tech[open]>summary::before{content:"－ "}
+.tech .foot{padding-bottom:13px}
+.pager[hidden]{display:none!important}
+.revbtn{width:44px;height:44px}
+.street-seg button{min-height:44px}
+.prow .pv{width:58px}
+@media(max-width:390px){
+  .appbar{gap:9px;padding:10px 12px}
+  .appbar .brand{font-size:16px}
+  .street-seg{gap:5px}
+  .street-seg button{font-size:9.5px;padding:7px 10px}
+  .view{padding-left:14px;padding-right:14px}
+  .acts{padding-left:12px;padding-right:12px}
+  .act .al{font-size:13.5px}
+  .act .asub{font-size:10px}
+  .sit .demo{display:none}
+}
+@media(max-width:440px){
+  /* Phone players tap; keyboard legends only add a faint, unreadable row of chrome. */
+  .hint,.act .k{display:none}
+}
+@media(max-width:350px){
+  #board .pc{width:42px;height:58px}
+  #hero .pc{width:56px;height:76px}
+  .act .asub{display:none}
+}
 </style>
 __SUITDEFS__
 <div class="app">
   <div class="appbar">
     <div class="pager"><button class="revbtn" id="prev" type="button" disabled aria-label="Back to the previous hand" title="Previous hand">&#8249;</button><button class="revbtn" id="fwd" type="button" disabled aria-label="Forward to the next hand" title="Next hand">&#8250;</button></div>
     <div class="brand"><span class="sp">&spades;</span> Hold'em Trainer</div>
-    <span class="vocab" id="vocab" hidden></span>
   </div>
   <div class="views">
   <section class="view on" id="v-train">
     <div class="street-seg" id="cats" role="group" aria-label="Which part to train">
       <button data-c="all" type="button">All</button><button data-c="preflop" type="button">Pre-flop</button><button data-c="flop" type="button">Flop</button><button data-c="turn" type="button">Turn</button><button data-c="river" type="button">River</button>
     </div>
-    <span class="catcount" id="catcount"></span>
-    <div class="bar-top"><i id="prog" style="width:0"></i></div>
+    <div class="session-hud" id="session-hud"><span id="session-kind">Quick session</span><span id="session-counter">Hand <b id="session-step">1</b> of <b id="session-total">10</b></span><span id="session-bonus" hidden>Bonus hand</span><button type="button" class="skip-bonus" id="skip-bonus" hidden>Skip</button></div>
+    <div class="bar-top" id="session-progress" role="progressbar" aria-label="Session progress" aria-valuemin="1" aria-valuemax="10" aria-valuenow="1"><i id="prog" style="width:0"></i></div>
 
-  <div class="card">
-    <div class="sit"><span class="pos" id="pos"></span><span id="sit"></span><span class="demo" id="demotag" hidden>raise demo</span></div>
+  <div class="card" id="play-card" tabindex="-1">
+    <div class="sit"><span class="pos" id="pos"></span><span class="sit-copy"><strong class="sit-main" id="sit"></strong><span class="sit-context" id="sitcontext"></span></span><span class="demo" id="demotag" hidden></span></div>
     <div class="seats" id="seats" hidden></div>
     <div class="felt">
       <div class="cap" id="boardcap">Flop</div>
@@ -786,14 +824,17 @@ __SUITDEFS__
       <div class="hero"><div class="cap" id="herocap">Your hand</div><div class="cards" id="hero"></div></div>
     </div>
     <div class="acts" id="acts"></div>
-    <div class="fb" id="fb">
+    <div class="fb" id="fb" role="dialog" aria-modal="true" aria-labelledby="verdict">
       <div class="grab" aria-hidden="true"></div>
-      <div class="verdict" id="verdict"></div>
-      <div class="unlock" id="unlock" hidden></div>
+      <div class="verdict" id="verdict" aria-live="polite"></div>
+      <div class="unlock" id="unlock" aria-live="polite" hidden></div>
+      <div class="fb-brief"><p class="head" id="head"></p></div>
+      <div class="mix"><h4 id="mixhead"></h4><div id="bars"></div></div>
+      <details class="learn" id="learn">
+        <summary id="learn-summary">Why the stronger play works</summary>
       <div class="why">
         <p class="read" id="read"></p>
         <span class="reason" id="reason"></span>
-        <p class="head" id="head"></p>
         <details class="analytics" id="analytics" hidden>
           <summary class="analytics-sum" id="analytics-sum"></summary>
           <div class="factors" id="factors"></div>
@@ -802,14 +843,28 @@ __SUITDEFS__
         <p class="cost" id="cost" hidden></p>
         <ul class="det" id="det"></ul>
       </div>
-      <div class="mix"><h4 id="mixhead"></h4><div id="bars"></div></div>
+      </details>
       <details class="compare" id="compare" hidden>
         <summary><span>&#8646;</span> A similar hand, the opposite play</summary>
         <div class="compare-body" id="compare-body"></div>
       </details>
-      <button class="next" id="next">Next hand &nbsp;&#8629;</button>
+      <div class="fb-actions"><button class="coach-open" id="coach-open" type="button">Ask coach</button><button class="next" id="next">Next hand &nbsp;&#8629;</button></div>
     </div>
   </div>
+  <section class="session-end" id="session-end" tabindex="-1" aria-live="polite" hidden>
+    <h2>Session complete</h2>
+    <p id="session-summary">Ten decisions. One clearer read of your game.</p>
+    <div class="session-score">
+      <div><b class="cSolid" id="session-solid">0</b><span>Strong</span></div>
+      <div><b class="cOk" id="session-ok">0</b><span>Playable</span></div>
+      <div><b class="cLeak" id="session-leak">0</b><span>Leaks</span></div>
+    </div>
+    <div class="session-end-actions"><button id="retry-leaks" type="button">Retry leaks</button><button class="primary" id="new-session" type="button">New session</button></div>
+  </section>
+  <details class="train-primer">
+    <summary>New to poker? Read the 30-second primer</summary>
+    <p>You get two private cards and share up to five board cards. Make the best five-card hand you can. Check passes, Bet puts chips in, Call matches a bet, Raise increases it, and Fold gives up the hand. Acting last gives you more information.</p>
+  </details>
 
   <details class="coach" id="coach">
     <summary>💬 Ask a coach about this hand<span class="byok">your API key</span></summary>
@@ -843,15 +898,17 @@ __SUITDEFS__
 
   <section class="view" id="v-progress">
     <div class="phead"><div class="ptitle">Progress</div></div>
-    <div class="big-stat"><b class="acc" id="acc">—</b><span>overall accuracy</span></div>
+    <div class="big-stat"><b class="acc" id="acc">—</b><span>decision quality</span></div>
+    <p class="progress-note" id="progress-note">Play five hands to start building a reliable read.</p>
     <div class="statrow">
       <div class="stat"><b id="n">0</b><span>Played</span></div>
-      <div class="stat"><b class="cSolid" id="solid">0</b><span>Solid</span></div>
-      <div class="stat"><b class="cOk" id="ok">0</b><span>OK</span></div>
-      <div class="stat"><b class="cLeak" id="leak">0</b><span>Leak</span></div>
+      <div class="stat"><b class="cSolid" id="solid">0</b><span>Strong</span></div>
+      <div class="stat"><b class="cOk" id="ok">0</b><span>Playable</span></div>
+      <div class="stat"><b class="cLeak" id="leak">0</b><span>Leaks</span></div>
     </div>
     <div class="prow-h">Mastery by street</div>
     <div id="mastery"></div>
+    <div class="terms-progress">Terms learned: <b id="terms-learned">0 / 17</b></div>
   </section>
 
   <section class="view" id="v-settings">
@@ -878,16 +935,19 @@ __SUITDEFS__
         starts in plain words and <b>teaches you the poker terms as you play them well</b>.</p>
     </details>
     <div class="s-sec">About</div>
+    <details class="tech">
+      <summary>Solver and data details</summary>
     <div class="foot">
     Real solver output — pack <code>__VERSION__</code>, <b>__RECORDS__</b> signed records, build <code>__COMMIT__</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
     <span class="demo">Turn / river</span> spots are now full-range solver output too, but
     <b>unconditioned</b> (ranges are card-removal only, not filtered by a prior check/check line),
-    and facing-a-bet there is Fold/Call — the raise pass on those streets is the next depth work.
+    with Fold/Call/Raise available on facing-a-bet nodes.
     Pre-flop spots are calibrated ranges (solver-approximate, tuned to standard frequencies).<br>
     Prefer to review the answers at a glance? See the <a href="preview.html">content gallery</a>.
-  </div>
+    </div>
+    </details>
   <div class="s-sec">Poker terms</div>
   <details class="glossary">
     <summary>Poker terms — tap to learn the lingo</summary>
@@ -939,14 +999,14 @@ __SUITDEFS__
   </div>
   <div class="fb-scrim" id="fb-scrim" hidden></div>
   <div class="hd-scrim" id="hd-scrim" hidden></div>
-  <div class="hd" id="handdetail">
-    <div class="hd-topbar"><button class="hd-back" id="hd-back" type="button">&#8249; Back</button><span class="hd-title">Hand strength &amp; odds</span></div>
+  <div class="hd" id="handdetail" role="dialog" aria-modal="true" aria-labelledby="handdetail-title">
+    <div class="hd-topbar"><button class="hd-back" id="hd-back" type="button">&#8249; Back</button><span class="hd-title" id="handdetail-title">Hand strength &amp; odds</span></div>
     <div class="hd-body" id="hd-body"></div>
   </div>
-  <nav class="tabbar" id="tabbar">
-    <button data-v="train" class="on"><svg class="ti"><use href="#so-spade"/></svg>Train</button>
-    <button data-v="progress"><span class="ti">&#9636;</span>Progress</button>
-    <button data-v="settings"><span class="ti">&#9776;</span>Settings</button>
+  <nav class="tabbar" id="tabbar" aria-label="Primary">
+    <button data-v="train" class="on" type="button"><svg class="ti"><use href="#so-spade"/></svg>Train</button>
+    <button data-v="progress" type="button"><span class="ti">&#9636;</span>Progress</button>
+    <button data-v="settings" type="button"><span class="ti">&#9776;</span>Settings</button>
   </nav>
 </div>
 <script>
@@ -954,7 +1014,6 @@ const Q = __DATA__;
 // Extra spots (from the full packs) used ONLY as "similar hand" contrasts, never in the quiz.
 const CPOOL = __CPOOL__;
 const ALLSPOTS = Q.concat(CPOOL);
-const SUIT = {s:["♠",0],h:["♥",1],d:["♦",1],c:["♣",0]};
 
 // Plain-English hand reader — tells the player WHAT they hold and where they stand
 // (top pair / overpair / a set / just a draw). This is the piece beginners lack:
@@ -1096,12 +1155,12 @@ function standingText(rd){
 const TERMS = {
   poker:{
     pos:{BTN:"BTN",BB:"BB",SB:"SB"},
-    act:{check:"Check",bet:"Bet 66%",fold:"Fold",call:"Call",raise:"Raise 3×"},
+    act:{check:"Check",bet:"Bet",fold:"Fold",call:"Call",raise:"Raise"},
     reason:{value:"Value bet",protection:"Protection",bluff:"Bluff",semi_bluff:"Semi-bluff",
       pot_control:"Pot control",trap:"Trap",realization:"Give up / realize equity",value_call:"Value call",
       bluff_catch:"Bluff-catch",call_odds:"Call on odds",raise_value:"Value raise",raise_bluff:"Bluff raise",
       raise_semibluff:"Semi-bluff raise",fold:"Fold",mixed:"Mixed / close"},
-    ev:"EV",boardcap:{flop:"Flop",turn:"Turn",river:"River"},herocap:"Your hand"},
+    boardcap:{flop:"Flop",turn:"Turn",river:"River"},herocap:"Your hand"},
   plain:{
     pos:{BTN:"You act last",BB:"You act first",SB:"You act first"},
     act:{check:"Check (pass, no bet)",bet:"Bet (put chips in)",fold:"Fold (give up the hand)",
@@ -1114,12 +1173,11 @@ const TERMS = {
       raise_value:"Raise a strong hand to build the pot",raise_bluff:"Raise as a bluff to make them fold",
       raise_semibluff:"Raise a hand that can improve",fold:"Fold — not strong enough to continue",
       mixed:"It's close — any choice is fine"},
-    ev:"profit",
     boardcap:{flop:"The 3 shared cards",turn:"The 4th shared card is out",river:"The last (5th) shared card"},
     herocap:"Your 2 cards (only you can see these)"},
   learning:{
     pos:{BTN:"BTN",BB:"BB",SB:"SB"},
-    act:{check:"Check",bet:"Bet 66%",fold:"Fold",call:"Call",raise:"Raise 3×"},
+    act:{check:"Check",bet:"Bet",fold:"Fold",call:"Call",raise:"Raise"},
     reason:{value:"Value bet — get paid by worse hands",protection:"Protection — charge the hands still chasing a card",
       bluff:"Bluff — make better hands fold",semi_bluff:"Semi-bluff — bet a hand that can still improve",
       pot_control:"Pot control — keep the pot small",trap:"Trap — check a very strong hand to hide it",
@@ -1127,21 +1185,52 @@ const TERMS = {
       bluff_catch:"Bluff-catch — you beat the hands they'd bluff with",call_odds:"Call on odds — the price is right to chase",
       raise_value:"Value raise — build the pot",raise_bluff:"Bluff raise — make them fold",
       raise_semibluff:"Semi-bluff raise — raise a hand that can improve",fold:"Fold — not strong enough",mixed:"Mixed — any is fine"},
-    ev:"EV",boardcap:{flop:"Flop (first 3 shared cards)",turn:"Turn (4th card)",river:"River (5th card)"},
+    boardcap:{flop:"Flop (first 3 shared cards)",turn:"Turn (4th card)",river:"River (5th card)"},
     herocap:"Your hand (your 2 private cards)"}
 };
-let order=[], pos=0, answered=false, cur=null, chosen=null, stats={n:0,solid:0,ok:0,leak:0,street:{}};
+const SESSION_SIZE=10;
+function freshStats(){return {n:0,solid:0,ok:0,leak:0,street:{}};}
+function safeCount(v){return Number.isFinite(v)&&v>=0?Math.floor(v):0;}
+function normalizeStats(x){
+  const out=freshStats();if(!x||typeof x!=="object")return out;
+  ["n","solid","ok","leak"].forEach(k=>out[k]=safeCount(x[k]));
+  // Every recorded decision has exactly one grade. Trust those classified buckets over
+  // a stale/corrupt total so quality never uses phantom hands in its denominator.
+  const classified=out.solid+out.ok+out.leak;out.n=classified;
+  const streets=x.street&&typeof x.street==="object"?x.street:{};
+  let remaining=out.n;
+  ["preflop","flop","turn","river"].forEach(k=>{
+    const s=streets[k];if(!s||typeof s!=="object")return;
+    const n=Math.min(remaining,safeCount(s.n)),hit=Math.min(n,safeCount(s.hit));
+    out.street[k]={n:n,hit:hit};remaining-=n;
+  });
+  return out;
+}
+function loadLifetime(){try{
+  const x=JSON.parse(localStorage.getItem("trainer-progress")||"null");
+  return normalizeStats(x);
+}catch(e){return freshStats();}}
+let order=[], pos=0, answered=false, cur=null, chosen=null, stats=freshStats(), lifetime=loadLifetime();
+let sessionMisses=[];
 // Hand history so you can step BACK and re-read a hand you already answered (with its
-// result), then step forward again. hist = [{qi, pick}] in the order shown; hidx = cursor.
+// result), then step forward again. hist = [{q, pick, step, bonus}]; hidx = cursor.
 let hist=[], hidx=-1;
-function trackStreet(hit){const k=qcat(cur);const s=stats.street[k]||(stats.street[k]={n:0,hit:0});s.n++;if(hit)s.hit++;}
+function trackStreet(bucket,hit){const k=qcat(cur);const s=bucket.street[k]||(bucket.street[k]={n:0,hit:0});s.n++;if(hit)s.hit++;}
+function recordGrade(bucket,tier,hit){
+  bucket.n++;bucket[tier]++;trackStreet(bucket,hit);
+}
+function saveLifetime(){try{localStorage.setItem("trainer-progress",JSON.stringify(lifetime));}catch(e){}}
 let mode=(function(){try{const m=localStorage.getItem("lang");return (m==="poker"||m==="learning"||m==="plain"||m==="progressive")?m:"progressive";}catch(e){return "progressive";}})();
 // Which part to train (pre-flop / flop / turn / river / all).
 let cat=(function(){try{const c=localStorage.getItem("cat");return ["all","preflop","flop","turn","river"].includes(c)?c:"all";}catch(e){return "all";}})();
 // Adaptive mode: each concept shows in plain words until you've EARNED it (played a
 // spot that uses it well); then it graduates to the poker term + its meaning.
-let learned=(function(){try{return new Set(JSON.parse(localStorage.getItem("learned")||"[]"));}catch(e){return new Set();}})();
-const VOCAB_TOTAL=2+Object.keys(TERMS.poker.reason).length;
+const VALID_TERMS=new Set(["positions","streets"].concat(Object.keys(TERMS.poker.reason).map(r=>"reason:"+r)));
+let learned=(function(){try{
+  const raw=JSON.parse(localStorage.getItem("learned")||"[]");
+  return new Set(Array.isArray(raw)?raw.filter(t=>VALID_TERMS.has(t)):[]);
+}catch(e){return new Set();}})();
+const VOCAB_TOTAL=VALID_TERMS.size;
 function eff(term){return mode!=="progressive"?mode:(learned.has(term)?"learning":"plain");}
 function T(){return TERMS[eff("streets")];}
 function posLabel(q){const m=eff("positions");
@@ -1156,8 +1245,22 @@ function actLabel(a){const m=eff("positions");
 // labels like "Check (pass, no bet)" are for the buttons, not for prose).
 const ACT_SHORT={check:"Check",bet:"Bet",fold:"Fold",call:"Call",raise:"Raise"};
 function shortAct(a){return ACT_SHORT[a]||a;}
+function actionPrimary(a){
+  return {fold:"Fold",check:"Check",call:"Call",bet:"Bet",raise:"Raise",
+    open:"Raise","3bet":"3-bet","4bet":"4-bet"}[a]||a;
+}
+function actionSecondary(a){
+  if(a==="fold")return "Give up";
+  if(a==="check")return "Pass";
+  if(a==="call")return "Match the bet";
+  if(a==="open")return "Open the pot";
+  if(a==="3bet"||a==="4bet")return "Re-raise";
+  const sized=cur&&cur.labels&&cur.labels[a]?cur.labels[a].replace(/^(Bet|Raise)\s*/,""):"";
+  if(a==="bet")return sized?"Put chips in · "+sized:"Put chips in";
+  if(a==="raise")return sized?"Bet more · "+sized:"Bet more";
+  return "";
+}
 function fmtEv(v){return (v>=0?"+":"")+v;}
-function reasonLabel(r){return (TERMS[eff("reason:"+r)].reason[r]||r);}
 // Beginner "why": explains the LOGIC of the play in plain words, not just names the
 // action. Replaces the generic per-reason phrase for plain mode; Learning keeps the
 // term-tagged phrase, Pro keeps the solver's baked headline.
@@ -1244,7 +1347,7 @@ function plainHead(q){
       return "The board is coordinated — a straight or flush is very possible — so your made hand is vulnerable. Betting here is thin: you often get called by the hands that beat you and fold out the ones you beat.";
     }
     let s="The board is coordinated — a straight or flush is very possible — so your hand is more of a bluff-catcher than a monster. Check to keep the pot small and take a cheap showdown rather than bet into the hands that beat you.";
-    // vs_check only — do not key off !acts_first (that also matches facing-a-bet).
+    // Checked-to decisions are distinct from facing-a-bet decisions.
     if((q.node||"").indexOf("_vs_check")>=0)s+=" It was checked to you, but on a board this connected a check doesn't rule out a straight — strong hands often check to trap — so betting mostly folds out the hands you beat and gets called by the ones that beat you.";
     return s;}
   if(q.street==="river"&&RIVER_PLAIN[q.reason])return RIVER_PLAIN[q.reason];
@@ -1289,13 +1392,15 @@ function situation(q){
     if(first) return "It's your turn, and you go first — you decide before your opponent does.";
     if(vscheck) return "Your opponent passed (checked) to you. It's your turn.";
     return q.actions.indexOf("raise")>=0
-      ? "Your opponent just put chips in (bet). It's on you — match it, put in even more, or give up?"
-      : "Your opponent just put chips in (bet). It's on you — match it, or give up?";
+      ? "Your opponent bet "+(q.bet_pct||66)+"% of the pot. It's on you — match it, put in even more, or give up?"
+      : "Your opponent bet "+(q.bet_pct||66)+"% of the pot. It's on you — match it, or give up?";
   }
   const pre=q.street==="turn"?"On the turn, ":q.street==="river"?"On the river, ":"On the flop, ";
   // vs_bet: an OOP player checked and now faces a bet; an IP player faces an opponent
   // lead — not their own c-bet. (Same distinction the pack server already makes.)
-  const betRole=q.is_oop?" — you checked and now face a bet.":" — they led into you.";
+  const betRole=q.is_oop
+    ?" — you checked and now face a "+(q.bet_pct||66)+"% pot bet."
+    :" — they led into you for "+(q.bet_pct||66)+"% of the pot.";
   if(sm==="learning"){
     // Seat role from is_oop (SB-vs-BB flips BB to IP); node suffix carries the line.
     const who="you're the "+q.acting_player+" (you act "+(q.is_oop?"first":"last")+")";
@@ -1308,11 +1413,14 @@ function situation(q){
 
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 const SYM={h:"heart",d:"diam",c:"club",s:"spade"};
+const SUIT_NAME={h:"hearts",d:"diamonds",c:"clubs",s:"spades"};
+const RANK_NAME={A:"Ace",K:"King",Q:"Queen",J:"Jack",T:"Ten","9":"Nine","8":"Eight","7":"Seven","6":"Six","5":"Five","4":"Four","3":"Three","2":"Two"};
 function svgUse(cls,id){const NS="http://www.w3.org/2000/svg";
   const svg=document.createElementNS(NS,"svg");svg.setAttribute("class",cls);
   const u=document.createElementNS(NS,"use");u.setAttribute("href","#"+id);svg.appendChild(u);return svg;}
 function card(t){const r=t[0],s=(t[1]||"").toLowerCase(),sy=SYM[s]||"spade";
   const e=document.createElement("div");e.className="pc pc-"+sy;
+  e.setAttribute("role","img");e.setAttribute("aria-label",(RANK_NAME[r]||r)+" of "+(SUIT_NAME[s]||"spades"));
   const ix=document.createElement("span");ix.className="ix";
   const b=document.createElement("b");b.textContent=(r==="T"?"10":r);ix.appendChild(b);
   ix.appendChild(svgUse("mini","so-"+sy));
@@ -1335,40 +1443,57 @@ function pfSituation(q){
   if(q.ctx==="vs3bet")return "You opened from "+pfPos(q.pos)+", and "+pfPos(q.tbettor)+" 3-bets. Back on you.";
   return "You're on "+pfPos(q.pos)+". It folds to you.";   // rfi
 }
+function pfHeadline(q){
+  if(q.ctx==="def")return (q.opener||"Opponent")+" opens";
+  if(q.ctx==="vs3bet")return (q.tbettor||"Opponent")+" 3-bets";
+  return "Action folds to you";
+}
+function addActionButton(box,a,i){
+  const b=document.createElement("button");b.type="button";b.className="act";b.dataset.a=a;
+  // Preflop buttons share the same labels as feedback (Open 2.5bb / 3-bet / …).
+  const preflop=!!(cur&&cur.preflop);
+  const l=document.createElement("span");l.className="al";l.textContent=preflop?pfActLabel(a):actionPrimary(a);
+  const sub=document.createElement("span");sub.className="asub";sub.textContent=preflop?"":actionSecondary(a);
+  const k=document.createElement("span");k.className="k";k.textContent=String(i+1);
+  b.appendChild(l);if(sub.textContent)b.appendChild(sub);b.appendChild(k);
+  b.onclick=()=>answer(a);box.appendChild(b);
+}
+function shownStep(){const e=hist[hidx];return e&&Number.isInteger(e.step)?e.step:pos;}
 function renderPreflop(q){
   const posEl=document.getElementById("pos");posEl.textContent=q.pos;posEl.className="pos "+q.pos;
-  document.getElementById("sit").textContent=pfSituation(q);
+  document.getElementById("sit").textContent=pfHeadline(q);
+  document.getElementById("sitcontext").textContent="You are "+q.pos+" · Preflop";
   const bd=document.getElementById("demotag");bd.hidden=false;bd.textContent="Preflop";
   document.getElementById("boardcap").style.display="none";document.getElementById("board").style.display="none";
   document.getElementById("herocap").textContent="Your hand";
   render(q.hand,document.getElementById("hero"));
-  const box=document.getElementById("acts");box.innerHTML="";
-  q.actions.forEach((a,i)=>{const b=document.createElement("button");b.className="act";b.dataset.a=a;
-    const l=document.createElement("span");l.textContent=pfActLabel(a);const k=document.createElement("span");k.className="k";k.textContent=String(i+1);
-    b.appendChild(l);b.appendChild(k);b.onclick=()=>answer(a);box.appendChild(b);});
+  const box=document.getElementById("acts");box.innerHTML="";box.className="acts n-"+q.actions.length;
+  q.actions.forEach((a,i)=>addActionButton(box,a,i));
   setHint(q.actions.length);renderSeats(q);
-  document.getElementById("prog").style.width=(100*pos/Math.max(1,order.length))+"%";
+  document.getElementById("prog").style.width=(100*(shownStep()+1)/Math.max(1,order.length))+"%";
+}
+function decisionHeadline(q){
+  const villain=q.villain||"Opponent",node=q.node||"";
+  if(node.endsWith("_vs_check"))return villain+" checks";
+  if(node.endsWith("_vs_bet"))return villain+" bets "+(q.bet_pct||66)+"% pot";
+  return "Your action";
 }
 function renderQuestion(q){
   if(q.preflop)return renderPreflop(q);
   document.getElementById("boardcap").style.display="";document.getElementById("board").style.display="";
   const posEl=document.getElementById("pos");posEl.textContent=posLabel(q);posEl.className="pos "+(q.is_oop?"oop":"ip");
-  document.getElementById("sit").textContent=situation(q);
+  document.getElementById("sit").textContent=decisionHeadline(q);
+  // Position is already the coloured lead label; keep the supporting line compact on phones.
+  document.getElementById("sitcontext").textContent="You are "+q.acting_player+" · "+cap1(q.street);
   const bd=document.getElementById("demotag");bd.hidden=!q.badge;bd.textContent=q.badge||"";
   document.getElementById("boardcap").textContent=(T().boardcap&&T().boardcap[q.street])||"Flop";
   document.getElementById("herocap").textContent=T().herocap;
   render(q.board,document.getElementById("board"));
   render(q.hero,document.getElementById("hero"));
-  const box=document.getElementById("acts");box.innerHTML="";
-  q.actions.forEach((a,i)=>{
-    const b=document.createElement("button");b.className="act";b.dataset.a=a;
-    const lab=document.createElement("span");lab.textContent=actLabel(a);
-    const k=document.createElement("span");k.className="k";k.textContent=String(i+1);
-    b.appendChild(lab);b.appendChild(k);
-    b.onclick=()=>answer(a);box.appendChild(b);
-  });
+  const box=document.getElementById("acts");box.innerHTML="";box.className="acts n-"+q.actions.length;
+  q.actions.forEach((a,i)=>addActionButton(box,a,i));
   setHint(q.actions.length);renderSeats(q);
-  document.getElementById("prog").style.width=(100*pos/Math.max(1,order.length))+"%";
+  document.getElementById("prog").style.width=(100*(shownStep()+1)/Math.max(1,order.length))+"%";
 }
 function setHint(n){const el=document.getElementById("hint");if(!el)return;
   let ks="";for(let i=1;i<=n;i++)ks+="<kbd>"+i+"</kbd>";
@@ -1380,8 +1505,7 @@ function renderSeats(q){
   el.innerHTML="";el.hidden=false;
   el.appendChild(q.preflop?preflopRing(q):ringTable(q));
 }
-const POS_PLAIN={BTN:"on the button",BB:"in the big blind",SB:"in the small blind",CO:"in the cutoff",HJ:"in the hijack",UTG:"first to act"};
-// full 6-max ring so position is spatial: clockwise seating + fixed screen slots.
+// Seat helpers shared by the postflop heads-up duel and the preflop 6-max ring.
 const RING_ORDER=["BTN","SB","BB","UTG","HJ","CO"];
 const RING_SLOTS=[[50,85,1],[15,67,1],[15,33,0],[50,15,0],[85,33,0],[85,67,1]]; // x%,y%,labelAbove
 const RING_SHORT={BTN:"the button",BB:"big blind",SB:"small blind",CO:"cutoff",HJ:"hijack",UTG:"under the gun"};
@@ -1391,28 +1515,18 @@ function ringTable(q){
   const node=q.node||"";
   let oppAct="",ok="wait";
   if(node.endsWith("_vs_check")){oppAct="checked";ok="check";}
-  else if(node.endsWith("_vs_bet")){oppAct="bet";ok="bet";}
-  const start=Math.max(0,RING_ORDER.indexOf(hero));
-  const seats=[];for(var i=0;i<6;i++)seats.push(RING_ORDER[(start+i)%6]);
+  else if(node.endsWith("_vs_bet")){oppAct="bet "+(q.bet_pct||66)+"%";ok="bet";}
   const D='<span class="dbtn" title="dealer button">D</span>';
-  let html="";
-  seats.forEach(function(pos,i){
-    const x=RING_SLOTS[i][0],y=RING_SLOTS[i][1],above=RING_SLOTS[i][2];
-    const role=pos===hero?"you":pos===villain?"opp":"fold";
-    const btn=(pos==="BTN")?D:"";
-    let inner='<div class="av">'+btn+'</div>';
-    if(role==="you")inner+='<div class="nm">You</div><div class="ps">'+(RING_SHORT[pos]||pos)+'</div><div class="turn">&#9679; your move</div>';
-    else if(role==="opp")inner+='<div class="nm">Opponent</div><div class="ps">'+(RING_SHORT[pos]||pos)+'</div>';
-    else inner+='<div class="nm">'+pos+'</div>';
-    html+='<div class="tvs '+role+(above?" ab":"")+'" style="left:'+x+'%;top:'+y+'%">'+inner+'</div>';
-  });
+  const heroBtn=hero==="BTN"?D:"",villainBtn=villain==="BTN"?D:"";
+  let html='<div class="tvs opp"><div class="av">'+villainBtn+'</div><div class="nm">Opponent</div><div class="ps">'+
+    (RING_SHORT[villain]||villain)+'</div></div>';
+  html+='<div class="tvs you ab"><div class="av">'+heroBtn+'</div><div class="nm">You</div><div class="ps">'+
+    (RING_SHORT[hero]||hero)+'</div><div class="turn">&#9679; your move</div></div>';
   html+='<div class="tvmid">'+(ok!=="wait"?'<span class="oppchip a-'+ok+'">'+oppAct+'</span>':'')+'<span class="potlab">pot</span></div>';
-  const w=document.createElement("div");w.className="tv";w.innerHTML=html;return w;
+  const w=document.createElement("div");w.className="tv duel";w.innerHTML=html;return w;
 }
 function preflopRing(q){
-  // same 6-max ring as postflop, so preflop position is spatial too: you + the raiser
-  // highlighted, the button on its seat, everyone else dimmed. The situation line above
-  // spells out the action ("the button opens, it's on you"); the chip echoes it.
+  // 6-max ring: you + the raiser highlighted, the button on its seat, everyone else dimmed.
   const hero=q.pos, opener=q.opener||null, tb=q.tbettor||null;
   const start=Math.max(0,RING_ORDER.indexOf(hero));
   const seats=[];for(var i=0;i<6;i++)seats.push(RING_ORDER[(start+i)%6]);
@@ -1435,21 +1549,55 @@ function preflopRing(q){
 }
 function renderHand(){                                  // draw the current history entry
   const e=hist[hidx];answered=false;chosen=null;cur=e.q;
+  document.getElementById("play-card").hidden=false;
+  document.getElementById("session-end").hidden=true;
+  document.getElementById("session-hud").hidden=false;
+  document.getElementById("session-progress").hidden=false;
+  const step=Math.min(shownStep()+1,order.length),bonus=!!e.bonus;
+  document.getElementById("session-kind").textContent=bonus?"Compare practice":"Quick session";
+  document.getElementById("session-counter").hidden=bonus;
+  document.getElementById("session-bonus").hidden=!bonus;
+  document.getElementById("skip-bonus").hidden=!(bonus&&e.pick==null);
+  document.getElementById("session-step").textContent=String(step);
+  document.getElementById("session-total").textContent=String(order.length);
+  const sessionProgress=document.getElementById("session-progress");
+  sessionProgress.setAttribute("aria-valuemax",String(order.length));
+  sessionProgress.setAttribute("aria-valuenow",String(step));
+  document.getElementById("hint").hidden=false;
   document.getElementById("fb").className="fb";sheetOpen(false);
+  document.getElementById("learn").open=false;
+  document.getElementById("coach").hidden=true;
   renderQuestion(cur);coachReset();
   if(e.pick!=null)replayAnswer(e.pick);                 // already answered -> show its result again
   updateNav();
 }
-function newHand(){hist.push({q:Q[order[pos]],pick:null});hidx=hist.length-1;renderHand();}
-function replayAnswer(a){answered=true;chosen=a;renderFeedback(cur,a,[]);}  // review: no stats change
+function newHand(){hist.push({q:Q[order[pos]],pick:null,step:pos,bonus:false});hidx=hist.length-1;renderHand();}
+function replayAnswer(a){answered=true;chosen=a;renderFeedback(cur,a,[]);
+  document.getElementById("coach").hidden=false;                  // review: re-show the coach panel, same as a live answer
+  document.getElementById("next").focus({preventScroll:true});}  // review: no stats change
 function prev(){if(hidx>0){hidx--;renderHand();}}
 // Forward is allowed when reviewing an earlier hand, or on the newest hand once it's answered
 // (so you can't skip a hand without answering it).
-function canFwd(){return hidx<hist.length-1||(hidx===hist.length-1&&answered);}
+function canFwd(){
+  if(hidx<hist.length-1)return true;
+  if(hidx===hist.length-1&&answered)return true;
+  // Unanswered compare-practice hands are optional — Forward skips them.
+  return !!(hidx===hist.length-1&&hist[hidx]&&hist[hidx].bonus&&!answered);
+}
 function updateNav(){const p=document.getElementById("prev"),f=document.getElementById("fwd");
   if(p)p.disabled=hidx<=0;if(f)f.disabled=!canFwd();}
+function skipBonus(){
+  const e=hist[hidx];
+  if(!e||!e.bonus||e.pick!=null)return;
+  hist.splice(hidx,1);
+  if(hidx<hist.length){
+    renderHand();document.getElementById("play-card").focus({preventScroll:true});return;}
+  hidx=hist.length-1;
+  if(pos>=order.length-1){showSessionEnd();return;}
+  pos++;newHand();document.getElementById("play-card").focus({preventScroll:true});
+}
 
-function renderPreflopFeedback(q,a){
+function renderPreflopFeedback(q,a,gained){
   const correct=a===q.answer, closeOk=q.mixed&&a===q.alt;
   document.querySelectorAll("#acts .act").forEach(b=>{b.disabled=true;b.className="act";
     if(b.dataset.a===q.answer)b.classList.add("g-best","chosen");
@@ -1462,12 +1610,19 @@ function renderPreflopFeedback(q,a){
   else if(closeOk){v.className="verdict v-good";
     v.textContent="≈ Close — "+pfActLabel(a).toLowerCase()+" is fine; "+pfActLabel(q.answer).toLowerCase()+" is the small favourite.";}
   else{v.className="verdict v-major_error";v.textContent="✗ Not quite — the play is "+pfActLabel(q.answer)+".";}
+  document.getElementById("learn-summary").textContent=(correct||closeOk)
+    ?"Why "+pfActLabel(a)+" works here"
+    :"Why "+pfActLabel(q.answer)+" is stronger";
   const rd=document.getElementById("read");rd.hidden=false;rd.innerHTML="";rd.appendChild(document.createTextNode("You held "));
   const bc=document.createElement("b");bc.textContent=q.read;rd.appendChild(bc);rd.appendChild(document.createTextNode("."));
   document.getElementById("reason").style.display="none";
   document.getElementById("head").textContent=q.why;
   document.getElementById("cost").hidden=true;document.getElementById("det").innerHTML="";
-  document.getElementById("unlock").hidden=true;
+  const ut=document.getElementById("unlock");
+  if(gained&&gained.length){ut.hidden=false;ut.innerHTML="";
+    const d=document.createElement("div");d.className="ul-row";
+    d.textContent="🔓 Position language learned — see it in Progress.";ut.appendChild(d);
+  }else{ut.hidden=true;}
   const ruleEl=document.getElementById("rule");ruleEl.hidden=false;ruleEl.innerHTML="";
   const lb=document.createElement("b");lb.textContent="Rule of thumb";ruleEl.appendChild(lb);ruleEl.appendChild(document.createTextNode(q.rule));
   document.querySelector(".mix").style.display="none";
@@ -1625,11 +1780,16 @@ function renderHandDetail(q){
     p.textContent=cap1(d.threats.join("; "))+".";w.appendChild(p);}
   const st=sec("Where you stand");const p=document.createElement("p");p.className="hd-now";p.textContent=d.standing;st.appendChild(p);
 }
+let handDetailReturn=null;
 function openHandDetail(){if(!cur||cur.preflop||!(cur.board&&cur.board.length>=3))return;
+  handDetailReturn=document.activeElement;
   renderHandDetail(cur);document.getElementById("handdetail").className="hd on";
-  var s=document.getElementById("hd-scrim");if(s)s.hidden=false;}
+  var s=document.getElementById("hd-scrim");if(s)s.hidden=false;
+  document.getElementById("hd-back").focus({preventScroll:true});}
 function closeHandDetail(){document.getElementById("handdetail").className="hd";
-  var s=document.getElementById("hd-scrim");if(s)s.hidden=true;}
+  var s=document.getElementById("hd-scrim");if(s)s.hidden=true;
+  if(handDetailReturn&&document.contains(handDetailReturn))handDetailReturn.focus({preventScroll:true});
+  handDetailReturn=null;}
 // ===== "A similar hand plays the opposite way" — the same hand strength can call for
 // opposite plays (bet-for-value vs check-to-trap, bluff vs give-up, call vs fold, ...). Each
 // reason IS the rule of thumb, so a confusing twin = same hand tier + the paired opposite
@@ -1731,13 +1891,20 @@ function renderContrast(q){
   why.innerHTML="<b>What flips it:</b> "+contrastWhy(q,rd,c.q,c.rd);
   const go=document.createElement("button");go.type="button";go.className="cmp-go";go.textContent="Play this hand →";
   // insert right AFTER the current hand (not at the end) so Back returns to this one even
-  // when the contrast is opened while reviewing an earlier hand.
-  go.onclick=function(){hist.splice(hidx+1,0,{q:c.q,pick:null});hidx++;renderHand();};
+  // when the contrast is opened while reviewing an earlier hand. Re-clicks reuse an
+  // already-queued copy of the same contrast instead of stacking duplicates.
+  go.onclick=function(){
+    if(hist[hidx]&&hist[hidx].bonus&&hist[hidx].q===c.q)return;
+    const queued=hist[hidx+1];
+    if(queued&&queued.bonus&&queued.q===c.q){hidx++;renderHand();
+      document.getElementById("play-card").focus({preventScroll:true});return;}
+    hist.splice(hidx+1,0,{q:c.q,pick:null,step:shownStep(),bonus:true});hidx++;renderHand();
+    document.getElementById("play-card").focus({preventScroll:true});};
   body.appendChild(l1);body.appendChild(l2);body.appendChild(why);body.appendChild(go);
 }
 function renderFeedback(q,a,gained){
   renderContrast(q);renderFactors(q);
-  if(q.preflop)return renderPreflopFeedback(q,a);
+  if(q.preflop)return renderPreflopFeedback(q,a,gained);
   document.querySelector(".mix").style.display="";
   document.querySelectorAll("#acts .act").forEach(b=>{
     b.disabled=true;const ga=q.grades[b.dataset.a];b.className="act g-"+ga;
@@ -1745,6 +1912,9 @@ function renderFeedback(q,a,gained){
   });
   const g=q.grades[a],pref=q.preferred;
   const you=shortAct(a),best=shortAct(pref);
+  document.getElementById("learn-summary").textContent=(g==="best"||g==="good")
+    ?"Why "+actionPrimary(a)+" works here"
+    :"Why "+actionPrimary(pref)+" is stronger";
   // Break down the analytics by default on a MISTAKE; keep it tidy (collapsed) when you nailed it.
   const aw=document.getElementById("analytics");if(aw&&!aw.hidden)aw.open=!(g==="best"||g==="good");
   const v=document.getElementById("verdict");v.className="verdict v-"+g;
@@ -1754,11 +1924,11 @@ function renderFeedback(q,a,gained){
   // Key off the GRADE, not a===pref: a co-best action (graded "best" but not the
   // single top-EV one) must still read as correct, not as a leak.
   let vmsg;
-  if(g==="best")vmsg=(a===pref)?"✓ "+you+" — the best play here.":"✓ "+you+" — also a top play here.";
-  else if(q.mixed&&(g==="good"||g==="acceptable"))vmsg="✓ "+you+" — close enough; any play is fine here.";
-  else if(g==="good")vmsg="✓ "+you+" works — "+best+" is only a touch better.";
-  else if(g==="acceptable")vmsg="~ "+you+" is OK, but "+best+" is the better play.";
-  else vmsg="✗ You picked "+you+" — "+(g==="major_error"?"a big mistake":"a costly leak")+". The play is "+best+".";
+  if(g==="best")vmsg=(a===pref)?"✓ "+you+" is strongest here.":"✓ "+you+" is also a top play here.";
+  else if(q.mixed&&(g==="good"||g==="acceptable"))vmsg="✓ Your "+you+" is strong — this is a genuinely mixed spot.";
+  else if(g==="good")vmsg="✓ Your "+you+" is strong. "+best+" is only marginally stronger.";
+  else if(g==="acceptable")vmsg="~ Your "+you+" is playable. "+best+" is strongest over time.";
+  else vmsg="✗ Your "+you+" is "+(g==="major_error"?"a major leak. ":"costly. ")+best+" is strongest here.";
   v.appendChild(document.createTextNode(vmsg));
   // Ground the explanation in the actual holding: "You held a pair of Jacks — the
   // Ace on the board outranks it." Beginners can't read their own hand yet, so this
@@ -1823,7 +1993,9 @@ function renderFeedback(q,a,gained){
     const li=document.createElement("li");li.textContent=clean;dl.appendChild(li);});}
   const ut=document.getElementById("unlock");
   if(gained&&gained.length){ut.hidden=false;ut.innerHTML="";
-    gained.forEach(t=>{const d=document.createElement("div");d.className="ul-row";d.textContent="🔓 New term learned — "+unlockText(t);ut.appendChild(d);});
+    const d=document.createElement("div");d.className="ul-row";
+    d.textContent="🔓 "+gained.length+" new term"+(gained.length===1?"":"s")+" learned — see them in Progress.";
+    ut.appendChild(d);
   }else{ut.hidden=true;}
   // The solver's mixed-strategy FREQUENCY (e.g. "Raise 14%") is a game-theory
   // balancing concept, and it can flatly contradict the grade ("14% · major error")
@@ -1833,12 +2005,12 @@ function renderFeedback(q,a,gained){
   // question a learner is actually asking.
   const payoffView=(mode!=="poker");
   document.getElementById("mixhead").textContent=payoffView
-    ?"What each play is worth"
+    ?"How the choices compare"
     :"Solver mix — how often the solver plays each action (★ = best EV), and its EV";
   const bars=document.getElementById("bars");bars.innerHTML="";
   const maxf=Math.max(1,...q.actions.map(x=>q.freq[x]));
   const GW={best:100,good:82,acceptable:58,costly:32,major_error:12};   // bar = how good
-  const VW={best:"Best",good:"Fine",acceptable:"Playable",costly:"Loses money",major_error:"Big mistake"};
+  const VW={best:"Strongest",good:"Strong",acceptable:"Playable",costly:"Costly",major_error:"Major leak"};
   const ordered=payoffView?q.actions.slice().sort((x,y)=>q.ev[y]-q.ev[x])
                           :q.actions.slice().sort((x,y)=>q.freq[y]-q.freq[x]);
   ordered.forEach(x=>{
@@ -1847,7 +2019,7 @@ function renderFeedback(q,a,gained){
     if(rec)row.classList.add("best-row");
     if(you)row.classList.add("you-row");
     const rlab=document.createElement("div");rlab.className="rlab";
-    const nm=document.createElement("span");nm.className="nm";nm.textContent=actLabel(x)+" ";
+    const nm=document.createElement("span");nm.className="nm";nm.textContent=(payoffView?actionPrimary(x):actLabel(x))+" ";
     if(rec){const st=document.createElement("span");st.className="star";st.textContent="★";st.title="Best EV (recommended)";nm.appendChild(st);nm.appendChild(document.createTextNode(" "));}
     if(you){const yp=document.createElement("span");yp.className="you";yp.textContent="YOUR PICK";nm.appendChild(yp);}
     const num=document.createElement("span");num.className="num";
@@ -1875,26 +2047,40 @@ function renderFeedback(q,a,gained){
   });
   document.getElementById("fb").className="fb on";sheetOpen(true);
 }
+function qualityScore(s){return s.n?Math.round(100*(s.solid+0.6*s.ok)/s.n):0;}
+function syncStatsUI(){
+  document.getElementById("n").textContent=lifetime.n;
+  document.getElementById("solid").textContent=lifetime.solid;
+  document.getElementById("ok").textContent=lifetime.ok;
+  document.getElementById("leak").textContent=lifetime.leak;
+  document.getElementById("acc").textContent=lifetime.n<5?"—":qualityScore(lifetime)+"%";
+  document.getElementById("progress-note").textContent=lifetime.n<5
+    ?"Play "+(5-lifetime.n)+" more hand"+(5-lifetime.n===1?"":"s")+" to start building a reliable read."
+    :"Weighted toward strong decisions · "+lifetime.n+" hands played.";
+}
 function answer(a){
   if(answered)return;answered=true;chosen=a;if(hist[hidx])hist[hidx].pick=a;updateNav();
+  document.getElementById("coach").hidden=false;
+  const inSession=!(hist[hidx]&&hist[hidx].bonus);
   if(cur.preflop){
     const correct=a===cur.answer, closeOk=!correct&&cur.mixed&&a===cur.alt;
-    stats.n++; if(correct||closeOk)stats.solid++; else stats.leak++;
-    trackStreet(correct||closeOk);
-    document.getElementById("n").textContent=stats.n;document.getElementById("solid").textContent=stats.solid;
-    document.getElementById("ok").textContent=stats.ok;document.getElementById("leak").textContent=stats.leak;
-    document.getElementById("acc").textContent=Math.round(100*(stats.solid+stats.ok)/stats.n)+"%";
-    renderFeedback(cur,a,[]);
+    const hit=correct||closeOk,tier=hit?"solid":"leak";
+    if(inSession)recordGrade(stats,tier,hit);
+    recordGrade(lifetime,tier,hit);saveLifetime();
+    if(inSession&&!hit)sessionMisses.push(cur);
+    syncStatsUI();
+    const gained=hit?tryUnlockPreflop():[];
+    renderFeedback(cur,a,gained);
     document.getElementById("next").focus({preventScroll:true});
     return;
   }
   const g=cur.grades[a];
-  stats.n++;
-  if(g==="best"||g==="good")stats.solid++;else if(g==="acceptable")stats.ok++;else stats.leak++;
-  trackStreet(g!=="costly"&&g!=="major_error");
-  document.getElementById("n").textContent=stats.n;document.getElementById("solid").textContent=stats.solid;
-  document.getElementById("ok").textContent=stats.ok;document.getElementById("leak").textContent=stats.leak;
-  document.getElementById("acc").textContent=Math.round(100*(stats.solid+stats.ok)/stats.n)+"%";
+  const tier=(g==="best"||g==="good")?"solid":g==="acceptable"?"ok":"leak";
+  const hit=tier!=="leak";
+  if(inSession)recordGrade(stats,tier,hit);
+  recordGrade(lifetime,tier,hit);saveLifetime();
+  if(inSession&&!hit)sessionMisses.push(cur);
+  syncStatsUI();
   const gained=tryUnlock(cur,g);
   // Don't re-render the question on unlock — swapping the button labels mid-answer
   // shifts the layout under the user's cursor. The feedback already reflects the new
@@ -1903,9 +2089,48 @@ function answer(a){
   // preventScroll: focusing Next must not yank the viewport to the bottom of the card.
   document.getElementById("next").focus({preventScroll:true});
 }
+function showSessionEnd(){
+  closeSheet(false);
+  document.getElementById("play-card").hidden=true;
+  document.getElementById("session-end").hidden=false;
+  document.getElementById("session-hud").hidden=true;
+  document.getElementById("session-progress").hidden=true;
+  document.getElementById("skip-bonus").hidden=true;
+  document.getElementById("coach").hidden=true;
+  document.getElementById("hint").hidden=true;
+  document.getElementById("fwd").disabled=true;
+  document.getElementById("prev").disabled=true;
+  // Freeze street filters so changing All/Flop/… can't wipe the completion summary / leak list.
+  document.querySelectorAll("#cats button").forEach(b=>{b.disabled=true;});
+  document.getElementById("session-solid").textContent=stats.solid;
+  document.getElementById("session-ok").textContent=stats.ok;
+  document.getElementById("session-leak").textContent=stats.leak;
+  const retry=document.getElementById("retry-leaks");retry.disabled=!sessionMisses.length;
+  document.getElementById("session-summary").textContent=sessionMisses.length
+    ?sessionMisses.length+" decision"+(sessionMisses.length===1?" needs":"s need")+" another look."
+    :"Clean session — every decision was strong or playable.";
+  window.scrollTo(0,0);
+  document.getElementById("session-end").focus({preventScroll:true});
+}
+function resetSession(){
+  stats=freshStats();sessionMisses=[];applyCatUI();buildOrder();newHand();
+  document.getElementById("play-card").focus({preventScroll:true});
+}
+function retryLeakSession(){
+  if(!sessionMisses.length)return;
+  const ids=sessionMisses.map(q=>Q.indexOf(q)).filter(i=>i>=0);
+  stats=freshStats();sessionMisses=[];order=shuffle(ids);pos=0;hist=[];hidx=-1;
+  applyCatUI();newHand();
+  document.getElementById("play-card").focus({preventScroll:true});
+}
 function next(){
-  if(hidx<hist.length-1){hidx++;renderHand();}          // stepping forward through review
-  else{pos=(pos+1)%order.length;if(pos===0)order=shuffle(order.slice());newHand();}
+  // Unanswered compare-practice is optional — Forward and Next both dismiss it,
+  // including when it sits mid-history after a review insert.
+  if(hist[hidx]&&hist[hidx].bonus&&!answered){skipBonus();return;}
+  if(hidx<hist.length-1){hidx++;renderHand();
+    if(!answered)document.getElementById("play-card").focus({preventScroll:true});return;}    // stepping forward through review
+  if(pos>=order.length-1){showSessionEnd();return;}
+  pos++;newHand();document.getElementById("play-card").focus({preventScroll:true});
 }
 // ---- result as a slide-up bottom sheet: verdict + why rise over the hand; swipe down,
 // tap the dimmer, or hit Next to deal the next one. ----
@@ -1914,8 +2139,12 @@ function sheetOpen(b){const s=document.getElementById("fb-scrim");if(s)s.hidden=
 // Dismissing the sheet (scrim tap / swipe down) only CLOSES it — it never advances the hand.
 // Advancing is always an explicit Next (the sheet button, the app-bar Next, or Enter/->), so
 // dismissing a hand you stepped Back to review no longer skips you forward.
-function closeSheet(){document.getElementById("fb").className="fb";sheetOpen(false);}
-function reopenSheet(){if(answered){document.getElementById("fb").className="fb on";sheetOpen(true);}}
+function closeSheet(restoreFocus=true){document.getElementById("fb").className="fb";sheetOpen(false);
+  if(restoreFocus&&document.getElementById("v-train").classList.contains("on")&&!document.getElementById("play-card").hidden){
+    document.getElementById("play-card").focus({preventScroll:true});
+  }}
+function reopenSheet(){if(answered){document.getElementById("fb").className="fb on";sheetOpen(true);
+  document.getElementById("next").focus({preventScroll:true});}}
 (function(){const scrim=document.getElementById("fb-scrim"),fb=document.getElementById("fb");
   if(scrim)scrim.onclick=function(){closeSheet();};
   // tap the hand (once dismissed) to bring the result back up
@@ -1929,6 +2158,7 @@ function reopenSheet(){if(answered){document.getElementById("fb").className="fb 
     if(dy>0)fb.style.transform="translate(-50%,"+Math.min(dy,140)+"px)";},{passive:true});
   fb.addEventListener("touchend",function(e){if(y0==null)return;const dy=e.changedTouches[0].clientY-y0;y0=null;
     fb.style.transform="";if(dy>90)closeSheet();},{passive:true});
+  fb.addEventListener("touchcancel",function(){y0=null;fb.style.transform="";},{passive:true});
 })();
 
 // Adaptive unlock: play a spot well (best/good) and its concept graduates into
@@ -1943,14 +2173,14 @@ function tryUnlock(q,g){
   if(gained.length){try{localStorage.setItem("learned",JSON.stringify([...learned]));}catch(e){}updateVocab();}
   return gained;
 }
-function unlockText(t){
-  if(t==="positions")return "Positions — who acts when. In position (IP) acts last (usually the Button); out of position (OOP) acts first. In blind-vs-blind, the BB is IP.";
-  if(t==="streets")return "Flop, turn, river — the shared cards come in stages (3, then a 4th, then a 5th).";
-  return (TERMS.poker.reason[t.slice(7)]||"")+" — "+(TERMS.learning.reason[t.slice(7)]||"").replace(/^[^—]*— /,"");
+function tryUnlockPreflop(){
+  if(mode!=="progressive"||learned.has("positions"))return [];
+  learned.add("positions");
+  try{localStorage.setItem("learned",JSON.stringify([...learned]));}catch(e){}
+  updateVocab();return ["positions"];
 }
-function updateVocab(){const v=document.getElementById("vocab");
-  v.hidden=(mode!=="progressive");
-  v.textContent="🔓 "+learned.size+" / "+VOCAB_TOTAL+" terms";}
+function updateVocab(){
+  const p=document.getElementById("terms-learned");if(p)p.textContent=learned.size+" / "+VOCAB_TOTAL;}
 const LEVEL_HINT={
   progressive:"Starts in plain words; poker terms unlock as you play them well.",
   plain:"Plain English — no poker jargon.",
@@ -1958,23 +2188,32 @@ const LEVEL_HINT={
   poker:"Full terminology and solver detail."};
 function updateLevelHint(){const el=document.getElementById("levelhint");if(el)el.textContent=LEVEL_HINT[mode]||"";}
 
-function applyModeUI(){document.querySelectorAll("#lang button").forEach(b=>b.classList.toggle("on",b.dataset.m===mode));}
+function applyModeUI(){document.querySelectorAll("#lang button").forEach(b=>{
+  const on=b.dataset.m===mode;b.classList.toggle("on",on);b.setAttribute("aria-pressed",String(on));
+});}
 function setMode(m){mode=m;try{localStorage.setItem("lang",m);}catch(e){}applyModeUI();updateVocab();updateLevelHint();
-  if(cur){renderQuestion(cur);if(answered)renderFeedback(cur,chosen,[]);}}
+  // Skip the live-card re-render while the session-summary screen is up (no card is shown).
+  if(cur&&document.getElementById("session-end").hidden){renderQuestion(cur);if(answered){renderFeedback(cur,chosen,[]);
+    if(!document.getElementById("v-train").classList.contains("on"))closeSheet(false);}}}
 document.querySelectorAll("#lang button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
 // --- train-category selector: filter the deck to one street (or all) ---
 function qcat(q){return q.preflop?"preflop":(q.street||"flop");}
 function catCounts(){const c={all:Q.length,preflop:0,flop:0,turn:0,river:0};Q.forEach(q=>{const k=qcat(q);c[k]=(c[k]||0)+1;});return c;}
-function buildOrder(){order=shuffle([...Q.keys()].filter(i=>cat==="all"||qcat(Q[i])===cat));pos=0;hist=[];hidx=-1;
-  const cc=catCounts();document.getElementById("catcount").textContent=(cat==="all"?Q.length:(cc[cat]||0))+" spots";}
+function buildOrder(){
+  const pool=shuffle([...Q.keys()].filter(i=>cat==="all"||qcat(Q[i])===cat));
+  order=pool.slice(0,Math.min(SESSION_SIZE,pool.length));pos=0;hist=[];hidx=-1;
+}
 function applyCatUI(){const cc=catCounts();
-  document.querySelectorAll("#cats button").forEach(b=>{b.classList.toggle("on",b.dataset.c===cat);
+  document.querySelectorAll("#cats button").forEach(b=>{const on=b.dataset.c===cat;b.classList.toggle("on",on);
+    b.setAttribute("aria-pressed",String(on));
     const n=b.dataset.c==="all"?Q.length:(cc[b.dataset.c]||0);b.disabled=n===0;b.style.opacity=n===0?"0.4":"";});}
-function setCat(c){cat=c;try{localStorage.setItem("cat",c);}catch(e){}applyCatUI();buildOrder();newHand();}
+function setCat(c){
+  if(!document.getElementById("session-end").hidden)return;
+  cat=c;try{localStorage.setItem("cat",c);}catch(e){}
+  stats=freshStats();sessionMisses=[];applyCatUI();buildOrder();newHand();}
 document.querySelectorAll("#cats button").forEach(b=>b.onclick=()=>setCat(b.dataset.c));
-// intro: open by default, remember if the reader dismisses it
-const intro=document.getElementById("intro");
 // Collapsed by default so the game sits at the top; remember if the reader opens it.
+const intro=document.getElementById("intro");
 try{intro.open=localStorage.getItem("introOpen")==="1";}catch(e){intro.open=false;}
 intro.addEventListener("toggle",()=>{try{localStorage.setItem("introOpen",intro.open?"1":"0");}catch(e){}});
 
@@ -1983,17 +2222,41 @@ document.getElementById("prev").onclick=prev;
 document.getElementById("fwd").onclick=next;
 document.getElementById("hd-back").onclick=closeHandDetail;
 document.getElementById("hd-scrim").onclick=closeHandDetail;
+function trapModalTab(root,e){
+  const items=[...root.querySelectorAll('button:not([disabled]),summary,a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')]
+    .filter(el=>el.offsetParent!==null);
+  if(!items.length){e.preventDefault();return;}
+  const first=items[0],last=items[items.length-1],active=document.activeElement;
+  if(e.shiftKey&&(active===first||!root.contains(active))){e.preventDefault();last.focus();}
+  else if(!e.shiftKey&&(active===last||!root.contains(active))){e.preventDefault();first.focus();}
+}
 document.addEventListener("keydown",e=>{
   // hand-strength panel is modal: Left/Escape closes it, everything else is swallowed
   if(document.getElementById("handdetail").classList.contains("on")){
+    if(e.key==="Tab")trapModalTab(document.getElementById("handdetail"),e);
     if(e.key==="ArrowLeft"||e.key==="Escape"){e.preventDefault();closeHandDetail();}return;}
+  // Session-complete owns Retry/New — never steal Enter/Space from those buttons.
+  if(!document.getElementById("session-end").hidden)return;
+  if(document.getElementById("fb").classList.contains("on")){
+    if(e.key==="Tab")trapModalTab(document.getElementById("fb"),e);
+    if(e.key==="Escape"){e.preventDefault();closeSheet();return;}
+    // Focused sheet controls (Ask coach, Next, details) keep native activation.
+    if(e.target.closest&&e.target.closest("button,summary,a[href],input,select,textarea"))return;
+    if(e.key==="Enter"||e.key===" "||e.key==="ArrowRight"){e.preventDefault();next();return;}
+    if(e.key==="ArrowLeft"){e.preventDefault();return;}
+    return;}
   if(e.target.tagName==="SUMMARY")return;   // let details summaries handle their own Enter/Space
   if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;         // don't hijack typing in inputs
   if(e.target.closest&&e.target.closest("#coach"))return;              // coach panel owns its own keys (chips/send/input)
   if(e.target.closest&&e.target.closest("#compare"))return;            // let the compare summary / "Play this hand" handle Enter/Space themselves
+  if((e.key==="Enter"||e.key===" ")&&e.target.closest&&e.target.closest("button"))return;
   const tv=document.getElementById("v-train");if(tv&&!tv.classList.contains("on"))return;  // only the Train view takes hotkeys
   if(e.key==="ArrowLeft"){e.preventDefault();prev();return;}   // step back to review
-  if(!answered){const i=parseInt(e.key);if(cur&&i>=1&&i<=cur.actions.length)answer(cur.actions[i-1]);}
+  if(!answered){
+    const i=parseInt(e.key);if(cur&&i>=1&&i<=cur.actions.length)answer(cur.actions[i-1]);
+    else if((e.key==="Enter"||e.key===" "||e.key==="ArrowRight")&&hist[hidx]&&hist[hidx].bonus){
+      e.preventDefault();skipBonus();}
+  }
   else if(e.key==="Enter"||e.key===" "||e.key==="ArrowRight"){e.preventDefault();next();}
 });
 // ===== Ask-a-coach — bring-your-own-key. Transport seam: web fetch today, native
@@ -2018,7 +2281,15 @@ const PROVIDERS={
     parse(j){return ((j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||"").trim();},
     emsg(j){return j&&j.error&&j.error.message;}},
 };
-function coachCfg(){try{return JSON.parse(localStorage.getItem("coach")||"{}");}catch(e){return {};}}
+function coachCfg(){try{
+  const c=JSON.parse(localStorage.getItem("coach")||"{}");
+  if(!c||typeof c!=="object"||Array.isArray(c))return {};
+  return {
+    provider:Object.prototype.hasOwnProperty.call(PROVIDERS,c.provider)?c.provider:"claude",
+    model:typeof c.model==="string"?c.model:"",
+    key:typeof c.key==="string"?c.key:""
+  };
+}catch(e){return {};}}
 function coachSaveCfg(c){try{localStorage.setItem("coach",JSON.stringify(c));}catch(e){}}
 let coachMsgs=[],coachBusy=false,coachErr=null,coachGen=0;
 
@@ -2158,41 +2429,52 @@ function coachReset(){coachGen++;coachMsgs=[];coachErr=null;coachBusy=false;coac
 function renderProgress(){
   const el=document.getElementById("mastery");if(!el)return;el.innerHTML="";
   [["preflop","Preflop","c-pre"],["flop","Flop","c-flop"],["turn","Turn","c-turn"],["river","River","c-river"]].forEach(function(r){
-    const s=stats.street[r[0]]||{n:0,hit:0};const pct=s.n?Math.round(100*s.hit/s.n):0;
+    const s=lifetime.street[r[0]]||{n:0,hit:0};const pct=s.n?Math.round(100*s.hit/s.n):0;
     const row=document.createElement("div");row.className="prow";
     const nm=document.createElement("span");nm.className="pn";nm.textContent=r[1];
     const bar=document.createElement("span");bar.className="pbar";
-    const i=document.createElement("i");i.className=r[2];i.style.width=pct+"%";bar.appendChild(i);
-    const v=document.createElement("span");v.className="pv";v.textContent=s.n?pct+"%":"—";
+    const i=document.createElement("i");i.className=r[2];i.style.width=(s.n<5?0:pct)+"%";bar.appendChild(i);
+    const v=document.createElement("span");v.className="pv";v.textContent=!s.n?"—":s.n<5?s.n+" hand"+(s.n===1?"":"s"):pct+"%";
     row.appendChild(nm);row.appendChild(bar);row.appendChild(v);el.appendChild(row);
   });
+  syncStatsUI();
 }
 function setView(v){
+  closeSheet(false);
   document.querySelectorAll(".view").forEach(function(s){s.classList.toggle("on",s.id==="v-"+v);});
-  document.querySelectorAll("#tabbar button").forEach(function(b){b.classList.toggle("on",b.dataset.v===v);});
+  document.querySelectorAll("#tabbar button").forEach(function(b){const on=b.dataset.v===v;b.classList.toggle("on",on);
+    if(on)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current");});
+  document.querySelector(".pager").hidden=v!=="train";
   if(v==="progress")renderProgress();
   window.scrollTo(0,0);
-  try{localStorage.setItem("view",v);}catch(e){}
 }
 document.querySelectorAll("#tabbar button").forEach(function(b){b.onclick=function(){setView(b.dataset.v);};});
 // reduce-motion toggle
 let motionOff=false;try{motionOff=localStorage.getItem("motion")==="off";}catch(e){}
 function applyMotion(){document.documentElement.classList.toggle("no-motion",motionOff);
-  const t=document.getElementById("tog-motion");if(t)t.classList.toggle("on",motionOff);}
+  const t=document.getElementById("tog-motion");if(t){t.classList.toggle("on",motionOff);t.setAttribute("aria-pressed",String(motionOff));}}
 document.getElementById("tog-motion").onclick=function(){motionOff=!motionOff;try{localStorage.setItem("motion",motionOff?"off":"on");}catch(e){}applyMotion();};
 document.getElementById("reset-btn").onclick=function(){
   if(!confirm("Reset your progress and learned terms?"))return;
-  try{localStorage.removeItem("learned");localStorage.removeItem("cat");}catch(e){}location.reload();};
+  try{localStorage.removeItem("learned");localStorage.removeItem("cat");localStorage.removeItem("trainer-progress");}catch(e){}location.reload();};
 applyMotion();
-try{setView(localStorage.getItem("view")||"train");}catch(e){setView("train");}
+setView("train");
 
-coachInit();applyModeUI();updateVocab();updateLevelHint();applyCatUI();buildOrder();newHand();
+document.getElementById("new-session").onclick=resetSession;
+document.getElementById("retry-leaks").onclick=retryLeakSession;
+document.getElementById("skip-bonus").onclick=skipBonus;
+document.getElementById("coach-open").onclick=function(){
+  closeSheet(false);const c=document.getElementById("coach");c.hidden=false;c.open=true;
+  const reduced=motionOff||(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  requestAnimationFrame(()=>c.scrollIntoView({behavior:reduced?"auto":"smooth",block:"start"}));
+};
+coachInit();applyModeUI();updateVocab();updateLevelHint();syncStatsUI();applyCatUI();buildOrder();newHand();
 </script>'''
 
 if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument("--allow-missing-demo-packs", action="store_true",
-                    help="skip raise/turn-river packs if absent (default: require them)")
+                    help="skip turn/river pack if absent (default: require it)")
     a = ap.parse_args()
     build(allow_missing_demo_packs=a.allow_missing_demo_packs)
