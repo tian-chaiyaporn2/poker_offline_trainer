@@ -2,7 +2,7 @@
 
 Samples real questions from a signed pack and emits a single HTML file that plays
 the actual end-user loop — deal a spot, pick an action, get graded + taught why —
-with no server. Writes demo/trainer_demo.html + trainer.html (Pages).
+with no server. Writes demo/trainer_demo.html + index.html (Pages).
 
 Run:  PYTHONPATH=src python demo/build_trainer.py
 """
@@ -101,7 +101,7 @@ def _require_verified(path: str) -> dict:
     return verdict
 
 
-ALAB = {"check": "Check", "bet": "Bet 66%", "fold": "Fold", "call": "Call", "raise": "Raise 3×"}
+ALAB = {"check": "Check", "bet": "Bet", "fold": "Fold", "call": "Call", "raise": "Raise 3×"}
 
 
 def _bet_pct_from_pack(path: str) -> int:
@@ -255,10 +255,6 @@ def load_scenario(db, badge, n):
     return out
 
 
-def load_sb(n=SB_Q, required=False):
-    return load_scenario(SB_DB, "SB vs BB", n)
-
-
 PF_Q = 16   # pre-flop spots blended in ("Chapter 0")
 
 
@@ -328,11 +324,9 @@ def load_contrast_pool(per_bucket=2):
 
 
 def build(allow_missing_demo_packs=False):
-    # The full-range pack now includes Fold/Call/Raise on facing-a-bet nodes (FR-011
-    # landed), so the reduced-range raise-demo blend is retired.
     meta, qs = load_questions()
     tr_qs = load_turnriver(required=not allow_missing_demo_packs)
-    sb_qs = load_sb()
+    sb_qs = load_scenario(SB_DB, "SB vs BB", SB_Q)
     btnsb_qs = load_scenario(BTNSB_DB, "BTN vs SB", BTNSB_Q)
     co_qs = load_scenario(CO_DB, "CO vs BB", CO_Q)
     utg_qs = load_scenario(UTG_DB, "UTG vs BB", CO_Q)
@@ -369,11 +363,10 @@ TEMPLATE = r'''<link rel="icon" href="data:,">
 <style>
 __FONTFACE__
 /* Locked dark visual design — one committed dark world (Rye + Space Mono + folded suits). */
-:root, :root[data-theme="light"], :root[data-theme="dark"]{
+:root{
   --bg:#0b0c10; --panel:#16171d; --panel2:#1d1f27; --ink:#f2f1ea; --muted:#888e9b; --line:#2a2c35;
   --brass:#8aa0ff; --brass-soft:#5b74ff;
   --best:#2fd08a; --good:#5ee7a8; --accept:#ffc24d; --costly:#ff8a6e; --major:#e0341a;
-  --pc-bg:#f5f0e7; --pc-ink:#15171e; --pc-red:#cf1a2c; --pc-line:#e3ddcf;
   --disp:"Rye","Iowan Old Style",Georgia,serif;
   --sans:"Avenir Next","Avenir",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,sans-serif;
   --mono:"Space Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
@@ -814,11 +807,11 @@ __SUITDEFS__
     <div class="street-seg" id="cats" role="group" aria-label="Which part to train">
       <button data-c="all" type="button">All</button><button data-c="preflop" type="button">Pre-flop</button><button data-c="flop" type="button">Flop</button><button data-c="turn" type="button">Turn</button><button data-c="river" type="button">River</button>
     </div>
-    <div class="session-hud"><span id="session-kind">Quick session</span><span id="session-counter">Hand <b id="session-step">1</b> of <b id="session-total">10</b></span><span id="session-bonus" hidden>Bonus hand</span><button type="button" class="skip-bonus" id="skip-bonus" hidden>Skip</button></div>
+    <div class="session-hud" id="session-hud"><span id="session-kind">Quick session</span><span id="session-counter">Hand <b id="session-step">1</b> of <b id="session-total">10</b></span><span id="session-bonus" hidden>Bonus hand</span><button type="button" class="skip-bonus" id="skip-bonus" hidden>Skip</button></div>
     <div class="bar-top" id="session-progress" role="progressbar" aria-label="Session progress" aria-valuemin="1" aria-valuemax="10" aria-valuenow="1"><i id="prog" style="width:0"></i></div>
 
   <div class="card" id="play-card" tabindex="-1">
-    <div class="sit"><span class="pos" id="pos"></span><span class="sit-copy"><strong class="sit-main" id="sit"></strong><span class="sit-context" id="sitcontext"></span></span><span class="demo" id="demotag" hidden>raise demo</span></div>
+    <div class="sit"><span class="pos" id="pos"></span><span class="sit-copy"><strong class="sit-main" id="sit"></strong><span class="sit-context" id="sitcontext"></span></span><span class="demo" id="demotag" hidden></span></div>
     <div class="seats" id="seats" hidden></div>
     <div class="felt">
       <div class="cap" id="boardcap">Flop</div>
@@ -1016,7 +1009,6 @@ const Q = __DATA__;
 // Extra spots (from the full packs) used ONLY as "similar hand" contrasts, never in the quiz.
 const CPOOL = __CPOOL__;
 const ALLSPOTS = Q.concat(CPOOL);
-const SUIT = {s:["♠",0],h:["♥",1],d:["♦",1],c:["♣",0]};
 
 // Plain-English hand reader — tells the player WHAT they hold and where they stand
 // (top pair / overpair / a set / just a draw). This is the piece beginners lack:
@@ -1158,12 +1150,12 @@ function standingText(rd){
 const TERMS = {
   poker:{
     pos:{BTN:"BTN",BB:"BB",SB:"SB"},
-    act:{check:"Check",bet:"Bet 66%",fold:"Fold",call:"Call",raise:"Raise 3×"},
+    act:{check:"Check",bet:"Bet",fold:"Fold",call:"Call",raise:"Raise"},
     reason:{value:"Value bet",protection:"Protection",bluff:"Bluff",semi_bluff:"Semi-bluff",
       pot_control:"Pot control",trap:"Trap",realization:"Give up / realize equity",value_call:"Value call",
       bluff_catch:"Bluff-catch",call_odds:"Call on odds",raise_value:"Value raise",raise_bluff:"Bluff raise",
       raise_semibluff:"Semi-bluff raise",fold:"Fold",mixed:"Mixed / close"},
-    ev:"EV",boardcap:{flop:"Flop",turn:"Turn",river:"River"},herocap:"Your hand"},
+    boardcap:{flop:"Flop",turn:"Turn",river:"River"},herocap:"Your hand"},
   plain:{
     pos:{BTN:"You act last",BB:"You act first",SB:"You act first"},
     act:{check:"Check (pass, no bet)",bet:"Bet (put chips in)",fold:"Fold (give up the hand)",
@@ -1176,12 +1168,11 @@ const TERMS = {
       raise_value:"Raise a strong hand to build the pot",raise_bluff:"Raise as a bluff to make them fold",
       raise_semibluff:"Raise a hand that can improve",fold:"Fold — not strong enough to continue",
       mixed:"It's close — any choice is fine"},
-    ev:"profit",
     boardcap:{flop:"The 3 shared cards",turn:"The 4th shared card is out",river:"The last (5th) shared card"},
     herocap:"Your 2 cards (only you can see these)"},
   learning:{
     pos:{BTN:"BTN",BB:"BB",SB:"SB"},
-    act:{check:"Check",bet:"Bet 66%",fold:"Fold",call:"Call",raise:"Raise 3×"},
+    act:{check:"Check",bet:"Bet",fold:"Fold",call:"Call",raise:"Raise"},
     reason:{value:"Value bet — get paid by worse hands",protection:"Protection — charge the hands still chasing a card",
       bluff:"Bluff — make better hands fold",semi_bluff:"Semi-bluff — bet a hand that can still improve",
       pot_control:"Pot control — keep the pot small",trap:"Trap — check a very strong hand to hide it",
@@ -1189,7 +1180,7 @@ const TERMS = {
       bluff_catch:"Bluff-catch — you beat the hands they'd bluff with",call_odds:"Call on odds — the price is right to chase",
       raise_value:"Value raise — build the pot",raise_bluff:"Bluff raise — make them fold",
       raise_semibluff:"Semi-bluff raise — raise a hand that can improve",fold:"Fold — not strong enough",mixed:"Mixed — any is fine"},
-    ev:"EV",boardcap:{flop:"Flop (first 3 shared cards)",turn:"Turn (4th card)",river:"River (5th card)"},
+    boardcap:{flop:"Flop (first 3 shared cards)",turn:"Turn (4th card)",river:"River (5th card)"},
     herocap:"Your hand (your 2 private cards)"}
 };
 const SESSION_SIZE=10;
@@ -1217,7 +1208,7 @@ function loadLifetime(){try{
 let order=[], pos=0, answered=false, cur=null, chosen=null, stats=freshStats(), lifetime=loadLifetime();
 let sessionMisses=[];
 // Hand history so you can step BACK and re-read a hand you already answered (with its
-// result), then step forward again. hist = [{qi, pick}] in the order shown; hidx = cursor.
+// result), then step forward again. hist = [{q, pick, step, bonus}]; hidx = cursor.
 let hist=[], hidx=-1;
 function trackStreet(bucket,hit){const k=qcat(cur);const s=bucket.street[k]||(bucket.street[k]={n:0,hit:0});s.n++;if(hit)s.hit++;}
 function recordGrade(bucket,tier,hit){
@@ -1509,7 +1500,7 @@ function renderSeats(q){
   el.innerHTML="";el.hidden=false;
   el.appendChild(q.preflop?preflopRing(q):ringTable(q));
 }
-// full 6-max ring so position is spatial: clockwise seating + fixed screen slots.
+// Seat helpers shared by the postflop heads-up duel and the preflop 6-max ring.
 const RING_ORDER=["BTN","SB","BB","UTG","HJ","CO"];
 const RING_SLOTS=[[50,85,1],[15,67,1],[15,33,0],[50,15,0],[85,33,0],[85,67,1]]; // x%,y%,labelAbove
 const RING_SHORT={BTN:"the button",BB:"big blind",SB:"small blind",CO:"cutoff",HJ:"hijack",UTG:"under the gun"};
@@ -1530,9 +1521,7 @@ function ringTable(q){
   const w=document.createElement("div");w.className="tv duel";w.innerHTML=html;return w;
 }
 function preflopRing(q){
-  // same 6-max ring as postflop, so preflop position is spatial too: you + the raiser
-  // highlighted, the button on its seat, everyone else dimmed. The situation line above
-  // spells out the action ("the button opens, it's on you"); the chip echoes it.
+  // 6-max ring: you + the raiser highlighted, the button on its seat, everyone else dimmed.
   const hero=q.pos, opener=q.opener||null, tb=q.tbettor||null;
   const start=Math.max(0,RING_ORDER.indexOf(hero));
   const seats=[];for(var i=0;i<6;i++)seats.push(RING_ORDER[(start+i)%6]);
@@ -1557,6 +1546,8 @@ function renderHand(){                                  // draw the current hist
   const e=hist[hidx];answered=false;chosen=null;cur=e.q;
   document.getElementById("play-card").hidden=false;
   document.getElementById("session-end").hidden=true;
+  document.getElementById("session-hud").hidden=false;
+  document.getElementById("session-progress").hidden=false;
   const step=Math.min(shownStep()+1,order.length),bonus=!!e.bonus;
   document.getElementById("session-kind").textContent=bonus?"Compare practice":"Quick session";
   document.getElementById("session-counter").hidden=bonus;
@@ -2096,6 +2087,8 @@ function showSessionEnd(){
   closeSheet(false);
   document.getElementById("play-card").hidden=true;
   document.getElementById("session-end").hidden=false;
+  document.getElementById("session-hud").hidden=true;
+  document.getElementById("session-progress").hidden=true;
   document.getElementById("skip-bonus").hidden=true;
   document.getElementById("coach").hidden=true;
   document.getElementById("hint").hidden=true;
@@ -2212,9 +2205,8 @@ function setCat(c){
   cat=c;try{localStorage.setItem("cat",c);}catch(e){}
   stats=freshStats();sessionMisses=[];applyCatUI();buildOrder();newHand();}
 document.querySelectorAll("#cats button").forEach(b=>b.onclick=()=>setCat(b.dataset.c));
-// intro: open by default, remember if the reader dismisses it
-const intro=document.getElementById("intro");
 // Collapsed by default so the game sits at the top; remember if the reader opens it.
+const intro=document.getElementById("intro");
 try{intro.open=localStorage.getItem("introOpen")==="1";}catch(e){intro.open=false;}
 intro.addEventListener("toggle",()=>{try{localStorage.setItem("introOpen",intro.open?"1":"0");}catch(e){}});
 
@@ -2448,7 +2440,6 @@ function setView(v){
   document.querySelector(".pager").hidden=v!=="train";
   if(v==="progress")renderProgress();
   window.scrollTo(0,0);
-  try{localStorage.setItem("view",v);}catch(e){}
 }
 document.querySelectorAll("#tabbar button").forEach(function(b){b.onclick=function(){setView(b.dataset.v);};});
 // reduce-motion toggle
@@ -2477,6 +2468,6 @@ if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument("--allow-missing-demo-packs", action="store_true",
-                    help="skip raise/turn-river packs if absent (default: require them)")
+                    help="skip turn/river pack if absent (default: require it)")
     a = ap.parse_args()
     build(allow_missing_demo_packs=a.allow_missing_demo_packs)

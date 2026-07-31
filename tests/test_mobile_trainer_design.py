@@ -41,6 +41,8 @@ def test_mobile_player_loop_contract_is_generated_from_source():
         "aria-current",
         "role=\"dialog\"",
         "setView(\"train\")",
+        "function skipBonus()",
+        "html.sheet-open,html.sheet-open body{overflow:hidden}",
     )
     for marker in required:
         assert marker in source
@@ -57,8 +59,10 @@ def test_generated_trainers_have_unique_control_ids():
 def test_generated_trainers_include_mobile_session_and_feedback_controls():
     required_ids = {
         "play-card",
+        "session-hud",
         "session-step",
         "session-total",
+        "session-progress",
         "session-end",
         "retry-leaks",
         "new-session",
@@ -88,6 +92,7 @@ def test_generated_trainers_expose_accessible_state_and_modal_semantics():
         assert 'document.getElementById("play-card").focus' in html
         assert 'e.setAttribute("role","img")' in html
         assert '" of "+(SUIT_NAME[s]||"spades")' in html
+        assert 'document.getElementById("session-hud").hidden=true' in html
 
 
 def test_generated_question_data_is_internally_consistent():
@@ -104,14 +109,13 @@ def test_generated_question_data_is_internally_consistent():
             cards = q["hand"] if q.get("preflop") else q["board"] + q["hero"]
             assert len(cards) == len(set(cards))
             if not q.get("preflop"):
-                assert "acts_first" not in q
-                assert "reason_label" not in q
                 assert len(q["board"]) == street_cards[q["street"]]
                 assert set(actions) <= set(q["ev"])
                 assert set(actions) <= set(q["freq"])
                 assert set(actions) <= set(q["grades"])
                 assert sum(q["freq"][action] for action in actions) == 100
                 assert 0 < q["bet_pct"] <= 500
+                assert "villain" in q and "is_oop" in q
             signature = (
                 "preflop" if q.get("preflop") else q["street"],
                 q.get("node") or q.get("ctx"),
@@ -133,6 +137,7 @@ def test_mobile_ux_copy_and_compact_layout_contract():
     assert '"How the choices compare"' in source
     assert 'oppAct="bet "+(q.bet_pct||66)+"%"' in source
     assert '"You are "+q.acting_player+" · "+cap1(q.street)' in source
+    assert "with Fold/Call/Raise available on facing-a-bet nodes" in source
 
 
 def test_session_history_and_comparison_practice_are_accounted_correctly():
@@ -144,11 +149,8 @@ def test_session_history_and_comparison_practice_are_accounted_correctly():
     assert "const inSession=!(hist[hidx]&&hist[hidx].bonus)" in source
     assert "if(inSession)recordGrade(stats,tier,hit)" in source
     assert "if(inSession&&!hit)sessionMisses.push(cur)" in source
-    assert "function skipBonus()" in source
     assert "queued&&queued.bonus&&queued.q===c.q" in source
-    assert 'id="skip-bonus"' in source
     assert "if(hist[hidx]&&hist[hidx].bonus&&!answered){skipBonus();return;}" in source
-    assert 'if(!document.getElementById("session-end").hidden)return;' in source
 
 
 def test_persisted_state_and_modal_escape_are_hardened():
@@ -158,6 +160,9 @@ def test_persisted_state_and_modal_escape_are_hardened():
     assert "raw.filter(t=>VALID_TERMS.has(t))" in source
     assert 'typeof c!=="object"||Array.isArray(c)' in source
     assert 'if(e.key==="Escape"){e.preventDefault();closeSheet();return;}' in source
+    assert 'if(!document.getElementById("session-end").hidden)return;' in source
+    assert 'e.target.closest("button,summary,a[href],input,select,textarea"))return;' in source
+    assert 'document.querySelectorAll("#cats button").forEach(b=>{b.disabled=true;});' in source
 
 
 def test_modal_and_view_transitions_restore_or_contain_focus():
@@ -169,11 +174,7 @@ def test_modal_and_view_transitions_restore_or_contain_focus():
     assert 'document.getElementById("session-end").focus' in source
     assert 'document.getElementById("next").focus({preventScroll:true});}  // review' in source
     assert 'fb.addEventListener("touchcancel"' in source
-    assert 'if(!document.getElementById("session-end").hidden)return;' in source
-    assert 'e.target.closest("button,summary,a[href],input,select,textarea"))return;' in source
-    assert "html.sheet-open,html.sheet-open body{overflow:hidden}" in source
     assert "closeSheet(false);" in source
-    assert 'document.querySelectorAll("#cats button").forEach(b=>{b.disabled=true;});' in source
 
 
 def test_correct_preflop_answers_unlock_position_language():
@@ -188,9 +189,3 @@ def test_correct_preflop_answers_unlock_position_language():
 def test_settings_language_change_does_not_open_feedback_over_settings():
     source = SOURCE.read_text()
     assert 'if(!document.getElementById("v-train").classList.contains("on"))closeSheet(false);' in source
-
-
-def test_settings_copy_matches_later_street_raise_support():
-    source = SOURCE.read_text()
-    assert "with Fold/Call/Raise available on facing-a-bet nodes" in source
-    assert "facing-a-bet there is Fold/Call" not in source
