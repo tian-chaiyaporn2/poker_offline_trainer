@@ -29,9 +29,9 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 .lvl-hint{margin:9px 0 0;font-size:12px;color:var(--muted);line-height:1.45}
 .bar-top{height:4px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:9px}
 .bar-top>i{display:block;height:100%;background:var(--brass);transition:width .3s}
-.card{background:linear-gradient(180deg,color-mix(in srgb,var(--panel) 92%,#fff),var(--panel));border:1px solid rgba(255,255,255,.05);border-radius:20px;overflow:hidden;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 18px 40px -20px rgba(0,0,0,.85),0 2px 8px -4px rgba(0,0,0,.5)}
-.sit{padding:9px 15px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px;font-family:var(--sans);font-size:12.5px;line-height:1.3}
+/* the play area needs no decorative panel — the session bar above and tab bar below frame it */
+.card{background:transparent;border:none;border-radius:0;overflow:visible}
+.sit{padding:8px 15px 4px;display:flex;align-items:center;gap:9px;font-family:var(--sans);font-size:12.5px;line-height:1.3}
 .sit-street{color:var(--muted);font-weight:600}
 .sit .pos{margin-left:auto}
 .pos{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.05em;padding:2px 8px;border-radius:6px;flex:none}
@@ -47,7 +47,7 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 /* position shown as an abstract constellation of seats; cards sit cleanly below it */
 .stage{display:flex;flex-direction:column;align-items:center;gap:7px;padding:4px 12px 4px}
 .posdial{display:flex;flex-direction:column;align-items:center;gap:3px}
-.cnst{width:168px;height:80px;overflow:visible;display:block}
+.cnst{width:188px;height:90px;overflow:visible;display:block}
 .cn-lbl{font-family:var(--sans);font-size:9px;font-weight:700}
 .cn-lbl-you{fill:var(--best)}.cn-lbl-opp{fill:var(--brass)}
 .cn-link{fill:none;stroke:color-mix(in srgb,var(--ink) 13%,transparent);stroke-width:1}
@@ -55,7 +55,7 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 .cn-opp{fill:var(--brass)}
 .cn-you{fill:var(--best)}
 .cn-btn{fill:none;stroke:#efe7d6;stroke-width:1.4}
-.cnst-wrap{position:relative;width:168px;height:80px}
+.cnst-wrap{position:relative;width:188px;height:90px}
 .cn-flow{fill:none;stroke-width:2;stroke-linecap:round}
 .fl-bet{stroke:var(--costly)}
 .fl-check{stroke:color-mix(in srgb,var(--accept) 78%,transparent);stroke-dasharray:3.5 3.5}
@@ -302,7 +302,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .revbtn:disabled{opacity:.3;cursor:default}
 .appbar .brand{white-space:nowrap}
 .appbar .brand{font-size:18px}
-.views{flex:1;padding-bottom:72px;display:flex;flex-direction:column;min-height:0}
+.views{flex:1;padding-bottom:60px;display:flex;flex-direction:column;min-height:0}
 .view{display:none;padding:14px 15px 8px}
 .view.on{display:flex;flex-direction:column;flex:1;min-height:0;animation:viewin .24s ease}
 #v-train.view.on>*{flex:none}
@@ -312,8 +312,8 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 @keyframes viewin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .no-motion *{animation:none!important;transition:none!important}
 .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:440px;z-index:30;display:flex;background:color-mix(in srgb,var(--panel) 94%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
-.tabbar button{flex:1;appearance:none;border:none;background:none;color:var(--muted);font-family:var(--label);font-size:11px;letter-spacing:.01em;font-weight:600;padding:9px 4px 11px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
-.tabbar button .ti{width:19px;height:19px;font-size:16px;line-height:1;display:grid;place-items:center;color:currentColor}
+.tabbar button{flex:1;appearance:none;border:none;background:none;color:var(--muted);font-family:var(--label);font-size:10px;letter-spacing:.01em;font-weight:600;padding:6px 4px 7px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
+.tabbar button .ti{width:17px;height:17px;font-size:14px;line-height:1;display:grid;place-items:center;color:currentColor}
 .tabbar button.on{color:var(--brass)}
 .street-seg{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;margin-bottom:4px;scrollbar-width:none}
 .street-seg::-webkit-scrollbar{display:none}
@@ -482,12 +482,12 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 .tech[open]>summary::before{content:"－ "}
 .tech .foot{padding-bottom:13px}
 .pager[hidden]{display:none!important}
-.revbtn{width:32px;height:32px}
+.revbtn{width:28px;height:28px;font-size:14px}
 .street-seg button{min-height:44px}
 .prow .pv{width:58px}
 @media(max-width:390px){
-  .appbar{gap:9px;padding:6px 12px}
-  .appbar .brand{font-size:16px}
+  .appbar{gap:9px;padding:4px 12px}
+  .appbar .brand{font-size:15px}
   .street-seg{gap:5px}
   .street-seg button{font-size:9.5px;padding:7px 10px}
   .view{padding-left:14px;padding-right:14px}
@@ -501,8 +501,8 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
   .hint,.act .k{display:none}
 }
 @media(max-width:350px){
-  #board .pc{width:40px;height:54px}
-  #hero .pc{width:62px;height:84px}
+  #board .pc{width:44px;height:60px}
+  #hero .pc{width:68px;height:92px}
   .act .asub{display:none}
 }
 </style>
@@ -637,7 +637,7 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
     <details class="tech">
       <summary>Solver and data details</summary>
     <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>d0ea160</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>b0d97af</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
     <span class="demo">Turn / river</span> spots are now full-range solver output too, but
