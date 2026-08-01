@@ -21,6 +21,20 @@ from pokertrainer.content_pack import verify_pack
 # ---- Locked visual assets: embedded fonts (Rye + Space Mono) and the custom
 # paper-craft folded suit SVG symbols. Emitted into the page at build time.
 _FONT_DIR = os.path.join(os.path.dirname(__file__), "fonts")
+_ASSET_DIR = os.path.join(os.path.dirname(__file__), "assets")
+
+
+def _roomphotos():
+    # Per-street illustrated rooms, embedded offline as data-URIs. They sit as a *faint* underlay
+    # beneath the geometric gradient so each room is just a hint of depth. Missing files -> {}.
+    out = {}
+    for street in ("preflop", "flop", "turn", "river"):
+        p = os.path.join(_ASSET_DIR, "room_%s.webp" % street)
+        if not os.path.exists(p):
+            continue
+        with open(p, "rb") as img:
+            out[street] = "data:image/webp;base64," + base64.b64encode(img.read()).decode()
+    return json.dumps(out, separators=(",", ":"))
 
 
 def _fontface():
@@ -349,7 +363,8 @@ def build(allow_missing_demo_packs=False):
     cdata = json.dumps(cpool, separators=(",", ":")).replace("<", "\\u003c")
     body = TEMPLATE.replace("__DATA__", data).replace("__CPOOL__", cdata).replace("__VERSION__", html.escape(meta.get("version", ""))) \
                    .replace("__RECORDS__", html.escape(str(meta.get("record_count", "")))).replace("__COMMIT__", html.escape(commit)) \
-                   .replace("__FONTFACE__", _fontface()).replace("__SUITDEFS__", _suitdefs())
+                   .replace("__FONTFACE__", _fontface()).replace("__SUITDEFS__", _suitdefs()) \
+                   .replace("__ROOMPHOTOS__", _roomphotos())
     os.makedirs("demo", exist_ok=True)
     with open("demo/trainer_demo.html", "w", encoding="utf-8") as demo_file:
         demo_file.write(body)
@@ -395,7 +410,14 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 .hallbg{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;
   -webkit-mask-image:linear-gradient(180deg,transparent,#000 6%,#000 94%,transparent);
           mask-image:linear-gradient(180deg,transparent,#000 6%,#000 94%,transparent)}
-.hall-room{position:absolute;inset:0;background-size:cover;background-position:50% 32%;opacity:.96;transition:opacity .3s}
+/* faint illustrated room beneath the gradient — revealed clearer at the sides (columns, crowd,
+   wall lamps) and masked down the centre so the cards sit on a clean field */
+.hall-photo{position:absolute;inset:0;background-size:cover;background-position:50% 30%;
+  filter:saturate(.9) brightness(.84) contrast(.98);
+  -webkit-mask-image:linear-gradient(90deg,#000,rgba(0,0,0,.35) 26%,transparent 43%,transparent 57%,rgba(0,0,0,.35) 74%,#000);
+          mask-image:linear-gradient(90deg,#000,rgba(0,0,0,.35) 26%,transparent 43%,transparent 57%,rgba(0,0,0,.35) 74%,#000);
+  transition:opacity .3s}
+.hall-room{position:absolute;inset:0;background-size:cover;background-position:50% 32%;opacity:.8;transition:opacity .3s}
 .hall-room .hall-svg{position:absolute;inset:0;width:100%;height:100%;display:block}
 .hall-tint{position:absolute;inset:0;mix-blend-mode:soft-light;opacity:.55}
 /* motion in the pockets: the background architecture breathes slowly, the warm light pulses */
@@ -901,7 +923,7 @@ __SUITDEFS__
     <div class="bar-top" id="session-progress" role="progressbar" aria-label="Session progress" aria-valuemin="1" aria-valuemax="10" aria-valuenow="1"><i id="prog" style="width:0"></i></div>
 
   <div class="card" id="play-card" tabindex="-1">
-    <div class="hallbg" id="hallbg" aria-hidden="true"><div class="hall-room" id="hall-room"></div><div class="hall-tint" id="hall-tint"></div><div class="hall-scrim"></div></div>
+    <div class="hallbg" id="hallbg" aria-hidden="true"><div class="hall-photo" id="hall-photo"></div><div class="hall-room" id="hall-room"></div><div class="hall-tint" id="hall-tint"></div><div class="hall-scrim"></div></div>
     <div class="sit"><span class="sit-street" id="sitcontext"></span><span class="pos" id="pos"></span><span class="demo" id="demotag" hidden></span></div>
     <div class="tablewrap" id="seats"></div>
     <div class="move-cue" id="movecue">Your move — tap what you'd do</div>
@@ -1700,14 +1722,16 @@ function geoRoom(name,s1,s2,oop){
   s+='</g><rect width="300" height="600" fill="url(#geovig)"/>';
   return s+'</svg>';
 }
+const ROOMPHOTOS=__ROOMPHOTOS__;   // street -> illustrated room, shown faintly under the gradient
 function updateHall(q){
-  const room=document.getElementById("hall-room"),tint=document.getElementById("hall-tint");
+  const room=document.getElementById("hall-room"),tint=document.getElementById("hall-tint"),photo=document.getElementById("hall-photo");
   if(!room)return;
   const h=q.preflop?q.hand:q.hero;
   const street=q.preflop?"preflop":(q.street||"flop");
   const oop=q.preflop?!(q.pos==="BTN"||q.pos==="CO"||q.pos==="HJ"):!!q.is_oop;
   const s1=(h&&h[0])?h[0][1]:"s",s2=(h&&h[1])?h[1][1]:"s";
   room.style.backgroundImage="none";room.innerHTML=geoRoom(street,s1,s2,oop);
+  if(photo){const img=ROOMPHOTOS[street];photo.style.backgroundImage=img?("url("+img+")"):"none";}
   if(tint)tint.style.display="none";   // the geometry bakes the suit tint + position temperature
 }
 function ringTable(q){
