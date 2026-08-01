@@ -2440,8 +2440,21 @@ document.querySelectorAll("#lang button").forEach(b=>b.onclick=()=>setMode(b.dat
 function qcat(q){return q.preflop?"preflop":(q.street||"flop");}
 function catCounts(){const c={all:Q.length,preflop:0,flop:0,turn:0,river:0};Q.forEach(q=>{const k=qcat(q);c[k]=(c[k]||0)+1;});return c;}
 function buildOrder(){
-  const pool=shuffle([...Q.keys()].filter(i=>cat==="all"||qcat(Q[i])===cat));
-  order=pool.slice(0,Math.min(SESSION_SIZE,pool.length));pos=0;hist=[];hidx=-1;
+  if(cat!=="all"){
+    const pool=shuffle([...Q.keys()].filter(i=>qcat(Q[i])===cat));
+    order=pool.slice(0,Math.min(SESSION_SIZE,pool.length));
+  }else{
+    // "All streets": draw a deliberate spread across streets so a session isn't ~83% flop.
+    const g={preflop:[],flop:[],turn:[],river:[]};
+    for(const i of Q.keys()){(g[qcat(Q[i])]||g.flop).push(i);}
+    for(const k in g)shuffle(g[k]);
+    const target={preflop:3,flop:4,turn:1,river:2},pick=[];
+    for(const k of ["preflop","flop","turn","river"]){const n=Math.min(target[k],g[k].length);for(let j=0;j<n;j++)pick.push(g[k].shift());}
+    const rest=shuffle([].concat(g.preflop,g.flop,g.turn,g.river));   // top up from whatever remains
+    while(pick.length<SESSION_SIZE&&rest.length)pick.push(rest.shift());
+    order=shuffle(pick).slice(0,SESSION_SIZE);
+  }
+  pos=0;hist=[];hidx=-1;
 }
 function applyCatUI(){const cc=catCounts();
   document.querySelectorAll("#cats button").forEach(b=>{const on=b.dataset.c===cat;b.classList.toggle("on",on);
