@@ -407,8 +407,9 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
    tinted by the two hole-card suits and cooled when out of position. Purely atmospheric —
    sits behind the play content (#fb stays fixed/z-50 above it) and never intercepts taps. */
 #play-card{position:relative}
-/* full-viewport ambient background: sits behind the whole app (frosted top/tab bars overlay it) */
-.hallbg{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:440px;z-index:-1;overflow:hidden;pointer-events:none}
+/* ambient background: fills the whole app column behind all content (frosted top/tab bars overlay
+   it). Absolute (not fixed) so it moves with the page — no repaint glitch against scroll. */
+.hallbg{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
 /* faint illustrated room beneath the gradient — revealed clearer at the sides (columns, crowd,
    wall lamps) and masked down the centre so the cards sit on a clean field */
 .hall-photo{position:absolute;inset:0;background-size:cover;background-position:50% 30%;
@@ -710,7 +711,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 #v-train.view.on>.session-hud,#v-train.view.on>#session-progress{flex:none}
 #v-train.view.on>#play-card{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
 /* the table area grows and centres its content; header stays on top, buttons anchor to the bottom */
-#play-card>#seats{flex:1 1 auto;display:flex;flex-direction:column;justify-content:flex-start;min-height:0;padding-top:6px}
+#play-card>#seats{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;min-height:0;padding-top:6px}
 #play-card .stage{padding-top:0}
 #play-card .sit,#play-card .move-cue,#play-card #acts{flex:none}
 @keyframes viewin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
