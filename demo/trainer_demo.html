@@ -36,9 +36,9 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 .tablewrap{padding:2px 14px 4px}
 /* unified poker table: opponent on top, the board on the felt, your hand at your seat */
 /* position shown as an abstract constellation of seats; cards sit cleanly below it */
-.stage{display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px 12px 8px}
-.posdial{display:flex;flex-direction:column;align-items:center;gap:7px}
-.cnst{width:206px;height:112px;overflow:visible;display:block}
+.stage{display:flex;flex-direction:column;align-items:center;gap:7px;padding:4px 12px 4px}
+.posdial{display:flex;flex-direction:column;align-items:center;gap:3px}
+.cnst{width:168px;height:80px;overflow:visible;display:block}
 .cn-lbl{font-family:var(--sans);font-size:9px;font-weight:700}
 .cn-lbl-you{fill:var(--best)}.cn-lbl-opp{fill:var(--brass)}
 .cn-link{fill:none;stroke:color-mix(in srgb,var(--ink) 13%,transparent);stroke-width:1}
@@ -46,7 +46,7 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 .cn-opp{fill:var(--brass)}
 .cn-you{fill:var(--best)}
 .cn-btn{fill:none;stroke:#efe7d6;stroke-width:1.4}
-.cnst-wrap{position:relative;width:206px;height:112px}
+.cnst-wrap{position:relative;width:168px;height:80px}
 .cn-flow{fill:none;stroke-width:2;stroke-linecap:round}
 .fl-bet{stroke:var(--costly)}
 .fl-check{stroke:color-mix(in srgb,var(--accept) 78%,transparent);stroke-dasharray:3.5 3.5}
@@ -72,7 +72,7 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 .t-move{font-family:var(--label);font-size:10px;font-weight:600;letter-spacing:.005em;color:var(--best)}
 .t-board,.t-you{width:100%}
 .t-board .cards,.t-you .cards{display:flex;justify-content:center}
-.cap{font-family:var(--sans);font-size:10.5px;font-weight:600;letter-spacing:.01em;color:var(--muted);margin-bottom:4px;text-align:center}
+.cap{font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:.01em;color:var(--muted);margin-bottom:2px;text-align:center}
 .ftable .cap{color:color-mix(in srgb,#eaf5ef 62%,transparent)}
 .cards{display:flex;gap:8px;justify-content:center}
 /* folded-suit playing cards: corner rank (Space Mono) + centered paper-craft suit */
@@ -90,7 +90,7 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 @media (prefers-reduced-motion:reduce){.pc{animation:none}}
 .hero{margin-top:5px}
 .hero .cap{color:var(--brass);font-weight:600}
-.move-cue{text-align:center;font-size:13px;font-weight:600;color:color-mix(in srgb,var(--ink) 80%,transparent);margin:4px 4px 7px}
+.move-cue{text-align:center;font-size:12.5px;font-weight:600;color:color-mix(in srgb,var(--ink) 80%,transparent);margin:2px 4px 5px}
 .move-cue::after{content:" ↓";color:var(--brass)}
 .acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;padding:10px 16px}
 .act{appearance:none;font-family:var(--sans);font-size:15px;font-weight:650;color:var(--ink);
@@ -306,9 +306,9 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .tabbar button{flex:1;appearance:none;border:none;background:none;color:var(--muted);font-family:var(--label);font-size:11px;letter-spacing:.01em;font-weight:600;padding:9px 4px 11px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
 .tabbar button .ti{width:19px;height:19px;font-size:16px;line-height:1;display:grid;place-items:center;color:currentColor}
 .tabbar button.on{color:var(--brass)}
-.street-seg{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:6px;scrollbar-width:none}
+.street-seg{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;margin-bottom:4px;scrollbar-width:none}
 .street-seg::-webkit-scrollbar{display:none}
-.street-seg button{appearance:none;flex:none;font-family:var(--label);font-size:12.5px;letter-spacing:0;font-weight:600;color:var(--muted);background:linear-gradient(180deg,#20222c,#191b22);border:1px solid rgba(255,255,255,.05);border-radius:999px;padding:7px 15px;cursor:pointer;transition:.14s;box-shadow:0 2px 5px -2px rgba(0,0,0,.5)}
+.street-seg button{appearance:none;flex:none;font-family:var(--label);font-size:12px;letter-spacing:0;font-weight:600;color:var(--muted);background:linear-gradient(180deg,#20222c,#191b22);border:1px solid rgba(255,255,255,.05);border-radius:999px;padding:6px 13px;cursor:pointer;transition:.14s;box-shadow:0 2px 5px -2px rgba(0,0,0,.5)}
 .street-seg button.on{background:var(--brass);color:#0b0c10;border-color:var(--brass)}
 .street-seg button:disabled{opacity:.4}
 /* progress view */
@@ -401,7 +401,7 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 .felt{padding:7px 12px 10px}
 #board{gap:6px}
 #hero{gap:8px}
-#board .pc{width:45px;height:61px}
+#board .pc{width:42px;height:57px}
 #board .pc .ix b{font-size:13px}
 #board .pc .ix .mini{width:9px;height:9px}
 #board .pc .center .psuit{width:25px;height:25px}
@@ -473,11 +473,11 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 .tech[open]>summary::before{content:"－ "}
 .tech .foot{padding-bottom:13px}
 .pager[hidden]{display:none!important}
-.revbtn{width:44px;height:44px}
+.revbtn{width:32px;height:32px}
 .street-seg button{min-height:44px}
 .prow .pv{width:58px}
 @media(max-width:390px){
-  .appbar{gap:9px;padding:10px 12px}
+  .appbar{gap:9px;padding:6px 12px}
   .appbar .brand{font-size:16px}
   .street-seg{gap:5px}
   .street-seg button{font-size:9.5px;padding:7px 10px}
@@ -492,8 +492,8 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
   .hint,.act .k{display:none}
 }
 @media(max-width:350px){
-  #board .pc{width:43px;height:58px}
-  #hero .pc{width:70px;height:95px}
+  #board .pc{width:40px;height:54px}
+  #hero .pc{width:62px;height:84px}
   .act .asub{display:none}
 }
 </style>
@@ -505,9 +505,6 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
   </div>
   <div class="views">
   <section class="view on" id="v-train">
-    <div class="street-seg" id="cats" role="group" aria-label="Which part to train">
-      <button data-c="all" type="button">All</button><button data-c="preflop" type="button">Pre-flop</button><button data-c="flop" type="button">Flop</button><button data-c="turn" type="button">Turn</button><button data-c="river" type="button">River</button>
-    </div>
     <div class="session-hud" id="session-hud"><span id="session-kind">Quick session</span><span id="session-counter">Hand <b id="session-step">1</b> of <b id="session-total">10</b></span><span id="session-bonus" hidden>Bonus hand</span><button type="button" class="skip-bonus" id="skip-bonus" hidden>Skip</button></div>
     <div class="bar-top" id="session-progress" role="progressbar" aria-label="Session progress" aria-valuemin="1" aria-valuemax="10" aria-valuenow="1"><i id="prog" style="width:0"></i></div>
 
@@ -553,10 +550,6 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
     </div>
     <div class="session-end-actions"><button id="retry-leaks" type="button">Retry leaks</button><button class="primary" id="new-session" type="button">New session</button></div>
   </section>
-  <details class="train-primer">
-    <summary>New to poker? Read the 30-second primer</summary>
-    <p>You get two private cards and share up to five board cards. Make the best five-card hand you can. Check passes, Bet puts chips in, Call matches a bet, Raise increases it, and Fold gives up the hand. Acting last gives you more information.</p>
-  </details>
 
   <details class="coach" id="coach">
     <summary>💬 Ask a coach about this hand<span class="byok">your API key</span></summary>
@@ -605,6 +598,11 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 
   <section class="view" id="v-settings">
     <div class="phead"><div class="ptitle">Settings</div></div>
+    <div class="s-sec">What to train</div>
+    <div class="street-seg" id="cats" role="group" aria-label="Which part to train">
+      <button data-c="all" type="button">All</button><button data-c="preflop" type="button">Pre-flop</button><button data-c="flop" type="button">Flop</button><button data-c="turn" type="button">Turn</button><button data-c="river" type="button">River</button>
+    </div>
+    <p class="lvl-hint">Pick a street to drill, or All for a mix. Changing this starts a fresh session.</p>
     <div class="s-sec">Language</div>
     <div class="seg" id="lang" role="group" aria-label="Language level">
       <button data-m="progressive" type="button">Adaptive</button><button data-m="plain" type="button">Beginner</button><button data-m="learning" type="button">Learning</button><button data-m="poker" type="button">Pro</button>
@@ -630,7 +628,7 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
     <details class="tech">
       <summary>Solver and data details</summary>
     <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>e6ff6bb</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>7c3bad4</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
     <span class="demo">Turn / river</span> spots are now full-range solver output too, but
@@ -958,32 +956,35 @@ function fmtEv(v){return (v>=0?"+":"")+v;}
 // term-tagged phrase, Pro keeps the solver's baked headline.
 // The headline is the concrete SITUATION for this hand (what's true right now). The action is
 // in the verdict; the reusable principle is in the Rule of thumb — so no block repeats another.
+// {hand} is filled with the player's actual made hand ("pair of Kings") so the "why" is
+// about THIS holding, not a generic "you" — the concrete version reads far clearer.
 const PLAIN_HEAD={
-  value:"Your hand is better than the hands that would call here.",
-  protection:"You're ahead right now — but a card could still come that beats you.",
-  bluff:"You almost certainly can't win this hand by checking it down.",
-  semi_bluff:"You're not ahead yet — but your draw can still get there.",
-  pot_control:"A decent hand — but bet big, get called, and you're usually beaten.",
-  trap:"You're very strong here, and betting would just scare the weaker hands off.",
-  realization:"Not much here — no reason to put chips in with a weak hand.",
-  value_call:"Their bet is often a worse hand or a bluff, and you beat those.",
-  bluff_catch:"You beat the hands they'd bluff with here.",
-  call_odds:"Not made yet, but you can still improve — and it's cheap to keep going.",
-  fold:"There just isn't enough here to keep going.",
-  raise_value:"You're strong, and there's a bet in front of you to punish.",
-  raise_bluff:"You can't win at showdown — but a big raise tells a believable story.",
-  raise_semibluff:"You're not there yet, but your draw can still get there.",
+  value:"Your {hand} beats the hands that would call a bet here.",
+  protection:"Your {hand} is ahead right now — but a later card could still beat it.",
+  bluff:"Your {hand} can't win by checking it down — betting is the only way to take it.",
+  semi_bluff:"Your {hand} isn't ahead yet — but the draw can still get there.",
+  pot_control:"Your {hand} is decent — but bet big, get called, and you're usually beaten.",
+  trap:"Your {hand} is very strong here, and betting would just scare the weaker hands off.",
+  realization:"Your {hand} is too weak to put chips in — no reason to bet.",
+  value_call:"Their bet is often a worse hand or a bluff, and your {hand} beats those.",
+  bluff_catch:"Your {hand} beats the hands they'd bluff with here.",
+  call_odds:"Your {hand} isn't made yet, but it can still improve — and it's cheap to keep going.",
+  fold:"Your {hand} just isn't enough to keep going here.",
+  raise_value:"Your {hand} is strong, and there's a bet in front of you to punish.",
+  raise_bluff:"Your {hand} can't win at showdown — but a big raise tells a believable story.",
+  raise_semibluff:"Your {hand} isn't there yet, but the draw can still get there.",
   mixed:"This one's genuinely close — any play is fine here."
 };
+function fillHand(s,made){return s?s.replace(/\{hand\}/g,(made||"hand").replace(/^an? /i,"")):s;}
 // River-specific "why": no more cards, so nothing about drawing / free cards / improving.
 const RIVER_PLAIN={
-  realization:"Nothing worth betting, and there are no more cards — just check and see who wins.",
-  semi_bluff:"You can't improve anymore — but you can still bet to make better hands fold.",
-  call_odds:"It's the last card — a cheap call to see who wins.",
-  raise_semibluff:"Nothing left to draw to — this raise is a bluff to pressure them into folding.",
-  protection:"The board is complete — bet to get paid by worse hands; nothing can catch up now.",
+  realization:"Your {hand} isn't worth betting, and there are no more cards — just check and see who wins.",
+  semi_bluff:"Your {hand} can't improve anymore — but you can still bet to make better hands fold.",
+  call_odds:"It's the last card — a cheap call with your {hand} to see who wins.",
+  raise_semibluff:"Your {hand} has nothing left to draw to — this raise is a bluff to pressure them into folding.",
+  protection:"The board is complete — bet your {hand} to get paid by worse hands; nothing can catch up now.",
   // no more cards on the river, so "let them catch up" doesn't apply — checking induces a bet/bluff.
-  trap:"You're very strong — checking hides it so they bet into you (or bluff) instead of folding to a bet; then you take their chips."
+  trap:"Your {hand} is very strong — checking hides it so they bet into you (or bluff) instead of folding; then you take their chips."
 };
 // Learning-mode river tags (short term + meaning; flop learning copy still says "improve").
 const RIVER_LEARNING={
@@ -1014,7 +1015,7 @@ function inferReason(q,rd){
 function closeExplain(q,rd){
   const pa=shortAct(q.preferred),r=inferReason(q,rd);
   // why the best play edges ahead — reuse the plain per-reason logic (river-aware).
-  const why=(q.street==="river"&&RIVER_PLAIN[r])?RIVER_PLAIN[r]:(r&&PLAIN_HEAD[r])?PLAIN_HEAD[r]:"the options are all near break-even here.";
+  const why=fillHand((q.street==="river"&&RIVER_PLAIN[r])?RIVER_PLAIN[r]:(r&&PLAIN_HEAD[r])?PLAIN_HEAD[r]:"the options are all near break-even here.",rd.made);
   const alt=q.actions.filter(function(a){return a!==q.preferred;})
     .sort(function(a,b){return (q.ev[b]||0)-(q.ev[a]||0);});
   const altTxt=alt.length?" "+cap1(shortAct(alt[0]))+" is fine too — it's nearly a coin-flip, so don't sweat which you pick.":"";
@@ -1042,8 +1043,8 @@ function plainHead(q){
     // Checked-to decisions are distinct from facing-a-bet decisions.
     if((q.node||"").indexOf("_vs_check")>=0)s+=" It was checked to you, but on a board this connected a check doesn't rule out a straight — strong hands often check to trap — so betting mostly folds out the hands you beat and gets called by the ones that beat you.";
     return s;}
-  if(q.street==="river"&&RIVER_PLAIN[q.reason])return RIVER_PLAIN[q.reason];
-  return PLAIN_HEAD[q.reason]||TERMS.plain.reason[q.reason]||q.headline;
+  if(q.street==="river"&&RIVER_PLAIN[q.reason])return fillHand(RIVER_PLAIN[q.reason],rd.made);
+  return fillHand(PLAIN_HEAD[q.reason]||TERMS.plain.reason[q.reason]||q.headline,rd.made);
 }
 // The generalizable lesson — a one-line pattern per spot type, so the takeaway
 // transfers to the next hand instead of staying stuck to this one. Jargon-free.
@@ -1269,7 +1270,7 @@ function renderHand(){                                  // draw the current hist
   document.getElementById("session-hud").hidden=false;
   document.getElementById("session-progress").hidden=false;
   const step=Math.min(shownStep()+1,order.length),bonus=!!e.bonus;
-  document.getElementById("session-kind").textContent=bonus?"Compare practice":"Quick session";
+  document.getElementById("session-kind").textContent=bonus?"Compare practice":({all:"All streets",preflop:"Preflop",flop:"Flop",turn:"Turn",river:"River"}[cat]||"Quick session");
   document.getElementById("session-counter").hidden=bonus;
   document.getElementById("session-bonus").hidden=!bonus;
   document.getElementById("skip-bonus").hidden=!(bonus&&e.pick==null);
@@ -1571,15 +1572,39 @@ function findContrast(q){
   }
   return best;
 }
+// A concrete "why this hand plays this way" clause per reason — completes "Your <hand> ___".
+// Naming BOTH hands' logic side by side is what makes the flip land, instead of a generic rule.
+const REASON_CLAUSE={
+  value:"is ahead of the hands that call a bet — so it bets for value",
+  trap:"is so strong that betting would just fold out everything worse — so it checks to trap",
+  protection:"is ahead now, but a later card could beat it — so it bets to make draws pay",
+  pot_control:"is only medium-strength — so it checks to keep the pot small",
+  bluff:"can't win at showdown — so it bets to fold better hands out",
+  semi_bluff:"isn't ahead yet but can still improve — so it bets (win now if they fold, later if it hits)",
+  realization:"is too weak to bet — so it checks and takes a free card",
+  value_call:"beats the hands doing the betting — so it calls",
+  bluff_catch:"beats the hands they'd bluff with — so it calls",
+  call_odds:"isn't made yet, but it's cheap to keep chasing — so it calls",
+  fold:"loses to most of what they'd bet — so it folds",
+  raise_value:"is strong enough that raising wins more than calling — so it raises",
+  raise_bluff:"can't win at showdown — so it raises to fold better hands out",
+  raise_semibluff:"is a draw worth raising — pressure now, and it can still improve"
+};
+const RIVER_CLAUSE={
+  semi_bluff:"can't improve anymore — so this bet only wins if they fold",
+  realization:"is too weak to bet, and the board is final — so it just checks it down",
+  call_odds:"it's the last card — so it's a cheap call to see who wins",
+  raise_semibluff:"has nothing left to draw to — so the raise is pure pressure to fold them out",
+  protection:"is ahead on a finished board — so it bets to get paid; nothing can catch up now",
+  trap:"is a monster and nothing can catch up — so it checks to let them bet or bluff into it"
+};
+function clauseFor(reason,street){return (street==="river"&&RIVER_CLAUSE[reason])||REASON_CLAUSE[reason]||"plays this way";}
 function contrastWhy(q,rd,o,ord){
-  const axis=CONTRAST[q.reason].axis;
-  const table=(q.street==="river"||o.street==="river")?RIVER_AXIS_WHY:AXIS_WHY;
-  let s=table[axis]||AXIS_WHY.strong;
-  const d=[];
-  if(q.is_oop!==o.is_oop)d.push("here you "+(q.is_oop?"act first (out of position)":"act last (in position)")+", there you "+(o.is_oop?"act first":"act last"));
+  const mine=(rd.made||"hand").replace(/^an? /i,""), twin=(ord.made||"hand").replace(/^an? /i,"");
+  let s="Yours (<b>"+mine+"</b>) "+clauseFor(q.reason,q.street)+". The look-alike (<b>"+twin+"</b>) "+clauseFor(o.reason,o.street)+".";
+  // Only add board/position as a co-factor when it genuinely differs — never as the headline reason.
   const wa=rd.boardStraighty>=2||rd.boardFlushy>=2, wb=ord.boardStraighty>=2||ord.boardFlushy>=2;
-  if(wa!==wb)d.push("this board is "+(wa?"wet — straights/flushes live":"dry and safe")+", the other the reverse");
-  if(d.length)s+=" <b>In this pair it comes down to:</b> "+d.join("; ")+".";
+  if(wa!==wb)s+=" The "+(wa?"wetter":"drier")+" board here nudges it the same way.";
   return s;
 }
 function renderContrast(q){
@@ -1924,9 +1949,9 @@ function applyCatUI(){const cc=catCounts();
     b.setAttribute("aria-pressed",String(on));
     const n=b.dataset.c==="all"?Q.length:(cc[b.dataset.c]||0);b.disabled=n===0;b.style.opacity=n===0?"0.4":"";});}
 function setCat(c){
-  if(!document.getElementById("session-end").hidden)return;
   cat=c;try{localStorage.setItem("cat",c);}catch(e){}
-  stats=freshStats();sessionMisses=[];applyCatUI();buildOrder();newHand();}
+  stats=freshStats();sessionMisses=[];applyCatUI();buildOrder();newHand();
+  setView("train");}   // picking what to train jumps you into a fresh session
 document.querySelectorAll("#cats button").forEach(b=>b.onclick=()=>setCat(b.dataset.c));
 // Collapsed by default so the game sits at the top; remember if the reader opens it.
 const intro=document.getElementById("intro");
