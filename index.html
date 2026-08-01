@@ -150,7 +150,7 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 /* result = slide-up bottom sheet over the hand */
 .fb.on{display:block;position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:100%;max-width:440px;z-index:50;
   background:var(--panel);border:1px solid var(--line);border-bottom:none;border-radius:22px 22px 0 0;
-  box-shadow:0 -16px 44px -10px rgba(0,0,0,.75);max-height:86vh;overflow-y:auto;overscroll-behavior:contain;
+  box-shadow:0 -16px 44px -10px rgba(0,0,0,.75);max-height:86vh;max-height:86dvh;overflow-y:auto;overscroll-behavior:contain;
   animation:sheetup .3s cubic-bezier(.2,.85,.25,1);padding-bottom:10px}
 .fb .grab{width:38px;height:4px;border-radius:3px;background:var(--line);margin:9px auto 2px}
 /* decision breakdown: the factors behind the play, each with a plain why */
@@ -214,7 +214,7 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 .fac-odds:hover{color:var(--ink)}
 .fac-odds-arr{font-size:17px;line-height:1}
 .hd{display:none}
-.hd.on{display:block;position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:100%;max-width:440px;z-index:60;background:var(--panel);border:1px solid var(--line);border-bottom:none;border-radius:22px 22px 0 0;max-height:92vh;overflow-y:auto;overscroll-behavior:contain;animation:sheetup .3s cubic-bezier(.2,.85,.25,1);box-shadow:0 -16px 44px -10px rgba(0,0,0,.75)}
+.hd.on{display:block;position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:100%;max-width:440px;z-index:60;background:var(--panel);border:1px solid var(--line);border-bottom:none;border-radius:22px 22px 0 0;max-height:92vh;max-height:92dvh;overflow-y:auto;overscroll-behavior:contain;animation:sheetup .3s cubic-bezier(.2,.85,.25,1);box-shadow:0 -16px 44px -10px rgba(0,0,0,.75)}
 .hd-scrim{position:fixed;inset:0;z-index:55;background:rgba(0,0,0,.6);backdrop-filter:blur(1.5px);animation:rise .25s ease}
 .hd-topbar{display:flex;align-items:center;gap:11px;padding:13px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:1}
 .hd-back{appearance:none;flex:none;font-family:var(--label);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--brass);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:7px 12px;cursor:pointer}
@@ -325,7 +325,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .coach-ask button{appearance:none;border:none;background:var(--brass);color:#fff;font-family:var(--sans);font-weight:700;font-size:13px;padding:0 16px;border-radius:9px;cursor:pointer;flex:none}
 .coach-ask button:disabled{opacity:.5;cursor:default}
 /* ===== mobile app shell ===== */
-.app{max-width:440px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative;background:transparent;z-index:0}
+.app{max-width:440px;margin:0 auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;position:relative;background:transparent;z-index:0}
 .appbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:flex-start;gap:11px;padding:12px 16px;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 .pager{display:flex;gap:5px;flex:none}
 .revbtn{appearance:none;flex:none;font-family:var(--label);font-size:16px;line-height:1;font-weight:700;color:var(--brass);background:var(--panel2);border:1px solid var(--line);border-radius:9px;width:30px;height:30px;display:grid;place-items:center;cursor:pointer;transition:.12s;padding:0}
@@ -671,7 +671,7 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
     <details class="tech">
       <summary>Solver and data details</summary>
     <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>e495ab4</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>1097c22</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
     <span class="demo">Turn / river</span> spots are now full-range solver output too, but
