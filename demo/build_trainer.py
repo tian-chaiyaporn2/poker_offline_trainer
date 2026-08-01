@@ -21,6 +21,20 @@ from pokertrainer.content_pack import verify_pack
 # ---- Locked visual assets: embedded fonts (Rye + Space Mono) and the custom
 # paper-craft folded suit SVG symbols. Emitted into the page at build time.
 _FONT_DIR = os.path.join(os.path.dirname(__file__), "fonts")
+_ASSET_DIR = os.path.join(os.path.dirname(__file__), "assets")
+
+
+def _roombgs():
+    # Per-street room backgrounds (flat Monument Valley casino interiors), embedded offline as
+    # data-URIs. Missing files degrade gracefully — the JS falls back to the procedural hall.
+    out = {}
+    for street in ("preflop", "flop", "turn", "river"):
+        p = os.path.join(_ASSET_DIR, "room_%s.webp" % street)
+        if not os.path.exists(p):
+            continue
+        with open(p, "rb") as img:
+            out[street] = "data:image/webp;base64," + base64.b64encode(img.read()).decode()
+    return json.dumps(out, separators=(",", ":"))
 
 
 def _fontface():
@@ -349,7 +363,8 @@ def build(allow_missing_demo_packs=False):
     cdata = json.dumps(cpool, separators=(",", ":")).replace("<", "\\u003c")
     body = TEMPLATE.replace("__DATA__", data).replace("__CPOOL__", cdata).replace("__VERSION__", html.escape(meta.get("version", ""))) \
                    .replace("__RECORDS__", html.escape(str(meta.get("record_count", "")))).replace("__COMMIT__", html.escape(commit)) \
-                   .replace("__FONTFACE__", _fontface()).replace("__SUITDEFS__", _suitdefs())
+                   .replace("__FONTFACE__", _fontface()).replace("__SUITDEFS__", _suitdefs()) \
+                   .replace("__ROOMBGS__", _roombgs())
     os.makedirs("demo", exist_ok=True)
     with open("demo/trainer_demo.html", "w", encoding="utf-8") as demo_file:
         demo_file.write(body)
@@ -388,6 +403,25 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 .bar-top>i{display:block;height:100%;background:var(--brass);transition:width .3s}
 /* the play area needs no decorative panel — the session bar above and tab bar below frame it */
 .card{background:transparent;border:none;border-radius:0;overflow:visible}
+/* ambient background: an abstract, blended casino hall receding to a warm vanishing point,
+   tinted by the two hole-card suits and cooled when out of position. Purely atmospheric —
+   sits behind the play content (#fb stays fixed/z-50 above it) and never intercepts taps. */
+#play-card{position:relative}
+.hallbg{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;
+  -webkit-mask-image:linear-gradient(180deg,transparent,#000 6%,#000 94%,transparent);
+          mask-image:linear-gradient(180deg,transparent,#000 6%,#000 94%,transparent)}
+.hall-room{position:absolute;inset:0;background-size:cover;background-position:50% 32%;opacity:.84;
+  filter:contrast(.8) saturate(.82) brightness(.92);transition:opacity .3s}
+.hall-room .hall-svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hall-tint{position:absolute;inset:0;mix-blend-mode:soft-light;opacity:.55}
+/* legibility scrim: darken the central card zone + top/bottom so cream cards and text always read */
+.hall-scrim{position:absolute;inset:0;background:
+  radial-gradient(74% 38% at 50% 60%,rgba(6,7,12,.52),transparent 72%),
+  linear-gradient(180deg,rgba(6,7,12,.4),transparent 20%,transparent 72%,rgba(6,7,12,.46))}
+#play-card>.sit,#play-card>#seats,#play-card>.move-cue,#play-card>#acts{position:relative;z-index:1}
+.action-line{text-shadow:0 1px 6px rgba(0,0,0,.6)}
+.stage .cap{text-shadow:0 1px 5px rgba(0,0,0,.55)}
+@media (prefers-reduced-motion:reduce){.hall-room{opacity:.8}}
 .sit{padding:8px 15px 4px;display:flex;align-items:center;gap:9px;font-family:var(--sans);font-size:12.5px;line-height:1.3}
 .sit-street{color:var(--muted);font-weight:600}
 .sit .pos{margin-left:auto}
@@ -662,10 +696,12 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .views{flex:1;padding-bottom:60px;display:flex;flex-direction:column;min-height:0}
 .view{display:none;padding:14px 15px 8px}
 .view.on{display:flex;flex-direction:column;flex:1;min-height:0;animation:viewin .24s ease}
-#v-train.view.on>*{flex:none}
-#play-card{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
-#play-card .stage{flex:0 1 auto;justify-content:flex-start;padding-top:0}
-#play-card .move-cue{margin-top:auto}   /* pin the move prompt + buttons to the bottom; no void up top */
+#v-train.view.on>.session-hud,#v-train.view.on>#session-progress{flex:none}
+#v-train.view.on>#play-card{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
+/* the table area grows and centres its content; header stays on top, buttons anchor to the bottom */
+#play-card>#seats{flex:1 1 auto;display:flex;flex-direction:column;justify-content:flex-start;min-height:0;padding-top:6px}
+#play-card .stage{padding-top:0}
+#play-card .sit,#play-card .move-cue,#play-card #acts{flex:none}
 @keyframes viewin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .no-motion *{animation:none!important;transition:none!important}
 .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:440px;z-index:30;display:flex;background:color-mix(in srgb,var(--panel) 94%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
@@ -875,6 +911,7 @@ __SUITDEFS__
     <div class="bar-top" id="session-progress" role="progressbar" aria-label="Session progress" aria-valuemin="1" aria-valuemax="10" aria-valuenow="1"><i id="prog" style="width:0"></i></div>
 
   <div class="card" id="play-card" tabindex="-1">
+    <div class="hallbg" id="hallbg" aria-hidden="true"><div class="hall-room" id="hall-room"></div><div class="hall-tint" id="hall-tint"></div><div class="hall-scrim"></div></div>
     <div class="sit"><span class="sit-street" id="sitcontext"></span><span class="pos" id="pos"></span><span class="demo" id="demotag" hidden></span></div>
     <div class="tablewrap" id="seats"></div>
     <div class="move-cue" id="movecue">Your move — tap what you'd do</div>
@@ -1539,6 +1576,7 @@ function decisionHeadline(q){
 }
 function renderQuestion(q){
   var mc=document.getElementById("movecue");if(mc)mc.hidden=false;   // show the decision cue on a fresh hand
+  updateHall(q);   // refresh the suit-tinted ambient hall for this hand
   if(q.preflop)return renderPreflop(q);
   const posEl=document.getElementById("pos");posEl.textContent=q.is_oop?"Out of position":"In position";posEl.className="pos "+(q.is_oop?"oop":"ip");
   // Position is already the coloured lead label; keep the supporting line compact on phones.
@@ -1598,7 +1636,107 @@ function constellation(hero,villain){
     }
   });
   return '<div class="cnst-wrap"><svg viewBox="'+VBX+' '+VBY+' '+VBW+' '+VBH+'" class="cnst" aria-hidden="true">'
+    +'<defs><radialGradient id="cnfill" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#05070c" stop-opacity="0.4"/><stop offset="1" stop-color="#05070c" stop-opacity="0"/></radialGradient></defs>'
+    +'<ellipse cx="98" cy="48" rx="80" ry="48" fill="url(#cnfill)"/>'
     +'<polygon points="'+poly+'" class="cn-link"/>'+dots+labels+'</svg></div>';
+}
+// ---- ambient casino-hall background, drawn from the current hand's two hole-card suits ----
+const HB_PIP={s:'M12 2C9 7 4 9 4 14a5 5 0 0 0 7 4l-1 4h4l-1-4a5 5 0 0 0 7-4c0-5-5-7-8-12z',
+ h:'M12 21C5 15 3 11 3 8a4.5 4.5 0 0 1 9-1 4.5 4.5 0 0 1 9 1c0 3-2 7-9 13z',
+ d:'M12 2l8 10-8 10-8-10z',c:'M12 2a4 4 0 0 1 3 6.6A4 4 0 1 1 13 15l-1 3 1 3h-4l1-3-1-3a4 4 0 1 1-2-6.4A4 4 0 0 1 12 2z'};
+const HB_ANCH={h:['#33222f','#6e3739','#b05e44'],s:['#212a44','#3f527a','#7089a8'],
+               d:['#2c2333','#6f4f31','#c2924a'],c:['#1e3028','#375f49','#5f9068']};
+function hbHx(c){c=c.replace('#','');return [parseInt(c.slice(0,2),16),parseInt(c.slice(2,4),16),parseInt(c.slice(4,6),16)];}
+function hbToh(a){return '#'+a.map(v=>Math.max(0,Math.min(255,v|0)).toString(16).padStart(2,'0')).join('');}
+function hbMix(a,b,t){const x=hbHx(a),y=hbHx(b);return hbToh([x[0]+(y[0]-x[0])*t,x[1]+(y[1]-x[1])*t,x[2]+(y[2]-x[2])*t]);}
+function hbShd(c,f){const x=hbHx(c);return hbToh([x[0]*f,x[1]*f,x[2]*f]);}
+function hbL(a,b,t){return a+(b-a)*t;}
+function hbTones(s1,s2,oop,n){
+  let deep=hbMix(HB_ANCH[s1][0],HB_ANCH[s2][0],.5),mid=hbMix(HB_ANCH[s1][1],HB_ANCH[s2][1],.5),bri=hbMix(HB_ANCH[s1][2],HB_ANCH[s2][2],.5);
+  if(oop){deep=hbMix(deep,'#1b2338',.42);mid=hbMix(mid,'#33425f',.3);bri=hbMix(bri,'#5c748f',.24);}
+  else{mid=hbMix(mid,'#7a4e30',.16);bri=hbMix(bri,'#c98a4c',.26);}
+  const out=[];for(let i=0;i<n;i++){const t=i/(n-1);out.push(t<0.5?hbMix(deep,mid,t*2):hbMix(mid,bri,(t-0.5)*2));}
+  return out;
+}
+function hbArch(cx,hw,base,spring,apex){return 'M '+(cx-hw)+' '+base+' L '+(cx-hw)+' '+spring+' Q '+(cx-hw)+' '+apex+' '+cx+' '+apex+' Q '+(cx+hw)+' '+apex+' '+(cx+hw)+' '+spring+' L '+(cx+hw)+' '+base+' Z';}
+function hbRect(x,y,w,h){return 'M '+x.toFixed(1)+' '+y.toFixed(1)+' h '+w.toFixed(1)+' v '+h.toFixed(1)+' h '+(-w).toFixed(1)+' Z';}
+// Each street is a different room, same visual language (flat geometry receding to the VP).
+// FLOP — arched gallery.
+function hbArches(t,N,cx){
+  const O={base:600,spring:250,apex:70,hw:150},I={base:314,spring:304,apex:292,hw:13};let s='';
+  for(let i=0;i<N;i++){const k=i/(N-1),hw=hbL(O.hw,I.hw,k),base=hbL(O.base,I.base,k),spring=hbL(O.spring,I.spring,k),apex=hbL(O.apex,I.apex,k);
+    s+='<path d="'+hbArch(cx,hw,base,spring,apex)+'" fill="'+t[i]+'"/>';
+    s+='<path d="M '+(cx-hw)+' '+spring+' Q '+(cx-hw)+' '+apex+' '+cx+' '+apex+' Q '+(cx+hw)+' '+apex+' '+(cx+hw)+' '+spring+'" fill="none" stroke="'+hbMix(t[i],'#ffffff',.16)+'" stroke-width="1" opacity="0.32"/>';}
+  return s;
+}
+// PREFLOP — entry colonnade: pairs of columns receding toward a far doorway.
+function hbColonnade(t,N,cx){let s='';
+  for(let i=0;i<N;i++){const d=1-i/(N-1);   // i=0 is farthest (drawn first)
+    const floorY=hbL(600,320,d),top=hbL(64,290,d),hw=Math.max(2,hbL(23,3,d));
+    const lx=hbL(18,cx-12,d),rx=hbL(282,cx+12,d),col=t[i],lit=hbMix(col,'#ffffff',.16),dk=hbShd(col,.78);
+    s+='<path d="'+hbRect(lx-hw,top,2*hw,floorY-top)+'" fill="'+col+'"/><path d="'+hbRect(lx-hw,top,hw*0.42,floorY-top)+'" fill="'+lit+'" opacity="0.5"/>';
+    s+='<path d="'+hbRect(rx-hw,top,2*hw,floorY-top)+'" fill="'+col+'"/><path d="'+hbRect(rx+hw*0.18,top,hw*0.42,floorY-top)+'" fill="'+dk+'" opacity="0.5"/>';
+  }
+  s+='<path d="'+hbArch(cx,26,318,300,278)+'" fill="'+hbMix(t[N-1],'#ffffff',.10)+'"/>';   // far doorway
+  return s;
+}
+// TURN — domed rotunda: concentric rings + radial ribs.
+function hbRotunda(t,N,cx){const cy=300;let s='';
+  for(let i=0;i<N;i++){const k=i/(N-1);s+='<ellipse cx="'+cx+'" cy="'+cy+'" rx="'+hbL(214,13,k).toFixed(1)+'" ry="'+hbL(152,12,k).toFixed(1)+'" fill="'+t[i]+'"/>';}
+  for(let j=0;j<12;j++){const a=j/12*6.2832,x=cx+Math.cos(a)*214,y=cy+Math.sin(a)*152;
+    s+='<line x1="'+cx+'" y1="'+cy+'" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="'+hbMix(t[3],'#ffffff',.13)+'" stroke-width="1" opacity="0.12"/>';}
+  return s;
+}
+// RIVER — the vault: nested rectangular thresholds + a safe-door wheel.
+function hbVault(t,N,cx){const cy=300;let s='';
+  for(let i=0;i<N;i++){const k=i/(N-1),hw=hbL(150,15,k),vh=hbL(300,15,k),rr=hbL(20,3,k),x=cx-hw,y=cy-vh;
+    s+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+(2*hw).toFixed(1)+'" height="'+(2*vh).toFixed(1)+'" rx="'+rr.toFixed(1)+'" fill="'+t[i]+'"/>';
+    s+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+(2*hw).toFixed(1)+'" height="'+(2*vh).toFixed(1)+'" rx="'+rr.toFixed(1)+'" fill="none" stroke="'+hbMix(t[i],'#ffffff',.14)+'" stroke-width="1" opacity="0.28"/>';}
+  const wc=hbMix(t[N-1],'#ffffff',.34);
+  s+='<circle cx="'+cx+'" cy="'+cy+'" r="12" fill="none" stroke="'+wc+'" stroke-width="1.4" opacity="0.5"/>';
+  for(let j=0;j<8;j++){const a=j/8*6.2832;s+='<line x1="'+(cx+Math.cos(a)*3).toFixed(1)+'" y1="'+(cy+Math.sin(a)*3).toFixed(1)+'" x2="'+(cx+Math.cos(a)*12).toFixed(1)+'" y2="'+(cy+Math.sin(a)*12).toFixed(1)+'" stroke="'+wc+'" stroke-width="1" opacity="0.4"/>';}
+  return s;
+}
+function hallStruct(street,t,N,cx){
+  if(street==='preflop')return hbColonnade(t,N,cx);
+  if(street==='turn')return hbRotunda(t,N,cx);
+  if(street==='river')return hbVault(t,N,cx);
+  return hbArches(t,N,cx);   // flop + default
+}
+function hallBG(s1,s2,oop,street){
+  if(!HB_ANCH[s1])s1='s'; if(!HB_ANCH[s2])s2='s';
+  const N=9,t=hbTones(s1,s2,oop,N),cx=150,VPY=300;
+  let s='<svg viewBox="0 0 300 600" preserveAspectRatio="xMidYMid slice" class="hall-svg">';
+  s+='<defs><radialGradient id="hbend" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="'+hbMix(t[N-1],'#ffffff',.30)+'" stop-opacity="0.5"/><stop offset="1" stop-color="'+t[N-1]+'" stop-opacity="0"/></radialGradient>';
+  s+='<radialGradient id="hbscrim" cx="0.5" cy="0.55" r="0.6"><stop offset="0" stop-color="#0b0c10" stop-opacity="0.42"/><stop offset="1" stop-color="#0b0c10" stop-opacity="0"/></radialGradient></defs>';
+  s+='<rect width="300" height="600" fill="'+t[0]+'"/>';
+  s+=hallStruct(street,t,N,cx);
+  s+='<ellipse cx="'+cx+'" cy="'+(VPY+4)+'" rx="46" ry="52" fill="url(#hbend)"/>';
+  const flrTop=VPY+16,xL=y=>hbL(0,cx-14,(600-y)/(600-flrTop)),xR=y=>hbL(300,cx+14,(600-y)/(600-flrTop));
+  s+='<path d="M 0 600 L '+(cx-14)+' '+flrTop+' L '+(cx+14)+' '+flrTop+' L 300 600 Z" fill="'+hbShd(t[1],.82)+'" opacity="0.66"/>';
+  for(const gx of [46,100,150,200,254])s+='<line x1="'+gx+'" y1="600" x2="'+hbL(gx,cx,0.9)+'" y2="'+flrTop+'" stroke="'+hbMix(t[2],'#ffffff',.14)+'" stroke-width="1" opacity="0.15"/>';
+  for(const yy of [600,540,486,438,398,366])s+='<line x1="'+xL(yy)+'" y1="'+yy+'" x2="'+xR(yy)+'" y2="'+yy+'" stroke="'+hbMix(t[2],'#ffffff',.12)+'" stroke-width="1" opacity="0.12"/>';
+  s+='<path d="'+HB_PIP[s1]+'" fill="'+hbMix(t[1],'#ffffff',.2)+'" opacity="0.42" transform="translate(127,486) scale(1.9)"/>';
+  s+='<rect width="300" height="600" fill="url(#hbscrim)"/>';
+  return s+'</svg>';
+}
+const ROOMBG=__ROOMBGS__;   // street -> flat-illustrated room background (offline data-URI)
+function updateHall(q){
+  const room=document.getElementById("hall-room"),tint=document.getElementById("hall-tint");
+  if(!room)return;
+  const h=q.preflop?q.hand:q.hero;
+  const street=q.preflop?"preflop":q.street;
+  const oop=q.preflop?!(q.pos==="BTN"||q.pos==="CO"||q.pos==="HJ"):!!q.is_oop;
+  const s1=(h&&h[0])?h[0][1]:"s",s2=(h&&h[1])?h[1][1]:"s";
+  const img=ROOMBG[street];
+  if(img){   // the illustrated room + a gentle suit/position colour grade over it
+    room.innerHTML="";room.style.backgroundImage="url("+img+")";
+    if(tint){const t=hbTones(s1,s2,oop,6);tint.style.display="block";
+      tint.style.background="radial-gradient(120% 86% at 50% 44%,"+t[4]+" 0%,"+t[2]+" 62%,"+t[1]+" 100%)";}
+  }else{   // no art for this street -> procedural hall fallback
+    room.style.backgroundImage="none";room.innerHTML=hallBG(s1,s2,oop,street);
+    if(tint)tint.style.display="none";
+  }
 }
 function ringTable(q){
   // Heads-up postflop: constellation for position, cards on the clean ground below it.
