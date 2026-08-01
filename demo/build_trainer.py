@@ -21,20 +21,6 @@ from pokertrainer.content_pack import verify_pack
 # ---- Locked visual assets: embedded fonts (Rye + Space Mono) and the custom
 # paper-craft folded suit SVG symbols. Emitted into the page at build time.
 _FONT_DIR = os.path.join(os.path.dirname(__file__), "fonts")
-_ASSET_DIR = os.path.join(os.path.dirname(__file__), "assets")
-
-
-def _roombgs():
-    # Per-street room backgrounds (flat Monument Valley casino interiors), embedded offline as
-    # data-URIs. Missing files degrade gracefully — the JS falls back to the procedural hall.
-    out = {}
-    for street in ("preflop", "flop", "turn", "river"):
-        p = os.path.join(_ASSET_DIR, "room_%s.webp" % street)
-        if not os.path.exists(p):
-            continue
-        with open(p, "rb") as img:
-            out[street] = "data:image/webp;base64," + base64.b64encode(img.read()).decode()
-    return json.dumps(out, separators=(",", ":"))
 
 
 def _fontface():
@@ -363,8 +349,7 @@ def build(allow_missing_demo_packs=False):
     cdata = json.dumps(cpool, separators=(",", ":")).replace("<", "\\u003c")
     body = TEMPLATE.replace("__DATA__", data).replace("__CPOOL__", cdata).replace("__VERSION__", html.escape(meta.get("version", ""))) \
                    .replace("__RECORDS__", html.escape(str(meta.get("record_count", "")))).replace("__COMMIT__", html.escape(commit)) \
-                   .replace("__FONTFACE__", _fontface()).replace("__SUITDEFS__", _suitdefs()) \
-                   .replace("__ROOMBGS__", _roombgs())
+                   .replace("__FONTFACE__", _fontface()).replace("__SUITDEFS__", _suitdefs())
     os.makedirs("demo", exist_ok=True)
     with open("demo/trainer_demo.html", "w", encoding="utf-8") as demo_file:
         demo_file.write(body)
@@ -410,10 +395,17 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 .hallbg{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;
   -webkit-mask-image:linear-gradient(180deg,transparent,#000 6%,#000 94%,transparent);
           mask-image:linear-gradient(180deg,transparent,#000 6%,#000 94%,transparent)}
-.hall-room{position:absolute;inset:0;background-size:cover;background-position:50% 32%;opacity:.84;
-  filter:contrast(.8) saturate(.82) brightness(.92);transition:opacity .3s}
+.hall-room{position:absolute;inset:0;background-size:cover;background-position:50% 32%;opacity:.96;transition:opacity .3s}
 .hall-room .hall-svg{position:absolute;inset:0;width:100%;height:100%;display:block}
 .hall-tint{position:absolute;inset:0;mix-blend-mode:soft-light;opacity:.55}
+/* motion in the pockets: the chandelier sways, stars twinkle, the warm light breathes */
+@keyframes hbswing{0%,100%{transform:rotate(-1.5deg)}50%{transform:rotate(1.5deg)}}
+@keyframes hbtwk{0%,100%{opacity:.28}50%{opacity:.8}}
+@keyframes hbpulse{0%,100%{opacity:.5}50%{opacity:.82}}
+.hb-swing{transform-box:fill-box;transform-origin:50% 10%;animation:hbswing 5.5s ease-in-out infinite}
+.hb-twk{animation:hbtwk 3.4s ease-in-out infinite}
+.hb-pulse{animation:hbpulse 5s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.hb-swing,.hb-twk,.hb-pulse{animation:none}}
 /* legibility scrim: darken the central card zone + top/bottom so cream cards and text always read */
 .hall-scrim{position:absolute;inset:0;background:
   radial-gradient(74% 38% at 50% 60%,rgba(6,7,12,.52),transparent 72%),
@@ -1640,103 +1632,95 @@ function constellation(hero,villain){
     +'<ellipse cx="98" cy="48" rx="80" ry="48" fill="url(#cnfill)"/>'
     +'<polygon points="'+poly+'" class="cn-link"/>'+dots+labels+'</svg></div>';
 }
-// ---- ambient casino-hall background, drawn from the current hand's two hole-card suits ----
+// ---- geometric Monument-Valley room backgrounds: one distilled room per street, drawn from the
+// two hole-card suits (tint + the floor emblem) and position (temperature). Pure vector, a few KB. ----
 const HB_PIP={s:'M12 2C9 7 4 9 4 14a5 5 0 0 0 7 4l-1 4h4l-1-4a5 5 0 0 0 7-4c0-5-5-7-8-12z',
  h:'M12 21C5 15 3 11 3 8a4.5 4.5 0 0 1 9-1 4.5 4.5 0 0 1 9 1c0 3-2 7-9 13z',
  d:'M12 2l8 10-8 10-8-10z',c:'M12 2a4 4 0 0 1 3 6.6A4 4 0 1 1 13 15l-1 3 1 3h-4l1-3-1-3a4 4 0 1 1-2-6.4A4 4 0 0 1 12 2z'};
-const HB_ANCH={h:['#33222f','#6e3739','#b05e44'],s:['#212a44','#3f527a','#7089a8'],
-               d:['#2c2333','#6f4f31','#c2924a'],c:['#1e3028','#375f49','#5f9068']};
 function hbHx(c){c=c.replace('#','');return [parseInt(c.slice(0,2),16),parseInt(c.slice(2,4),16),parseInt(c.slice(4,6),16)];}
 function hbToh(a){return '#'+a.map(v=>Math.max(0,Math.min(255,v|0)).toString(16).padStart(2,'0')).join('');}
 function hbMix(a,b,t){const x=hbHx(a),y=hbHx(b);return hbToh([x[0]+(y[0]-x[0])*t,x[1]+(y[1]-x[1])*t,x[2]+(y[2]-x[2])*t]);}
-function hbShd(c,f){const x=hbHx(c);return hbToh([x[0]*f,x[1]*f,x[2]*f]);}
 function hbL(a,b,t){return a+(b-a)*t;}
-function hbTones(s1,s2,oop,n){
-  let deep=hbMix(HB_ANCH[s1][0],HB_ANCH[s2][0],.5),mid=hbMix(HB_ANCH[s1][1],HB_ANCH[s2][1],.5),bri=hbMix(HB_ANCH[s1][2],HB_ANCH[s2][2],.5);
-  if(oop){deep=hbMix(deep,'#1b2338',.42);mid=hbMix(mid,'#33425f',.3);bri=hbMix(bri,'#5c748f',.24);}
-  else{mid=hbMix(mid,'#7a4e30',.16);bri=hbMix(bri,'#c98a4c',.26);}
-  const out=[];for(let i=0;i<n;i++){const t=i/(n-1);out.push(t<0.5?hbMix(deep,mid,t*2):hbMix(mid,bri,(t-0.5)*2));}
-  return out;
-}
-function hbArch(cx,hw,base,spring,apex){return 'M '+(cx-hw)+' '+base+' L '+(cx-hw)+' '+spring+' Q '+(cx-hw)+' '+apex+' '+cx+' '+apex+' Q '+(cx+hw)+' '+apex+' '+(cx+hw)+' '+spring+' L '+(cx+hw)+' '+base+' Z';}
-function hbRect(x,y,w,h){return 'M '+x.toFixed(1)+' '+y.toFixed(1)+' h '+w.toFixed(1)+' v '+h.toFixed(1)+' h '+(-w).toFixed(1)+' Z';}
-// Each street is a different room, same visual language (flat geometry receding to the VP).
-// FLOP — arched gallery.
-function hbArches(t,N,cx){
-  const O={base:600,spring:250,apex:70,hw:150},I={base:314,spring:304,apex:292,hw:13};let s='';
-  for(let i=0;i<N;i++){const k=i/(N-1),hw=hbL(O.hw,I.hw,k),base=hbL(O.base,I.base,k),spring=hbL(O.spring,I.spring,k),apex=hbL(O.apex,I.apex,k);
-    s+='<path d="'+hbArch(cx,hw,base,spring,apex)+'" fill="'+t[i]+'"/>';
-    s+='<path d="M '+(cx-hw)+' '+spring+' Q '+(cx-hw)+' '+apex+' '+cx+' '+apex+' Q '+(cx+hw)+' '+apex+' '+(cx+hw)+' '+spring+'" fill="none" stroke="'+hbMix(t[i],'#ffffff',.16)+'" stroke-width="1" opacity="0.32"/>';}
-  return s;
-}
-// PREFLOP — entry colonnade: pairs of columns receding toward a far doorway.
-function hbColonnade(t,N,cx){let s='';
-  for(let i=0;i<N;i++){const d=1-i/(N-1);   // i=0 is farthest (drawn first)
-    const floorY=hbL(600,320,d),top=hbL(64,290,d),hw=Math.max(2,hbL(23,3,d));
-    const lx=hbL(18,cx-12,d),rx=hbL(282,cx+12,d),col=t[i],lit=hbMix(col,'#ffffff',.16),dk=hbShd(col,.78);
-    s+='<path d="'+hbRect(lx-hw,top,2*hw,floorY-top)+'" fill="'+col+'"/><path d="'+hbRect(lx-hw,top,hw*0.42,floorY-top)+'" fill="'+lit+'" opacity="0.5"/>';
-    s+='<path d="'+hbRect(rx-hw,top,2*hw,floorY-top)+'" fill="'+col+'"/><path d="'+hbRect(rx+hw*0.18,top,hw*0.42,floorY-top)+'" fill="'+dk+'" opacity="0.5"/>';
+const GEO_GOLD='#d3ab5c',GEO_GOLDH='#f0d488',GEO_GLOW='#f8edcf',GEO_MOON='#f0e8d2';
+const GEO_SUITHUE={h:'#6f3a4e',d:'#71562f',s:'#38405f',c:'#2e5245'};
+const GEO_HZ=384,GEO_VP=344;
+function geoMoon(mx,my,r){return '<circle cx="'+mx+'" cy="'+my+'" r="'+r+'" fill="'+GEO_MOON+'" opacity="0.92"/><circle cx="'+(mx+r*0.55)+'" cy="'+(my-r*0.3)+'" r="'+(r*0.92)+'" fill="#20203a"/>';}
+function geoStars(){var p=[[46,64,1.3],[92,44,1],[210,58,1.2],[250,80,1],[188,40,1],[70,96,1],[236,116,1.1],[150,34,1.4],[120,74,0.9]],s='';
+  for(var i=0;i<p.length;i++)s+='<circle class="hb-twk" style="animation-delay:'+(i*0.4)+'s" cx="'+p[i][0]+'" cy="'+p[i][1]+'" r="'+p[i][2]+'" fill="'+GEO_MOON+'"/>';return s;}
+// faceted crystal chandelier — two flat facets (no outlines) + halo + candle glow, gently swaying
+function geoGem(gx,gy,sc){const w=12*sc,h=16*sc,top=gy-h,mid=gy-h*0.18,bot=gy+h;
+  let s='<g class="hb-swing"><ellipse cx="'+gx+'" cy="'+gy+'" rx="'+(w*2.6)+'" ry="'+(h*2.1)+'" fill="url(#geohalo)"/>';
+  s+='<rect x="'+(gx-0.7*sc)+'" y="'+(top-13*sc)+'" width="'+(1.4*sc)+'" height="'+(13*sc)+'" fill="'+GEO_GOLD+'" opacity="0.45"/>';
+  s+='<polygon points="'+gx+','+top+' '+(gx-w)+','+mid+' '+gx+','+bot+'" fill="'+hbMix(GEO_GOLD,'#5f4519',0.4)+'"/>';
+  s+='<polygon points="'+gx+','+top+' '+(gx+w)+','+mid+' '+gx+','+bot+'" fill="url(#geogem)"/>';
+  s+='<polygon points="'+gx+','+top+' '+(gx-w)+','+mid+' '+gx+','+(gy+h*0.08)+'" fill="'+GEO_GLOW+'" opacity="0.5"/>';
+  for(let k=-1;k<=1;k++)s+='<circle cx="'+(gx+k*w*0.62)+'" cy="'+(mid+1.5*sc)+'" r="'+(1.4*sc)+'" fill="'+GEO_GLOW+'"/>';
+  return s+'</g>';}
+function geoAperture(ax,ay,rx,ry){return '<ellipse class="hb-pulse" cx="'+ax+'" cy="'+ay+'" rx="'+rx+'" ry="'+ry+'" fill="url(#geoglow)"/>';}
+function geoRunner(s1){const cx=150;let s='<path d="M '+(cx-56)+' 600 L '+(cx-11)+' '+(GEO_HZ+2)+' L '+(cx+11)+' '+(GEO_HZ+2)+' L '+(cx+56)+' 600 Z" fill="url(#georunner)" opacity="0.95"/>';
+  s+='<path d="'+HB_PIP[s1]+'" fill="'+GEO_GOLD+'" opacity="0.75" transform="translate('+(cx-12)+',500) scale(1.0)"/>';return s;}
+function geoCol(x,topY,botY,w,tone){return '<rect x="'+(x-w).toFixed(1)+'" y="'+topY.toFixed(1)+'" width="'+(2*w).toFixed(1)+'" height="'+(botY-topY).toFixed(1)+'" rx="'+(w*0.5).toFixed(1)+'" fill="'+tone+'"/>'
+  +'<rect x="'+(x-w).toFixed(1)+'" y="'+topY.toFixed(1)+'" width="'+(2*w).toFixed(1)+'" height="'+(botY-topY).toFixed(1)+'" rx="'+(w*0.5).toFixed(1)+'" fill="url(#geosheen)"/>';}
+function geoDefs(sky1,sky2,sky3,wall,wallHi,floorHi,floorLo){
+  return '<defs>'
+   +'<linearGradient id="geosky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+sky1+'"/><stop offset="0.55" stop-color="'+sky2+'"/><stop offset="1" stop-color="'+sky3+'"/></linearGradient>'
+   +'<linearGradient id="geofloor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+floorHi+'"/><stop offset="1" stop-color="'+floorLo+'"/></linearGradient>'
+   +'<linearGradient id="geosheen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity="0.13"/><stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/></linearGradient>'
+   +'<radialGradient id="geoglow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="'+GEO_GLOW+'"/><stop offset="0.55" stop-color="'+hbMix(GEO_GLOW,sky3,0.45)+'" stop-opacity="0.8"/><stop offset="1" stop-color="'+sky3+'" stop-opacity="0"/></radialGradient>'
+   +'<radialGradient id="geohalo" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="'+GEO_GLOW+'" stop-opacity="0.42"/><stop offset="1" stop-color="'+GEO_GLOW+'" stop-opacity="0"/></radialGradient>'
+   +'<linearGradient id="geogem" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="'+GEO_GOLDH+'"/><stop offset="1" stop-color="'+GEO_GOLD+'"/></linearGradient>'
+   +'<linearGradient id="georunner" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+GEO_GOLD+'" stop-opacity="0"/><stop offset="1" stop-color="'+GEO_GOLD+'" stop-opacity="0.20"/></linearGradient>'
+   +'<radialGradient id="geodome" gradientUnits="userSpaceOnUse" cx="150" cy="250" r="164"><stop offset="0" stop-color="'+hbMix(GEO_GLOW,wallHi,0.4)+'"/><stop offset="0.5" stop-color="'+wallHi+'"/><stop offset="1" stop-color="'+wall+'"/></radialGradient>'
+   +'<radialGradient id="geomed" gradientUnits="userSpaceOnUse" cx="150" cy="486" r="110"><stop offset="0" stop-color="'+GEO_GOLD+'" stop-opacity="0.30"/><stop offset="0.6" stop-color="'+GEO_GOLD+'" stop-opacity="0.12"/><stop offset="1" stop-color="'+GEO_GOLD+'" stop-opacity="0"/></radialGradient>'
+   +'<radialGradient id="geovig" cx="0.5" cy="0.46" r="0.72"><stop offset="0.55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#05060c" stop-opacity="0.5"/></radialGradient>'
+   +'</defs>';}
+function geoRoom(name,s1,s2,oop){
+  if(!GEO_SUITHUE[s1])s1='s'; if(!GEO_SUITHUE[s2])s2='s';
+  const cx=150,tintHue=GEO_SUITHUE[s1];
+  const sky1=hbMix('#161428',tintHue,0.10),sky2=hbMix('#292140',tintHue,0.20),sky3=hbMix(oop?'#3a3352':'#4a3a4e',tintHue,0.22);
+  const wall=hbMix(sky2,'#211d33',0.35),wallHi=hbMix(sky3,'#736a92',0.45);
+  const floorHi=hbMix(sky3,'#6f8f8b',0.5),floorLo=hbMix('#2f4645',tintHue,0.10);
+  let s='<svg viewBox="0 0 300 600" preserveAspectRatio="xMidYMid slice" class="hall-svg">'+geoDefs(sky1,sky2,sky3,wall,wallHi,floorHi,floorLo);
+  s+='<rect width="300" height="600" fill="url(#geosky)"/>';
+  s+='<rect y="'+GEO_HZ+'" width="300" height="'+(600-GEO_HZ)+'" fill="url(#geofloor)"/>';
+  s+='<ellipse class="hb-pulse" cx="150" cy="'+GEO_HZ+'" rx="150" ry="26" fill="url(#geoglow)"/>';
+  if(name==='preflop'){
+    s+=geoMoon(126,92,15)+geoStars();
+    const N=4;
+    for(let i=0;i<N;i++){const k=i/(N-1),lx=hbL(40,cx-22,k),rx=300-lx,w=hbL(11,3.5,k),top=hbL(205,GEO_VP+4,k),bot=hbL(524,GEO_HZ,k),tn=hbMix(hbMix(wall,'#161326',0.25),wallHi,0.15+0.7*k);
+      s+=geoCol(lx,top,bot,w,tn)+geoCol(rx,top,bot,w,tn);}
+    s+='<path d="M '+(cx-24)+' '+GEO_HZ+' L '+(cx-24)+' '+(GEO_VP+8)+' Q '+(cx-24)+' '+GEO_VP+' '+cx+' '+GEO_VP+' Q '+(cx+24)+' '+GEO_VP+' '+(cx+24)+' '+(GEO_VP+8)+' L '+(cx+24)+' '+GEO_HZ+' Z" fill="url(#geoglow)"/>';
+    s+=geoAperture(cx,GEO_HZ-4,32,42)+geoRunner(s1);
+  }else if(name==='turn'){
+    s+='<path d="M -6 250 A 156 152 0 0 1 306 250 Z" fill="url(#geodome)"/>';
+    s+=geoAperture(150,250,30,26)+geoMoon(118,112,10)+geoStars()+geoGem(150,150,1.45);
+    s+='<ellipse cx="150" cy="486" rx="104" ry="42" fill="url(#geomed)"/>';
+    s+='<path d="'+HB_PIP[s1]+'" fill="'+GEO_GOLD+'" opacity="0.7" transform="translate(140,476) scale(0.85)"/>';
+  }else if(name==='river'){
+    const dk=hbMix(wall,'#131120',0.5);
+    for(let i=0;i<5;i++){const k=i/4,hw=hbL(146,24,k),vh=hbL(300,30,k),tn=hbMix(dk,wallHi,k);
+      s+='<rect x="'+(cx-hw).toFixed(1)+'" y="'+(GEO_VP-vh).toFixed(1)+'" width="'+(2*hw).toFixed(1)+'" height="'+(2*vh).toFixed(1)+'" rx="8" fill="'+tn+'"/>';}
+    ['h','c','d','s'].forEach(function(g,i){const y=232+i*54;s+='<path d="'+HB_PIP[g]+'" fill="'+GEO_GOLD+'" opacity="0.34" transform="translate(24,'+y+') scale(0.42)"/><path d="'+HB_PIP[g]+'" fill="'+GEO_GOLD+'" opacity="0.34" transform="translate(264,'+y+') scale(0.42)"/>';});
+    s+=geoAperture(150,GEO_VP,26,30);
+    s+='<circle cx="150" cy="'+GEO_VP+'" r="13" fill="'+hbMix(GEO_GOLD,wall,0.15)+'" opacity="0.55"/><circle cx="150" cy="'+GEO_VP+'" r="7" fill="'+GEO_GOLD+'" opacity="0.4"/>';
+    s+=geoGem(150,140,1.05)+geoRunner(s1);
+  }else{   // flop (+ default) — arched gallery
+    for(let i=0;i<4;i++){const k=i/3,hw=hbL(150,30,k),base=hbL(600,GEO_HZ,k),apex=hbL(96,GEO_VP,k),spring=(base+apex)/2,tn=hbMix(wall,wallHi,(1-k)*0.55);
+      s+='<path d="M '+(cx-hw)+' '+base+' L '+(cx-hw)+' '+spring+' Q '+(cx-hw)+' '+apex+' '+cx+' '+apex+' Q '+(cx+hw)+' '+apex+' '+(cx+hw)+' '+spring+' L '+(cx+hw)+' '+base+' Z" fill="'+tn+'"/>';}
+    s+=geoAperture(cx,GEO_HZ-2,30,40)+geoMoon(124,80,12)+geoStars()+geoGem(150,148,1.6)+geoRunner(s1);
   }
-  s+='<path d="'+hbArch(cx,26,318,300,278)+'" fill="'+hbMix(t[N-1],'#ffffff',.10)+'"/>';   // far doorway
-  return s;
-}
-// TURN — domed rotunda: concentric rings + radial ribs.
-function hbRotunda(t,N,cx){const cy=300;let s='';
-  for(let i=0;i<N;i++){const k=i/(N-1);s+='<ellipse cx="'+cx+'" cy="'+cy+'" rx="'+hbL(214,13,k).toFixed(1)+'" ry="'+hbL(152,12,k).toFixed(1)+'" fill="'+t[i]+'"/>';}
-  for(let j=0;j<12;j++){const a=j/12*6.2832,x=cx+Math.cos(a)*214,y=cy+Math.sin(a)*152;
-    s+='<line x1="'+cx+'" y1="'+cy+'" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="'+hbMix(t[3],'#ffffff',.13)+'" stroke-width="1" opacity="0.12"/>';}
-  return s;
-}
-// RIVER — the vault: nested rectangular thresholds + a safe-door wheel.
-function hbVault(t,N,cx){const cy=300;let s='';
-  for(let i=0;i<N;i++){const k=i/(N-1),hw=hbL(150,15,k),vh=hbL(300,15,k),rr=hbL(20,3,k),x=cx-hw,y=cy-vh;
-    s+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+(2*hw).toFixed(1)+'" height="'+(2*vh).toFixed(1)+'" rx="'+rr.toFixed(1)+'" fill="'+t[i]+'"/>';
-    s+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+(2*hw).toFixed(1)+'" height="'+(2*vh).toFixed(1)+'" rx="'+rr.toFixed(1)+'" fill="none" stroke="'+hbMix(t[i],'#ffffff',.14)+'" stroke-width="1" opacity="0.28"/>';}
-  const wc=hbMix(t[N-1],'#ffffff',.34);
-  s+='<circle cx="'+cx+'" cy="'+cy+'" r="12" fill="none" stroke="'+wc+'" stroke-width="1.4" opacity="0.5"/>';
-  for(let j=0;j<8;j++){const a=j/8*6.2832;s+='<line x1="'+(cx+Math.cos(a)*3).toFixed(1)+'" y1="'+(cy+Math.sin(a)*3).toFixed(1)+'" x2="'+(cx+Math.cos(a)*12).toFixed(1)+'" y2="'+(cy+Math.sin(a)*12).toFixed(1)+'" stroke="'+wc+'" stroke-width="1" opacity="0.4"/>';}
-  return s;
-}
-function hallStruct(street,t,N,cx){
-  if(street==='preflop')return hbColonnade(t,N,cx);
-  if(street==='turn')return hbRotunda(t,N,cx);
-  if(street==='river')return hbVault(t,N,cx);
-  return hbArches(t,N,cx);   // flop + default
-}
-function hallBG(s1,s2,oop,street){
-  if(!HB_ANCH[s1])s1='s'; if(!HB_ANCH[s2])s2='s';
-  const N=9,t=hbTones(s1,s2,oop,N),cx=150,VPY=300;
-  let s='<svg viewBox="0 0 300 600" preserveAspectRatio="xMidYMid slice" class="hall-svg">';
-  s+='<defs><radialGradient id="hbend" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="'+hbMix(t[N-1],'#ffffff',.30)+'" stop-opacity="0.5"/><stop offset="1" stop-color="'+t[N-1]+'" stop-opacity="0"/></radialGradient>';
-  s+='<radialGradient id="hbscrim" cx="0.5" cy="0.55" r="0.6"><stop offset="0" stop-color="#0b0c10" stop-opacity="0.42"/><stop offset="1" stop-color="#0b0c10" stop-opacity="0"/></radialGradient></defs>';
-  s+='<rect width="300" height="600" fill="'+t[0]+'"/>';
-  s+=hallStruct(street,t,N,cx);
-  s+='<ellipse cx="'+cx+'" cy="'+(VPY+4)+'" rx="46" ry="52" fill="url(#hbend)"/>';
-  const flrTop=VPY+16,xL=y=>hbL(0,cx-14,(600-y)/(600-flrTop)),xR=y=>hbL(300,cx+14,(600-y)/(600-flrTop));
-  s+='<path d="M 0 600 L '+(cx-14)+' '+flrTop+' L '+(cx+14)+' '+flrTop+' L 300 600 Z" fill="'+hbShd(t[1],.82)+'" opacity="0.66"/>';
-  for(const gx of [46,100,150,200,254])s+='<line x1="'+gx+'" y1="600" x2="'+hbL(gx,cx,0.9)+'" y2="'+flrTop+'" stroke="'+hbMix(t[2],'#ffffff',.14)+'" stroke-width="1" opacity="0.15"/>';
-  for(const yy of [600,540,486,438,398,366])s+='<line x1="'+xL(yy)+'" y1="'+yy+'" x2="'+xR(yy)+'" y2="'+yy+'" stroke="'+hbMix(t[2],'#ffffff',.12)+'" stroke-width="1" opacity="0.12"/>';
-  s+='<path d="'+HB_PIP[s1]+'" fill="'+hbMix(t[1],'#ffffff',.2)+'" opacity="0.42" transform="translate(127,486) scale(1.9)"/>';
-  s+='<rect width="300" height="600" fill="url(#hbscrim)"/>';
+  s+='<rect width="300" height="600" fill="url(#geovig)"/>';
   return s+'</svg>';
 }
-const ROOMBG=__ROOMBGS__;   // street -> flat-illustrated room background (offline data-URI)
 function updateHall(q){
   const room=document.getElementById("hall-room"),tint=document.getElementById("hall-tint");
   if(!room)return;
   const h=q.preflop?q.hand:q.hero;
-  const street=q.preflop?"preflop":q.street;
+  const street=q.preflop?"preflop":(q.street||"flop");
   const oop=q.preflop?!(q.pos==="BTN"||q.pos==="CO"||q.pos==="HJ"):!!q.is_oop;
   const s1=(h&&h[0])?h[0][1]:"s",s2=(h&&h[1])?h[1][1]:"s";
-  const img=ROOMBG[street];
-  if(img){   // the illustrated room + a gentle suit/position colour grade over it
-    room.innerHTML="";room.style.backgroundImage="url("+img+")";
-    if(tint){const t=hbTones(s1,s2,oop,6);tint.style.display="block";
-      tint.style.background="radial-gradient(120% 86% at 50% 44%,"+t[4]+" 0%,"+t[2]+" 62%,"+t[1]+" 100%)";}
-  }else{   // no art for this street -> procedural hall fallback
-    room.style.backgroundImage="none";room.innerHTML=hallBG(s1,s2,oop,street);
-    if(tint)tint.style.display="none";
-  }
+  room.style.backgroundImage="none";room.innerHTML=geoRoom(street,s1,s2,oop);
+  if(tint)tint.style.display="none";   // the geometry bakes the suit tint + position temperature
 }
 function ringTable(q){
   // Heads-up postflop: constellation for position, cards on the clean ground below it.
