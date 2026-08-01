@@ -407,9 +407,8 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
    tinted by the two hole-card suits and cooled when out of position. Purely atmospheric —
    sits behind the play content (#fb stays fixed/z-50 above it) and never intercepts taps. */
 #play-card{position:relative}
-.hallbg{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;
-  -webkit-mask-image:linear-gradient(180deg,transparent,#000 6%,#000 94%,transparent);
-          mask-image:linear-gradient(180deg,transparent,#000 6%,#000 94%,transparent)}
+/* full-viewport ambient background: sits behind the whole app (frosted top/tab bars overlay it) */
+.hallbg{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:440px;z-index:-1;overflow:hidden;pointer-events:none}
 /* faint illustrated room beneath the gradient — revealed clearer at the sides (columns, crowd,
    wall lamps) and masked down the centre so the cards sit on a clean field */
 .hall-photo{position:absolute;inset:0;background-size:cover;background-position:50% 30%;
@@ -697,7 +696,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .coach-ask button{appearance:none;border:none;background:var(--brass);color:#fff;font-family:var(--sans);font-weight:700;font-size:13px;padding:0 16px;border-radius:9px;cursor:pointer;flex:none}
 .coach-ask button:disabled{opacity:.5;cursor:default}
 /* ===== mobile app shell ===== */
-.app{max-width:440px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative;background:var(--bg)}
+.app{max-width:440px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative;background:transparent;z-index:0}
 .appbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:flex-start;gap:11px;padding:12px 16px;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 .pager{display:flex;gap:5px;flex:none}
 .revbtn{appearance:none;flex:none;font-family:var(--label);font-size:16px;line-height:1;font-weight:700;color:var(--brass);background:var(--panel2);border:1px solid var(--line);border-radius:9px;width:30px;height:30px;display:grid;place-items:center;cursor:pointer;transition:.12s;padding:0}
@@ -913,6 +912,7 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 </style>
 __SUITDEFS__
 <div class="app">
+  <div class="hallbg" id="hallbg" aria-hidden="true"><div class="hall-photo" id="hall-photo"></div><div class="hall-room" id="hall-room"></div><div class="hall-tint" id="hall-tint"></div><div class="hall-scrim"></div></div>
   <div class="appbar">
     <div class="pager"><button class="revbtn" id="prev" type="button" disabled aria-label="Back to the previous hand" title="Previous hand">&#8249;</button><button class="revbtn" id="fwd" type="button" disabled aria-label="Forward to the next hand" title="Next hand">&#8250;</button></div>
     <div class="brand"><span class="sp">&spades;</span> Hold'em Trainer</div>
@@ -923,7 +923,6 @@ __SUITDEFS__
     <div class="bar-top" id="session-progress" role="progressbar" aria-label="Session progress" aria-valuemin="1" aria-valuemax="10" aria-valuenow="1"><i id="prog" style="width:0"></i></div>
 
   <div class="card" id="play-card" tabindex="-1">
-    <div class="hallbg" id="hallbg" aria-hidden="true"><div class="hall-photo" id="hall-photo"></div><div class="hall-room" id="hall-room"></div><div class="hall-tint" id="hall-tint"></div><div class="hall-scrim"></div></div>
     <div class="sit"><span class="sit-street" id="sitcontext"></span><span class="pos" id="pos"></span><span class="demo" id="demotag" hidden></span></div>
     <div class="tablewrap" id="seats"></div>
     <div class="move-cue" id="movecue">Your move — tap what you'd do</div>
