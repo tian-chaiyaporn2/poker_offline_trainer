@@ -243,7 +243,7 @@ def pack_records():
             if a == ans:
                 return 0.0
             if a == alt:
-                return -0.1
+                return -0.05   # ~2% of a 2.5bb pot -> grades "acceptable" (a close, fine alt)
             return -1.0
         recs.append({
             "board": "", "board_texture": [], "board_favored": None,

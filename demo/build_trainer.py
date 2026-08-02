@@ -360,7 +360,9 @@ def load_contrast_pool(per_bucket=2):
             cat = category_name(evaluate(cs))
             # Match the JS handRead teaching: "two pair" only counts when the hero's OWN two
             # cards pair the board. A board pair (KK) + one matching hole card is really a single
-            # pair, so it must not fill the genuine two-pair bucket used for contrasts.
+            # pair; a double-paired board where the hero pairs neither is "play the board" =
+            # high card (JS cat "high"). Bucket them the same way JS will, so the diverse pool
+            # doesn't file them under a category the runtime matcher will never assign.
             if cat == "two pair":
                 hr = [card_rank(x) for x in parse_cards(d["hand"])]
                 br = [card_rank(x) for x in parse_cards(d["board"])]
@@ -368,7 +370,7 @@ def load_contrast_pool(per_bucket=2):
                 allc = _C(br + hr); bc = _C(br)
                 hero_made = [r for r, n in allc.items() if n == 2 and r in hr and bc.get(r, 0) < 2]
                 if len(hero_made) < 2:
-                    cat = "one pair"
+                    cat = "one pair" if len(hero_made) == 1 else "high card"
             key = (d["reason"], cat)
             k2 = (d["board"], d["hand"], d["node"])
             if buckets[key] >= per_bucket or k2 in seen:
@@ -408,7 +410,14 @@ def build(allow_missing_demo_packs=False):
     os.makedirs("demo", exist_ok=True)
     with open("demo/trainer_demo.html", "w", encoding="utf-8") as demo_file:
         demo_file.write(body)
+    # Locked-down CSP: the app is fully self-contained (inline script/style, data-URI fonts
+    # and images) and only ever reaches out to the two BYOK coach providers over the network.
+    csp = ("default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; "
+           "img-src data:; font-src data:; "
+           "connect-src https://api.anthropic.com https://api.openai.com; "
+           "base-uri 'none'; form-action 'none'")
     doc = ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
+           '<meta http-equiv="Content-Security-Policy" content="' + csp + '">\n'
            '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
            '<title>Full-Street Flop Trainer</title>\n'
            '<meta name="description" content="Interactive GTO flop trainer — pick an action, '
@@ -1912,7 +1921,7 @@ function decisionFactors(q,rd){
   // a pure bluff). Keep it concise (strip the parenthetical detail from the read).
   const drawShort=rd.draw?rd.draw.replace(/ \([^)]*\)/,""):"";
   const handReadTxt=rd.draw?cap1(rd.made).replace(" (no pair)","")+" + "+drawShort:cap1(rd.made);
-  const handWhy=(rd.cat==="high"&&rd.draw)
+  const handWhy=(rd.cat==="high"&&rd.draw&&!rd.playingBoard)
     ? "No pair yet — but "+rd.draw+" is real equity: several cards complete a strong hand, so this plays like a draw, not air. That's why betting or raising it is a semi-bluff — you can win now, or hit."
     : standingText(rd);
   items.push({label:"Your hand",meter:handTier(rd),read:handReadTxt,why:handWhy});
