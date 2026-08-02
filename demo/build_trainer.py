@@ -471,6 +471,8 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 /* under the constellation: a quiet position legend, then the prominent action line */
 .pos-legend{margin-top:7px;text-align:center;font-size:11.5px;color:var(--muted)}
 .action-line{margin-top:3px;text-align:center;font-size:16px;font-weight:650;color:var(--ink);line-height:1.3}
+.pot-odds{margin-top:3px;text-align:center;font-size:11px;color:var(--muted);line-height:1.3}
+.pot-odds b{color:color-mix(in srgb,var(--ink) 82%,transparent);font-variant-numeric:tabular-nums;font-weight:700}
 .hl-you{color:var(--best);font-weight:700}.hl-opp{color:var(--brass);font-weight:700}
 .fl-arrow,.fl-dot{color:color-mix(in srgb,var(--muted) 60%,transparent);font-weight:700}
 .t-mid{display:flex;flex-direction:column;align-items:center;gap:3px}
@@ -1734,6 +1736,13 @@ function updateHall(q){
   if(photo){const img=ROOMPHOTOS[street];photo.style.backgroundImage=img?("url("+img+")"):"none";}
   if(tint)tint.style.display="none";   // the geometry bakes the suit tint + position temperature
 }
+// Pot odds from a pot-relative bet: calling B of the pot risks B to win 1+B, so you need
+// B/(1+2B) equity. Bet size is ALWAYS shown as % of the pot — the absolute chip amount never
+// changes this, which is exactly why the actual pot size doesn't matter to the decision.
+function potOddsLine(pct){
+  const b=pct/100, need=Math.round(100*b/(1+2*b));
+  return "It’s "+pct+"% of the pot either way — the actual chip amount doesn’t change the play. You need <b>"+need+"%</b> to call.";
+}
 function ringTable(q){
   // Heads-up postflop: constellation for position, cards on the clean ground below it.
   const hero=q.acting_player||"BB";
@@ -1746,7 +1755,9 @@ function ringTable(q){
     :ok==="check"?'<b class="hl-opp">Opponent</b> checks — it’s on you'
     :'No bet yet — you act first';
   let html='<div class="posdial">'+constellation(hero,villain)
-    +'<div class="action-line">'+actLine+'</div></div>';
+    +'<div class="action-line">'+actLine+'</div>'
+    +(ok==="bet"?'<div class="pot-odds">'+potOddsLine(q.bet_pct||66)+'</div>':'')
+    +'</div>';
   html+='<div class="t-mid"><div class="cap" id="boardcap">Flop</div><div class="cards" id="board"></div>'
     +'<div class="cap" id="herocap">Your hand</div><div class="cards" id="hero"></div></div>';
   const w=document.createElement("div");w.className="stage duel";w.innerHTML=html;return w;
