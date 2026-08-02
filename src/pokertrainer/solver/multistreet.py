@@ -308,6 +308,16 @@ class MultiStreetSpike:
                 return i
         raise ValueError(f"combo {combo} not in {seat} range")   # never index [-1] silently
 
+    def node_action_share(self, bkey: tuple, node: str, action_idx: int) -> float:
+        """Range-aggregate frequency of one action at a node, reach-weighted over the ACTING
+        player's arriving range. Used to script a range-vs-range villain along one played line:
+        the villain takes an action when its range predominantly does (>= 0.5)."""
+        cap = self._ucache[bkey]
+        reach = cap["ro"] if node in ("root", "ovb") else cap["ri"]
+        s = cap["s_" + node]
+        tot = float(reach.sum())
+        return float((reach * s[:, action_idx]).sum() / tot) if tot > 1e-12 else 0.0
+
     def decision(self, bkey: tuple, node: str, hero_idx: int, actions) -> dict:
         """Per-combo ev/freq/preferred for the hero at (bkey, node), read from the eval cache.
         Opp-mass uses the ARRIVING reaches cached at the node (upstream strategy + runout

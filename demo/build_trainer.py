@@ -318,6 +318,7 @@ def load_continuation():
             "preferred": d["preferred_action"], "mixed": bool(d["mixed"]),
             "hand_id": hid, "step_index": int(det.get("step_index", 0)),
             "villain_action": det.get("villain_action", ""),
+            "newcard": bool(det.get("newcard", True)),   # did the board grow at this step?
             # renderFeedback needs these on the normal (postflop) path: reason drives the
             # mode lookups (guarded — CONTRAST/RULES fall through for "continuation"), headline
             # is the one-line why (the live hand-read factor panel carries the specifics), and
@@ -1725,11 +1726,13 @@ function renderQuestion(q){
   renderSeats(q);   // build the unified felt table first (creates the #board/#hero slots)
   document.getElementById("boardcap").textContent="Board";
   document.getElementById("herocap").textContent="Your hand";
-  // Continuation step>0: keep the earlier board cards + hero in place (no re-bounce) and only
-  // deal the newly-revealed board card. Fresh hands / drills deal everything (noDealBefore=0).
-  const contStep=q.hand_id&&q.step_index>0;
-  render(q.board,document.getElementById("board"),contStep?q.board.length-1:0);
-  render(q.hero,document.getElementById("hero"),contStep?q.hero.length:0);
+  // Continuation step>0: hero cards + prior board cards stay put (no re-bounce). Deal only the
+  // newly-revealed board card when the street advanced (q.newcard); a same-street step (e.g. now
+  // facing a bet after checking) reveals nothing new. Fresh hands / drills deal everything.
+  let bnd=0,hnd=0;
+  if(q.hand_id&&q.step_index>0){hnd=q.hero.length;bnd=q.newcard?q.board.length-1:q.board.length;}
+  render(q.board,document.getElementById("board"),bnd);
+  render(q.hero,document.getElementById("hero"),hnd);
   const box=document.getElementById("acts");box.innerHTML="";box.className="acts n-"+q.actions.length;
   q.actions.forEach((a,i)=>addActionButton(box,a,i));
   setHint(q.actions.length);
@@ -2422,13 +2425,12 @@ function renderFeedback(q,a,gained){
     i.style.width=Math.max(3,payoffView?(GW[ga]||50):Math.round(100*q.freq[x]/maxf))+"%";
     track.appendChild(i);row.appendChild(rlab);row.appendChild(track);bars.appendChild(row);
   });
-  // Continuation: name the villain's between-street action and relabel Next as "Next street".
+  // Continuation: show what the opponent does / how the hand resolves, and label the button
+  // "Continue" mid-hand vs "Next hand" at the end. The villain_action text is authored per step
+  // by the generator (it follows the solved line — the opponent bets when its range does).
   const nb=document.getElementById("next");
-  if(q.hand_id&&!q.last){
-    const nextStreet=q.step_index===0?"turn":"river";
-    v.appendChild(document.createTextNode(" Villain "+(q.villain_action||"checks")+" — the "+nextStreet+" comes."));
-    if(nb)nb.innerHTML="Next street &nbsp;&#8629;";
-  }else if(nb){nb.innerHTML="Next hand &nbsp;&#8629;";}
+  if(q.hand_id&&q.villain_action)v.appendChild(document.createTextNode(" "+q.villain_action));
+  if(nb)nb.innerHTML=(q.hand_id&&!q.last)?"Continue &nbsp;&#8629;":"Next hand &nbsp;&#8629;";
   document.getElementById("fb").className="fb on";sheetOpen(true);
 }
 function qualityScore(s){return s.n?Math.round(100*(s.solid+0.6*s.ok)/s.n):0;}
