@@ -147,7 +147,9 @@ def test_session_history_and_comparison_practice_are_accounted_correctly():
     assert "step:shownStep(),bonus:true" in source
     assert 'document.getElementById("session-counter").hidden=bonus' in source
     assert "const inSession=!(hist[hidx]&&hist[hidx].bonus)" in source
-    assert "if(inSession)recordGrade(stats,tier,hit)" in source
+    # bonus/compare-practice must not record to session OR lifetime (else a contrast twin that
+    # is also a live quiz spot double-counts lifetime): both recordGrade calls are gated together
+    assert "if(inSession){recordGrade(stats,tier,hit);recordGrade(lifetime,tier,hit);saveLifetime();}" in source
     assert "if(inSession&&!hit)sessionMisses.push(cur)" in source
     assert "queued&&queued.bonus&&queued.q===c.q" in source
     assert "if(hist[hidx]&&hist[hidx].bonus&&!answered){skipBonus();return;}" in source

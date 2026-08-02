@@ -120,7 +120,11 @@ def test_preflop_signed_pack_roundtrips(tmp_path):
         assert set(r["freq"]) == set(r["actions"]) == set(r["ev"])
         assert abs(sum(r["freq"].values()) - 1.0) < 1e-9
         assert r["freq"][r["preferred"]] == 1.0      # pure on the correct action
-        assert set(r["ev"].values()) == {0.0}        # flat, not solver-derived
+        # EV sentinels (not solver-derived): answer is the unique max at 0.0; every other
+        # action is strictly worse, so stored action_grades never label a mistake "best".
+        assert r["ev"][r["preferred"]] == 0.0
+        assert r["ev"][r["preferred"]] == max(r["ev"].values())
+        assert all(v < 0 for a, v in r["ev"].items() if a != r["preferred"])
         assert r["explanation"]["detail"]["why"]     # coaching preserved
 
     report = build_pack(recs, {"content_kind": "preflop_ranges"},

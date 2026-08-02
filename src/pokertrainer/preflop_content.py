@@ -235,12 +235,22 @@ def pack_records():
     for q in build_questions():
         acts = q["actions"]
         ans = q["answer"]
+        alt = q.get("alt") if q.get("mixed") else None
+        # Chart-based EV sentinels so the pack's grades are correct even though we have no
+        # solver EV: the answer is best (0.0); a flagged close alternative is a near-tie
+        # (small penalty); any other action is a clear mistake. freq stays a pure strategy.
+        def _ev(a):
+            if a == ans:
+                return 0.0
+            if a == alt:
+                return -0.1
+            return -1.0
         recs.append({
             "board": "", "board_texture": [], "board_favored": None,
             "node": _pf_node(q), "acting_player": q["pos"], "decision_type": "preflop",
             "hand": "".join(q["hand"]), "hand_category": q["cls"],
             "actions": acts,
-            "ev": {a: 0.0 for a in acts},
+            "ev": {a: _ev(a) for a in acts},
             "freq": {a: (1.0 if a == ans else 0.0) for a in acts},
             "preferred": ans,
             "mixed": bool(q.get("mixed")),

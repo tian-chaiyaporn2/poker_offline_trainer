@@ -459,7 +459,6 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
   transition:opacity .3s}
 .hall-room{position:absolute;inset:0;background-size:cover;background-position:50% 32%;opacity:.8;transition:opacity .3s}
 .hall-room .hall-svg{position:absolute;inset:0;width:100%;height:100%;display:block}
-.hall-tint{position:absolute;inset:0;mix-blend-mode:soft-light;opacity:.55}
 /* motion in the pockets: the background architecture breathes slowly, the warm light pulses */
 @keyframes hbdrift{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
 @keyframes hbpulse{0%,100%{opacity:.42}50%{opacity:.72}}
@@ -751,7 +750,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 #v-train.view.on>.session-hud,#v-train.view.on>#session-progress{flex:none}
 #v-train.view.on>#play-card{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
 /* the table area grows and centres its content; header stays on top, buttons anchor to the bottom */
-#play-card>#seats{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;min-height:0;padding-top:6px}
+#play-card>#seats{flex:1 1 auto;display:flex;flex-direction:column;justify-content:safe center;min-height:0;padding-top:6px}
 #play-card .stage{padding-top:0}
 #play-card .sit,#play-card .move-cue,#play-card #acts{flex:none}
 @keyframes viewin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -953,7 +952,7 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 </style>
 __SUITDEFS__
 <div class="app">
-  <div class="hallbg" id="hallbg" aria-hidden="true"><div class="hall-photo" id="hall-photo"></div><div class="hall-room" id="hall-room"></div><div class="hall-tint" id="hall-tint"></div><div class="hall-scrim"></div></div>
+  <div class="hallbg" id="hallbg" aria-hidden="true"><div class="hall-photo" id="hall-photo"></div><div class="hall-room" id="hall-room"></div><div class="hall-scrim"></div></div>
   <div class="appbar">
     <div class="pager"><button class="revbtn" id="prev" type="button" disabled aria-label="Back to the previous hand" title="Previous hand">&#8249;</button><button class="revbtn" id="fwd" type="button" disabled aria-label="Forward to the next hand" title="Next hand">&#8250;</button></div>
     <div class="brand"><span class="sp">&spades;</span> Hold'em Trainer</div>
@@ -1198,7 +1197,7 @@ function handRead(hero,board){
   const boardFlushAlone=river&&bmax>=5;
   const boardStraightAlone=river&&hasStraight(bv);
   const top=cnt[groups[0]],second=cnt[groups[1]]||0;
-  let made,strength=null,cat="high",pairKind=null,overs=[];
+  let made,strength=null,cat="high",pairKind=null,overs=[],rd_playingBoard=false;
   // A pair/trips the hero doesn't contribute to is the shared board, not their hand —
   // teach it by what the hero actually holds, not the board's rank.
   const air=()=>{made=ONE[Math.max(...hv)]+" high (no pair)";cat="high";};
@@ -1226,7 +1225,11 @@ function handRead(hero,board){
     const heroMade=prRanks.filter(function(r){return hv.indexOf(r)>=0&&(bCnt[r]||0)<2;});
     if(heroMade.length>=2){made="two pair";cat="twopair";}       // both hole cards work
     else if(heroMade.length===1)pairOf(heroMade[0]);             // one real pair alongside a board pair
-    else{made="two pair";cat="twopair";}                         // double-paired board — hero rides it
+    else{                                                        // double-paired board — hero pairs neither
+      // You play the board's two pair with a kicker: a bluff-catcher, not a monster. Any
+      // pocket pair (or paired hole card) above the board's low pair makes a better two pair.
+      made="two pair on the board (only your kicker plays)";cat="high";rd_playingBoard=true;
+    }
   }
   else if(top===2){const pr=groups[0];const heroInPair=pocket?hv[0]===pr:hv.includes(pr);
     if(!heroInPair)air();    // board-pair-only — hero holds none of that rank
@@ -1238,7 +1241,7 @@ function handRead(hero,board){
     // Only the hero's draw — if the board alone already forms the straight draw, it's shared, not yours.
     const sd=straightDraw(allV);if(sd&&!straightDraw(bv))parts.push(sd);
     if(parts.length)draw=parts.join(" and ");}
-  return {made,strength,draw,cat,pairKind,overs,boardStraighty,boardFlushy,boardFlushAlone,boardStraightAlone};
+  return {made,strength,draw,cat,pairKind,overs,playingBoard:rd_playingBoard,boardStraighty,boardFlushy,boardFlushAlone,boardStraightAlone};
 }
 // "Where you stand" — plain relative strength: what you beat and what beats you.
 // The single most important read for a beginner; hedged so it stays true regardless
@@ -1249,6 +1252,8 @@ function orList(vals){const a=vals.map(nm);
   if(a.length===2)return a[0]+" or "+a[1];
   return a.slice(0,-1).join(", ")+", or "+a[a.length-1];}
 function standingText(rd){
+  // Playing the board's two pair with only a kicker — a bluff-catcher, not a made two pair.
+  if(rd.playingBoard)return "You're playing the board's two pair — only your kicker plays. Any pair in their hand makes a better two pair and beats you, so this is a bluff-catcher.";
   // What the coordinated shared cards let opponents have (straights/flushes).
   const dg=[];
   if(rd.boardStraighty>=2)dg.push("the shared cards are four to a straight, so a straight is very much in play");
@@ -1767,15 +1772,14 @@ function geoRoom(name,s1,s2,oop){
 }
 const ROOMPHOTOS=__ROOMPHOTOS__;   // street -> illustrated room, shown faintly under the gradient
 function updateHall(q){
-  const room=document.getElementById("hall-room"),tint=document.getElementById("hall-tint"),photo=document.getElementById("hall-photo");
+  const room=document.getElementById("hall-room"),photo=document.getElementById("hall-photo");
   if(!room)return;
   const h=q.preflop?q.hand:q.hero;
   const street=q.preflop?"preflop":(q.street||"flop");
   const oop=q.preflop?!(q.pos==="BTN"||q.pos==="CO"||q.pos==="HJ"):!!q.is_oop;
   const s1=(h&&h[0])?h[0][1]:"s",s2=(h&&h[1])?h[1][1]:"s";
-  room.style.backgroundImage="none";room.innerHTML=geoRoom(street,s1,s2,oop);
+  room.style.backgroundImage="none";room.innerHTML=geoRoom(street,s1,s2,oop);   // geometry bakes suit tint + position temperature
   if(photo){const img=ROOMPHOTOS[street];photo.style.backgroundImage=img?("url("+img+")"):"none";}
-  if(tint)tint.style.display="none";   // the geometry bakes the suit tint + position temperature
 }
 function ringTable(q){
   // Heads-up postflop: constellation for position, cards on the clean ground below it.
@@ -2145,9 +2149,11 @@ function clauseFor(reason,street){return (street==="river"&&RIVER_CLAUSE[reason]
 function contrastWhy(q,rd,o,ord){
   const mine=(rd.made||"hand").replace(/^an? /i,""), twin=(ord.made||"hand").replace(/^an? /i,"");
   let s="Yours (<b>"+mine+"</b>) "+clauseFor(q.reason,q.street)+". The look-alike (<b>"+twin+"</b>) "+clauseFor(o.reason,o.street)+".";
-  // Only add board/position as a co-factor when it genuinely differs — never as the headline reason.
+  // Note a texture difference factually — but don't claim which way it pushes the play; that
+  // depends on the reason (a wet board argues for betting on a value/protection line but for
+  // caution elsewhere), and asserting a single direction was sometimes backwards.
   const wa=rd.boardStraighty>=2||rd.boardFlushy>=2, wb=ord.boardStraighty>=2||ord.boardFlushy>=2;
-  if(wa!==wb)s+=" The "+(wa?"wetter":"drier")+" board here nudges it the same way.";
+  if(wa!==wb)s+=" (The boards differ in texture too — "+(wa?"wetter":"drier")+" here, "+(wa?"drier":"wetter")+" there.)";
   return s;
 }
 function renderContrast(q){
@@ -2349,8 +2355,9 @@ function answer(a){
   if(cur.preflop){
     const correct=a===cur.answer, closeOk=!correct&&cur.mixed&&a===cur.alt;
     const hit=correct||closeOk,tier=hit?"solid":"leak";
-    if(inSession)recordGrade(stats,tier,hit);
-    recordGrade(lifetime,tier,hit);saveLifetime();
+    // Compare-practice / bonus hands are a side exercise — don't count them in session OR
+    // lifetime stats (and a contrast twin can be a live quiz spot, which would double-count).
+    if(inSession){recordGrade(stats,tier,hit);recordGrade(lifetime,tier,hit);saveLifetime();}
     if(inSession&&!hit)sessionMisses.push(cur);
     syncStatsUI();
     const gained=hit?tryUnlockPreflop():[];
@@ -2361,8 +2368,7 @@ function answer(a){
   const g=cur.grades[a];
   const tier=(g==="best"||g==="good")?"solid":g==="acceptable"?"ok":"leak";
   const hit=tier!=="leak";
-  if(inSession)recordGrade(stats,tier,hit);
-  recordGrade(lifetime,tier,hit);saveLifetime();
+  if(inSession){recordGrade(stats,tier,hit);recordGrade(lifetime,tier,hit);saveLifetime();}
   if(inSession&&!hit)sessionMisses.push(cur);
   syncStatsUI();
   const gained=tryUnlock(cur,g);

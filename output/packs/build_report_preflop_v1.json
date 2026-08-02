@@ -18,7 +18,7 @@
     "note": "Chart-based opening/defense ranges; freq is a pure strategy, ev is flat (not solver EV)."
   },
   "provenance": {
-    "git_commit": "926977583ad5c3ad12738fcfbaf5553e47207dd3",
+    "git_commit": "33e4875288cc750f28f8293626c8dd7aa1f5997d",
     "solver_model": "preflop_chart_ranges_v1"
   },
   "grade_thresholds_pct_pot": {
@@ -30,10 +30,10 @@
   "record_count": "83",
   "signing_scheme": "hmac-sha256-dev",
   "default_pot_bb": "2.5",
-  "content_hash": "1d6338706dcab1eb7e9e68a74e6ad4f432d7bf7dea5a9f53f0a26d2e41b53830",
-  "signature": "eae2a35e8e9244abf21a375de7dca7df575034f0ecf13007bc1ddf77df639d2d",
-  "db_bytes": 114688,
-  "gz_bytes": 11896,
+  "content_hash": "efc3be6d865cb0b7bb35c65d815de75d068c133feb3eff29b2ac79f850ab3b1e",
+  "signature": "bf2f3c0c6809b326de6a80ca14715dd8f7f80ee800d72c7a54988503a87fd83e",
+  "db_bytes": 118784,
+  "gz_bytes": 12096,
   "records_accepted": 83,
   "records_after_dedup": 83
 }
