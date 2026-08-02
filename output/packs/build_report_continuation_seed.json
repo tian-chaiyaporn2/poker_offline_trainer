@@ -1,0 +1,49 @@
+{
+  "pack_id": "flop_srp_btn_bb_continuation_seed",
+  "version": "continuation_seed",
+  "config": {
+    "positions": {
+      "ip": "BTN",
+      "oop": "BB"
+    },
+    "stack_bb": 100,
+    "pot_bb": 5.5,
+    "bet_pct_pot": 66,
+    "line": "continuation_passive_villain",
+    "note": "linked flop->turn->river; villain passive (checks/calls); CPU seed",
+    "solver_model": "multistreet_spike_cfr_plus",
+    "convergence": [
+      {
+        "flop": "7c6d2s",
+        "root_ev_pct_pot": 33.0,
+        "stable": true,
+        "runtime_sec": 3413.4
+      },
+      {
+        "flop": "Ah7d2c",
+        "root_ev_pct_pot": 18.71,
+        "stable": true,
+        "runtime_sec": 3296.1
+      }
+    ]
+  },
+  "provenance": {
+    "git_commit": "df98da644d95922f7d9bd39d190fdad37c44e826",
+    "solver_model": "multistreet_spike_cfr_plus"
+  },
+  "grade_thresholds_pct_pot": {
+    "best": 0.25,
+    "good": 1.0,
+    "acceptable": 3.0,
+    "costly": 10.0
+  },
+  "record_count": "42",
+  "signing_scheme": "hmac-sha256-dev",
+  "default_pot_bb": "5.5",
+  "content_hash": "c5da2647d0ccafd86b30080ff4827c19364aec372c66381b15ea9b474cf08416",
+  "signature": "efa39fb3d41d7ea619d960e9ce10317275bca383774870bda94c8a9fc769c457",
+  "db_bytes": 77824,
+  "gz_bytes": 10307,
+  "records_accepted": 42,
+  "records_after_dedup": 42
+}
