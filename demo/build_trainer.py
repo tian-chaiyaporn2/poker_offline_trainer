@@ -275,6 +275,58 @@ PF_Q = 16   # pre-flop spots blended in ("Chapter 0")
 
 
 PF_DB = "output/packs/flop_pack_preflop_v1.db"   # signed pre-flop pack (A5)
+CONT_DB = "output/packs/flop_pack_continuation_seed.db"   # signed continuation pack (C)
+
+
+def _cards(s):
+    return [s[i:i + 2] for i in range(0, len(s), 2)]
+
+
+def load_continuation():
+    """Continuation hands (C): linked flop->turn->river step-decisions from the signed pack,
+    grouped by hand_id and ordered by step_index. Each step is a postflop-shaped question the
+    trainer renders/grades on its normal path, plus continuation fields (hand_id / step_index /
+    villain_action / last) that drive the play-a-hand session flow. Returns [] if absent."""
+    if not os.path.exists(CONT_DB):
+        return []
+    try:
+        _require_verified(CONT_DB)
+    except SystemExit:
+        return []
+    from pokertrainer.explanations import freq_pct_ints
+    cols = ("scenario board node acting_player hand actions ev freq preferred_action "
+            "action_grades pot_bb mixed detail").split()
+    conn = sqlite3.connect(CONT_DB)
+    try:
+        rows = [dict(zip(cols, r)) for r in
+                conn.execute(f"SELECT {','.join(cols)} FROM flop_decision").fetchall()]
+    finally:
+        conn.close()
+    hands = {}
+    for d in rows:
+        det = json.loads(d["detail"] or "{}")
+        hid = det.get("hand_id") or d["scenario"].split("|")[1]
+        acts = json.loads(d["actions"])
+        freq_raw = {k: float(v) for k, v in json.loads(d["freq"]).items()}
+        step = {
+            "street": det.get("street"), "board": _cards(d["board"]), "hero": _cards(d["hand"]),
+            "is_oop": bool(det.get("is_oop")), "acting_player": d["acting_player"],
+            "villain": det.get("villain"), "node": d["node"], "bet_pct": 66,
+            "actions": acts, "grades": json.loads(d["action_grades"]),
+            "ev": {k: round(v, 2) for k, v in json.loads(d["ev"]).items()},
+            "freq": freq_pct_ints(freq_raw, order=acts),   # integer % summing to 100 (like _to_q)
+            "preferred": d["preferred_action"], "mixed": bool(d["mixed"]),
+            "hand_id": hid, "step_index": int(det.get("step_index", 0)),
+            "villain_action": det.get("villain_action", ""),
+        }
+        hands.setdefault(hid, []).append(step)
+    out = []
+    for hid, steps in hands.items():
+        steps.sort(key=lambda s: s["step_index"])
+        for i, s in enumerate(steps):
+            s["last"] = (i == len(steps) - 1)
+        out.append(steps)
+    return out
 
 
 def _pf_from_pack(n):
@@ -400,10 +452,13 @@ def build(allow_missing_demo_packs=False):
           f"{len(co_qs)} CO-vs-BB + {len(utg_qs)} UTG-vs-BB + {len(hj_qs)} HJ-vs-BB + "
           f"{len(bb3bet_qs)} 3-bet-pot + "
           f"{len(pf_qs)} pre-flop spots blended in; {len(cpool)} contrast-pool spots)")
+    cont = load_continuation()
+    print(f"  ({sum(len(h) for h in cont)} continuation step-records in {len(cont)} hands)")
     # Escape </script> so pack strings cannot break out of the inline script.
     data = json.dumps(qs, separators=(",", ":")).replace("<", "\\u003c")
     cdata = json.dumps(cpool, separators=(",", ":")).replace("<", "\\u003c")
-    body = TEMPLATE.replace("__DATA__", data).replace("__CPOOL__", cdata).replace("__VERSION__", html.escape(meta.get("version", ""))) \
+    contdata = json.dumps(cont, separators=(",", ":")).replace("<", "\\u003c")
+    body = TEMPLATE.replace("__DATA__", data).replace("__CPOOL__", cdata).replace("__CONT__", contdata).replace("__VERSION__", html.escape(meta.get("version", ""))) \
                    .replace("__RECORDS__", html.escape(str(meta.get("record_count", "")))).replace("__COMMIT__", html.escape(commit)) \
                    .replace("__FONTFACE__", _fontface()).replace("__SUITDEFS__", _suitdefs()) \
                    .replace("__ROOMPHOTOS__", _roomphotos())
@@ -1167,6 +1222,9 @@ const Q = __DATA__;
 // Extra spots (from the full packs) used ONLY as "similar hand" contrasts, never in the quiz.
 const CPOOL = __CPOOL__;
 const ALLSPOTS = Q.concat(CPOOL);
+// Continuation hands (C): each is an ordered [flop,turn,river] list of linked step-questions
+// (same hero, growing board). Drives the "play a hand through" session (the default when present).
+const CONT = __CONT__;
 
 // Plain-English hand reader — tells the player WHAT they hold and where they stand
 // (top pair / overpair / a set / just a draw). This is the piece beginners lack:
@@ -1370,6 +1428,7 @@ function loadLifetime(){try{
   return normalizeStats(x);
 }catch(e){return freshStats();}}
 let order=[], pos=0, answered=false, cur=null, chosen=null, stats=freshStats(), lifetime=loadLifetime();
+let contMode=false, contHands=0;   // continuation ("play a hand") session state
 let sessionMisses=[];
 // Hand history so you can step BACK and re-read a hand you already answered (with its
 // result), then step forward again. hist = [{q, pick, step, bonus}]; hidx = cursor.
@@ -1419,7 +1478,7 @@ function actionSecondary(a){
   if(a==="raise")return sized?"Bet more · "+sized:"Bet more";
   return "";
 }
-function fmtEv(v){return (v>=0?"+":"")+v;}
+function fmtEv(v){const r=Math.round(v*100)/100;return (r>=0?"+":"")+r;}
 // Beginner "why": explains the LOGIC of the play in plain words, not just names the
 // action. Replaces the generic per-reason phrase for plain mode; Learning keeps the
 // term-tagged phrase, Pro keeps the solver's baked headline.
@@ -1825,15 +1884,18 @@ function renderHand(){                                  // draw the current hist
   document.getElementById("session-end").hidden=true;
   document.getElementById("session-hud").hidden=false;
   document.getElementById("session-progress").hidden=false;
-  const step=Math.min(shownStep()+1,order.length),bonus=!!e.bonus;
-  document.getElementById("session-kind").textContent=bonus?"Compare practice":({all:"All streets",preflop:"Preflop",flop:"Flop",turn:"Turn",river:"River"}[cat]||"Quick session");
+  const bonus=!!e.bonus;
+  // continuation counts by HAND ("Hand 2 of 5"); drills count by spot ("Hand 3 of 10").
+  const step=contMode?contHandNum(shownStep()):Math.min(shownStep()+1,order.length);
+  const total=contMode?contHands:order.length;
+  document.getElementById("session-kind").textContent=bonus?"Compare practice":contMode?"Play a hand":({all:"All streets",preflop:"Preflop",flop:"Flop",turn:"Turn",river:"River"}[cat]||"Quick session");
   document.getElementById("session-counter").hidden=bonus;
   document.getElementById("session-bonus").hidden=!bonus;
   document.getElementById("skip-bonus").hidden=!(bonus&&e.pick==null);
   document.getElementById("session-step").textContent=String(step);
-  document.getElementById("session-total").textContent=String(order.length);
+  document.getElementById("session-total").textContent=String(total);
   const sessionProgress=document.getElementById("session-progress");
-  sessionProgress.setAttribute("aria-valuemax",String(order.length));
+  sessionProgress.setAttribute("aria-valuemax",String(total));
   sessionProgress.setAttribute("aria-valuenow",String(step));
   document.getElementById("hint").hidden=false;
   document.getElementById("fb").className="fb";sheetOpen(false);
@@ -1843,7 +1905,7 @@ function renderHand(){                                  // draw the current hist
   if(e.pick!=null)replayAnswer(e.pick);                 // already answered -> show its result again
   updateNav();
 }
-function newHand(){hist.push({q:Q[order[pos]],pick:null,step:pos,bonus:false});hidx=hist.length-1;renderHand();}
+function newHand(){hist.push({q:spotAt(pos),pick:null,step:pos,bonus:false});hidx=hist.length-1;renderHand();}
 function replayAnswer(a){answered=true;chosen=a;renderFeedback(cur,a,[]);
   document.getElementById("coach").hidden=false;                  // review: re-show the coach panel, same as a live answer
   document.getElementById("next").focus({preventScroll:true});}  // review: no stats change
@@ -2344,6 +2406,13 @@ function renderFeedback(q,a,gained){
     i.style.width=Math.max(3,payoffView?(GW[ga]||50):Math.round(100*q.freq[x]/maxf))+"%";
     track.appendChild(i);row.appendChild(rlab);row.appendChild(track);bars.appendChild(row);
   });
+  // Continuation: name the villain's between-street action and relabel Next as "Next street".
+  const nb=document.getElementById("next");
+  if(q.hand_id&&!q.last){
+    const nextStreet=q.step_index===0?"turn":"river";
+    v.appendChild(document.createTextNode(" Villain "+(q.villain_action||"checks")+" — the "+nextStreet+" comes."));
+    if(nb)nb.innerHTML="Next street &nbsp;&#8629;";
+  }else if(nb){nb.innerHTML="Next hand &nbsp;&#8629;";}
   document.getElementById("fb").className="fb on";sheetOpen(true);
 }
 function qualityScore(s){return s.n?Math.round(100*(s.solid+0.6*s.ok)/s.n):0;}
@@ -2498,12 +2567,22 @@ document.querySelectorAll("#lang button").forEach(b=>b.onclick=()=>setMode(b.dat
 // --- train-category selector: filter the deck to one street (or all) ---
 function qcat(q){return q.preflop?"preflop":(q.street||"flop");}
 function catCounts(){const c={all:Q.length,preflop:0,flop:0,turn:0,river:0};Q.forEach(q=>{const k=qcat(q);c[k]=(c[k]||0)+1;});return c;}
+const CONT_HANDS_PER_SESSION=5;
+// order entries are either a Q index (drills) or a continuation step-object (play-a-hand).
+function spotAt(i){const o=order[i];return (o&&typeof o==="object")?o:Q[o];}
+function contHandNum(p){let n=0;for(let i=0;i<=p&&i<order.length;i++){const o=order[i];if(o&&typeof o==="object"&&o.step_index===0)n++;}return n;}
 function buildOrder(){
-  if(cat!=="all"){
+  contMode=false;contHands=0;
+  if(cat==="all"&&CONT.length){                 // default: play whole hands flop->turn->river
+    const hands=shuffle(CONT.slice()).slice(0,Math.min(CONT_HANDS_PER_SESSION,CONT.length));
+    order=[];hands.forEach(h=>h.forEach(st=>order.push(st)));
+    contMode=true;contHands=hands.length;pos=0;hist=[];hidx=-1;return;
+  }
+  if(cat!=="all"){                              // secondary: single-street / preflop drills
     const pool=shuffle([...Q.keys()].filter(i=>qcat(Q[i])===cat));
     order=pool.slice(0,Math.min(SESSION_SIZE,pool.length));
   }else{
-    // "All streets": draw a deliberate spread across streets so a session isn't ~83% flop.
+    // "All streets" fallback (no continuation pack): deliberate spread so it isn't ~83% flop.
     const g={preflop:[],flop:[],turn:[],river:[]};
     for(const i of Q.keys()){(g[qcat(Q[i])]||g.flop).push(i);}
     for(const k in g)shuffle(g[k]);

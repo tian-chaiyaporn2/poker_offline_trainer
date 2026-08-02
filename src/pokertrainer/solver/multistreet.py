@@ -57,6 +57,11 @@ class MultiStreetSpike:
         self._Ecache: Dict[frozenset, np.ndarray] = {}
         self._t = 0
         self._eval = False
+        # continuation-mode trajectory extraction: in eval mode, snapshot the per-combo
+        # per-action utility/strategy arrays (and the arriving reaches) for a target set of
+        # bkeys, so a linked flop->turn->river line can be read out. See eval_capture_targets.
+        self._targets: set = set()
+        self._ucache: Dict[tuple, dict] = {}
 
     @staticmethod
     def _compat(oc, ic):
@@ -185,6 +190,18 @@ class MultiStreetSpike:
         u_bet = oop_bet_fold + uo_ivbcall
         u_root = np.stack([u_check, u_bet], axis=1)
 
+        # continuation extraction: snapshot this node's per-combo arrays + arriving reaches.
+        # ro/ri already fold in upstream strategy and runout card-removal, so opp-mass must
+        # normalize against THESE (not w_o/w_i) — see _decision_from_cap.
+        if self._eval and bkey in self._targets:
+            self._ucache[bkey] = {
+                "s_root": s_root.copy(), "u_root": u_root.copy(),
+                "s_ipc": s_ipc.copy(), "u_ipc": u_ipc.copy(),
+                "s_ovb": s_ovb.copy(), "u_ovb": u_ovb.copy(),
+                "s_ivb": s_ivb.copy(), "u_ivb": u_ivb.copy(),
+                "ro": ro.copy(), "ri": ri.copy(),
+            }
+
         # --- regret + strategy-sum updates (CFR+, linear averaging) ---
         self._t_update(k_root, s_root, u_root, ro)
         self._t_update(k_ipc, s_ipc, u_ipc, ri)
@@ -270,6 +287,53 @@ class MultiStreetSpike:
         base = (strat * u).sum(axis=1, keepdims=True)
         self.R[key] = np.maximum(self.R[key] + (u - base), 0.0)
         self.S[key] += self._t * reach[:, None] * strat
+
+    # --- continuation-mode extraction (call after run(); read the averaged strategy) ---
+    def eval_capture_targets(self, targets) -> Dict[tuple, dict]:
+        """One eval-mode traversal that snapshots the per-combo utility/strategy arrays for
+        every bkey in `targets`. Side-effect-free: under _eval, _t_update is a no-op and
+        _get_strat returns the averaged strategy (CFR+'s last iterate oscillates)."""
+        self._targets = set(targets)
+        self._ucache = {}
+        self._eval = True
+        self._solve_street(1, self.flop, 0.0, 0.0, self.w_o.copy(), self.w_i.copy())
+        self._eval = False
+        return self._ucache
+
+    def combo_index(self, seat: str, combo: Combo) -> int:
+        arr = self.oc if seat == "OOP" else self.ic
+        want = {int(combo[0]), int(combo[1])}
+        for i in range(len(arr)):
+            if {int(arr[i, 0]), int(arr[i, 1])} == want:
+                return i
+        return -1
+
+    def decision(self, bkey: tuple, node: str, hero_idx: int, actions) -> dict:
+        """Per-combo ev/freq/preferred for the hero at (bkey, node), read from the eval cache.
+        Opp-mass uses the ARRIVING reaches cached at the node (upstream strategy + runout
+        card-removal already folded in) — same convention as batched._flop_decisions_from_cap."""
+        from .batched import preferred_action
+        cap = self._ucache[bkey]
+        B = self.B
+        if node == "root":
+            opp = B @ cap["ri"]
+        elif node == "ipc":
+            opp = B.T @ (cap["ro"] * cap["s_root"][:, CHECK])
+        elif node == "ovb":
+            opp = B @ (cap["ri"] * cap["s_ipc"][:, BET])
+        elif node == "ivb":
+            opp = B.T @ (cap["ro"] * cap["s_root"][:, BET])
+        else:
+            raise ValueError(f"unknown node {node!r}")
+        u, s = cap["u_" + node], cap["s_" + node]
+        i = hero_idx
+        m = float(opp[i]) if opp[i] > 1e-12 else 1.0
+        ev = {a: float(u[i, k] / m) for k, a in enumerate(actions)}
+        fr = {a: float(s[i, k]) for k, a in enumerate(actions)}
+        tot = sum(fr.values()) or 1.0
+        fr = {a: v / tot for a, v in fr.items()}
+        return {"ev": ev, "freq": fr, "reach_mass": float(opp[i]),
+                "preferred": preferred_action(ev, fr)}
 
     def run(self, iterations: int) -> Dict:
         if iterations <= 0:

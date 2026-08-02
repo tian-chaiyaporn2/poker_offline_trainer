@@ -356,10 +356,11 @@ def refresh_pack_lessons(db_path: str, signing_key: Optional[bytes] = None,
         (rid, board, btex, bfav, node, actor, dtype, hand, hcat, actions_s, ev_s,
          freq_s, pref, sep, mixed, reason, headline, detail_s, pot_bb, oop_pos,
          ip_pos, scenario) = row
-        # Pre-flop rows are chart-based with no board and sentinel EVs; this routine assumes
-        # solver EVs + a real board, so it would wrongly flip `mixed` and overwrite the plain
-        # reads with flop text. Leave them untouched.
-        if dtype == "preflop" or scenario == "preflop" or not board:
+        # Pre-flop rows are chart-based (no board, sentinel EVs) and continuation rows carry
+        # structured trajectory metadata in `detail`; this routine assumes solver EVs + a real
+        # board and would wrongly flip `mixed` / overwrite `detail`, dropping that metadata.
+        if (dtype in ("preflop", "continuation") or scenario == "preflop"
+                or (scenario or "").startswith("cont|") or not board):
             continue
         ev = json.loads(ev_s)
         freq = json.loads(freq_s)
