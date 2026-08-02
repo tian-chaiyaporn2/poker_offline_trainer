@@ -217,3 +217,44 @@ def build_questions():
     return qs
 
 
+def _pf_node(q):
+    ctx = q.get("ctx", "rfi")
+    tail = q.get("opener") or q.get("tbettor")
+    return f"pf_{q['pos'].lower()}_{ctx}" + (f"_{tail}" if tail else "")
+
+
+def pack_records():
+    """Map the chart spots into signed-pack record dicts (A5).
+
+    Pre-flop content is chart-based (a single correct action, no per-action solver EV), so
+    each decision is encoded HONESTLY as a pure strategy: freq = 1.0 on the correct action,
+    with a flat neutral EV (all 0.0) that is explicitly not solver-derived. The pre-flop-only
+    fields ride in `explanation.detail` so the trainer can round-trip them losslessly.
+    """
+    recs = []
+    for q in build_questions():
+        acts = q["actions"]
+        ans = q["answer"]
+        recs.append({
+            "board": "", "board_texture": [], "board_favored": None,
+            "node": _pf_node(q), "acting_player": q["pos"], "decision_type": "preflop",
+            "hand": "".join(q["hand"]), "hand_category": q["cls"],
+            "actions": acts,
+            "ev": {a: 0.0 for a in acts},
+            "freq": {a: (1.0 if a == ans else 0.0) for a in acts},
+            "preferred": ans,
+            "mixed": bool(q.get("mixed")),
+            "scenario": "preflop",
+            "explanation": {
+                "reason": q.get("ctx", "rfi"),
+                "headline": q["read"],
+                "detail": {
+                    "why": q["why"], "rule": q["rule"], "ctx": q.get("ctx"),
+                    "opener": q.get("opener"), "tbettor": q.get("tbettor"),
+                    "alt": q.get("alt"), "situation": q.get("situation"),
+                },
+            },
+        })
+    return recs
+
+

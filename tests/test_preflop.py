@@ -106,6 +106,30 @@ def test_rfi_ranges_are_nested_and_sensible():
     assert "76s" in opens("BTN") and "76s" not in opens("UTG")
 
 
+def test_preflop_signed_pack_roundtrips(tmp_path):
+    """A5: pre-flop ranges wrap into a signed, verifiable pack; chart answers encode as a
+    pure strategy with flat neutral EV, and the plain-language fields round-trip via detail."""
+    import json
+    from pokertrainer.preflop_content import pack_records
+    from pokertrainer.content_pack import build_pack, verify_pack
+
+    recs = pack_records()
+    assert len(recs) > 50
+    for r in recs:                                   # honest pure-strategy encoding
+        assert r["board"] == "" and r["decision_type"] == "preflop"
+        assert set(r["freq"]) == set(r["actions"]) == set(r["ev"])
+        assert abs(sum(r["freq"].values()) - 1.0) < 1e-9
+        assert r["freq"][r["preferred"]] == 1.0      # pure on the correct action
+        assert set(r["ev"].values()) == {0.0}        # flat, not solver-derived
+        assert r["explanation"]["detail"]["why"]     # coaching preserved
+
+    report = build_pack(recs, {"content_kind": "preflop_ranges"},
+                        str(tmp_path), "preflop_test", pot=2.5, dedup_cap=99)
+    assert report["records_after_dedup"] == len(recs)   # dedup_cap high => nothing dropped
+    v = verify_pack(str(tmp_path / "flop_pack_preflop_test.db"))
+    assert v["hash_ok"] and v["signature_ok"] and v["records"] == len(recs)
+
+
 def test_bb_defense_ranges():
     from pokertrainer.preflop_ranges import bb_defense_ranges, BB_DEFENSE
     from pokertrainer.solver.preflop import combo_weights

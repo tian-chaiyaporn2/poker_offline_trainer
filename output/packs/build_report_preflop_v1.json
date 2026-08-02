@@ -1,0 +1,39 @@
+{
+  "pack_id": "flop_srp_btn_bb_preflop_v1",
+  "version": "preflop_v1",
+  "config": {
+    "content_kind": "preflop_ranges",
+    "solver_model": "preflop_chart_ranges_v1",
+    "positions": {
+      "format": "6-max",
+      "seats": [
+        "UTG",
+        "HJ",
+        "CO",
+        "BTN",
+        "SB",
+        "BB"
+      ]
+    },
+    "note": "Chart-based opening/defense ranges; freq is a pure strategy, ev is flat (not solver EV)."
+  },
+  "provenance": {
+    "git_commit": "926977583ad5c3ad12738fcfbaf5553e47207dd3",
+    "solver_model": "preflop_chart_ranges_v1"
+  },
+  "grade_thresholds_pct_pot": {
+    "best": 0.25,
+    "good": 1.0,
+    "acceptable": 3.0,
+    "costly": 10.0
+  },
+  "record_count": "83",
+  "signing_scheme": "hmac-sha256-dev",
+  "default_pot_bb": "2.5",
+  "content_hash": "1d6338706dcab1eb7e9e68a74e6ad4f432d7bf7dea5a9f53f0a26d2e41b53830",
+  "signature": "eae2a35e8e9244abf21a375de7dca7df575034f0ecf13007bc1ddf77df639d2d",
+  "db_bytes": 114688,
+  "gz_bytes": 11896,
+  "records_accepted": 83,
+  "records_after_dedup": 83
+}

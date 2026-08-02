@@ -274,9 +274,49 @@ def load_scenario(db, badge, n):
 PF_Q = 16   # pre-flop spots blended in ("Chapter 0")
 
 
+PF_DB = "output/packs/flop_pack_preflop_v1.db"   # signed pre-flop pack (A5)
+
+
+def _pf_from_pack(n):
+    """Load pre-flop spots from the signed pack (verified like every other pack). The
+    pre-flop-only fields live in each row's `detail` JSON. Returns None if unavailable."""
+    if not os.path.exists(PF_DB):
+        return None
+    try:
+        _require_verified(PF_DB)
+    except SystemExit:
+        return None
+    cols = ("hand acting_player actions preferred_action mixed reason headline detail").split()
+    conn = sqlite3.connect(PF_DB)
+    try:
+        rows = [dict(zip(cols, r)) for r in
+                conn.execute(f"SELECT {','.join(cols)} FROM flop_decision").fetchall()]
+    finally:
+        conn.close()
+    import random as _r
+    _r.Random(11).shuffle(rows)           # deterministic variety across seats
+    out = []
+    for d in rows[:n]:
+        det = json.loads(d["detail"] or "{}")
+        h = d["hand"]
+        out.append({
+            "preflop": True, "badge": "Preflop", "pos": d["acting_player"],
+            "ctx": det.get("ctx") or d["reason"], "opener": det.get("opener"),
+            "tbettor": det.get("tbettor"),
+            "hand": [h[0:2], h[2:4]], "actions": json.loads(d["actions"]),
+            "answer": d["preferred_action"], "mixed": bool(d["mixed"]), "alt": det.get("alt"),
+            "read": d["headline"], "why": det.get("why"), "rule": det.get("rule"),
+        })
+    return out
+
+
 def load_preflop(n=PF_Q):
-    """Pre-flop spots (open/fold + BB defense) from the calibrated ranges — a different
-    question KIND the trainer renders on its own path (no board)."""
+    """Pre-flop spots (open/fold + BB/SB defense + vs-3bet) — a different question KIND the
+    trainer renders on its own path (no board). Prefers the signed pack (A5); falls back to
+    generating from the calibrated ranges if the pack is missing/unverified."""
+    packed = _pf_from_pack(n)
+    if packed is not None:
+        return packed
     from pokertrainer.preflop_content import build_questions
     out = []
     for q in build_questions()[:n]:
