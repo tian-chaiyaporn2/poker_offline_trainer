@@ -79,11 +79,19 @@ def extract_records(flop_str, oop, ip, iters, make, pot, bet_frac,
     # between mid and final on a NON-indifferent spot is an unconverged, unreliable answer — it
     # must not ship as the graded key. `_done` makes the linear average continuous across the two
     # run() calls, so this yields the same final profile as a single run(iters).
+    def _sep(evd):     # final-vs-2nd-best EV gap in pct-pot (0 for a single action)
+        rr = sorted(100.0 * (max(evd.values()) - v) / pot for v in evd.values())
+        return rr[1] if len(rr) > 1 else 0.0
     half = max(1, iters // 2)
-    s.run(half)
-    mid_pref = ({(r["node"], r["hand"]): r["preferred"] for r in s.flop_decisions_report()}
-                if iters >= 2 else {})
-    res = s.run(iters - half if iters - half > 0 else 1)
+    res = s.run(half)
+    mid = {}
+    if iters >= 2:
+        # snapshot BOTH the preferred action and the mid EV gap, so the gate can require the
+        # mid spot to have been confident too (a near-tie -> clear-winner flip is convergence,
+        # not instability, and must not be dropped).
+        mid = {(r["node"], r["hand"]): (r["preferred"], _sep(r["ev"]))
+               for r in s.flop_decisions_report()}
+        res = s.run(iters - half)          # iters>=2 => iters-half>=1; no double-solve at iters==1
     ev_pct = res.get("root_ev_pct_pot", 50.0)     # OOP share of pot
     board_favored = ip_pos if ev_pct < 45 else (oop_pos if ev_pct > 55 else None)
     recs = s.flop_decisions_report()
@@ -109,12 +117,13 @@ def extract_records(flop_str, oop, ip, iters, make, pot, bet_frac,
         # "either is acceptable" headline while fold is a major error.
         r["mixed"] = all(g < CLEAR_SEP_PCT for g in regrets)
         # Convergence gate (D1): unstable = the preferred action flipped between the mid and
-        # final snapshots AND the final top-2 EV gap is clear (>= CLEAR_SEP_PCT), i.e. the
-        # "clearly best" action changed — genuine non-convergence, not near-tie noise. A flip
-        # inside an indifferent (near-tied) spot is expected and fine. Keys use the still-role
-        # node (relabeled below), matching the mid snapshot.
-        prev = mid_pref.get((r["node"], r["hand"]))
-        r["stability"] = ("unstable" if (prev is not None and prev != r["preferred"]
+        # final snapshots AND BOTH snapshots were confident (top-2 gap >= CLEAR_SEP_PCT), i.e. a
+        # clearly-best action reversed — genuine non-convergence. Requiring the MID to also be
+        # confident avoids dropping a spot that merely converged from an early near-tie to a
+        # clear winner. Keys use the still-role node (relabeled below), matching the snapshot.
+        prev = mid.get((r["node"], r["hand"]))
+        r["stability"] = ("unstable" if (prev is not None and prev[0] != r["preferred"]
+                                         and prev[1] >= CLEAR_SEP_PCT
                                          and r["ev_sep_pct"] >= CLEAR_SEP_PCT) else "stable")
         # Accepted: practically reached AND converged (an unstable answer must not ship).
         r["accepted"] = (r["reach_mass"] >= MIN_REACH) and (r["stability"] == "stable")

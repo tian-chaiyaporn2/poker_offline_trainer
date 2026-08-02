@@ -318,6 +318,14 @@ def load_continuation():
             "preferred": d["preferred_action"], "mixed": bool(d["mixed"]),
             "hand_id": hid, "step_index": int(det.get("step_index", 0)),
             "villain_action": det.get("villain_action", ""),
+            # renderFeedback needs these on the normal (postflop) path: reason drives the
+            # mode lookups (guarded — CONTRAST/RULES fall through for "continuation"), headline
+            # is the one-line why (the live hand-read factor panel carries the specifics), and
+            # detail MUST be a list (Pro mode does q.detail.forEach).
+            "reason": "continuation",
+            "headline": ("On the " + str(det.get("street", "flop")) + ", the solver's strongest "
+                         "play with this hand is to " + d["preferred_action"] + "."),
+            "detail": [],
         }
         hands.setdefault(hid, []).append(step)
     out = []
@@ -2312,7 +2320,7 @@ function renderFeedback(q,a,gained){
   const rp=document.getElementById("reason");
   if(rm==="plain"){rp.style.display="none";}
   else{rp.style.display="";rp.textContent=TERMS.poker.reason[q.reason]||q.reason;}
-  document.getElementById("head").textContent=(rm==="poker")?q.headline:(rm==="plain")?plainHead(q):(TERMS[rm].reason[q.reason]||q.headline);
+  document.getElementById("head").textContent=(rm==="poker")?q.headline:(rm==="plain")?(plainHead(q)||q.headline):(TERMS[rm].reason[q.reason]||q.headline);
   // Learning mode: flop TERMS still say "improve" / "free card" — use river tags.
   if(rm==="learning"&&q.street==="river"&&RIVER_LEARNING[q.reason]){
     document.getElementById("head").textContent=RIVER_LEARNING[q.reason];
@@ -2423,8 +2431,8 @@ function syncStatsUI(){
   document.getElementById("leak").textContent=lifetime.leak;
   document.getElementById("acc").textContent=lifetime.n<5?"—":qualityScore(lifetime)+"%";
   document.getElementById("progress-note").textContent=lifetime.n<5
-    ?"Play "+(5-lifetime.n)+" more hand"+(5-lifetime.n===1?"":"s")+" to start building a reliable read."
-    :"Weighted toward strong decisions · "+lifetime.n+" hands played.";
+    ?"Make "+(5-lifetime.n)+" more decision"+(5-lifetime.n===1?"":"s")+" to start building a reliable read."
+    :"Weighted toward strong decisions · "+lifetime.n+" decisions graded.";
 }
 function answer(a){
   if(answered)return;answered=true;chosen=a;if(hist[hidx])hist[hidx].pick=a;updateNav();
@@ -2486,8 +2494,13 @@ function resetSession(){
 }
 function retryLeakSession(){
   if(!sessionMisses.length)return;
-  const ids=sessionMisses.map(q=>Q.indexOf(q)).filter(i=>i>=0);
-  stats=freshStats();sessionMisses=[];order=shuffle(ids);pos=0;hist=[];hidx=-1;
+  contMode=false;contHands=0;
+  // Keep the actual missed spots. Drills stored Q-objects, continuation stored step-objects;
+  // spotAt() resolves both, so order holds the objects directly (no Q.indexOf, which returns
+  // -1 for continuation steps and would blank the session). Force `last` so a retried mid-hand
+  // step reads as a standalone spot ("Next hand"), not a dangling "Next street".
+  const misses=sessionMisses.map(q=>(q&&typeof q==="object"&&q.hand_id)?Object.assign({},q,{last:true}):q);
+  stats=freshStats();sessionMisses=[];order=shuffle(misses);pos=0;hist=[];hidx=-1;
   applyCatUI();newHand();
   document.getElementById("play-card").focus({preventScroll:true});
 }

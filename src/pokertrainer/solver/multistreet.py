@@ -306,7 +306,7 @@ class MultiStreetSpike:
         for i in range(len(arr)):
             if {int(arr[i, 0]), int(arr[i, 1])} == want:
                 return i
-        return -1
+        raise ValueError(f"combo {combo} not in {seat} range")   # never index [-1] silently
 
     def decision(self, bkey: tuple, node: str, hero_idx: int, actions) -> dict:
         """Per-combo ev/freq/preferred for the hero at (bkey, node), read from the eval cache.

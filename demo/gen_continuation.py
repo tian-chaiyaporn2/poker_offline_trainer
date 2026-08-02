@@ -97,7 +97,8 @@ def _build_trajectory(s, flopb, turn, river, flop_s, seat, hero_idx, version):
     hand = hand_str(hero_cards)
     node = _node_for(seat)
     hero_pos, vill_pos = SEAT_POS[seat]
-    hand_id = record_id(flop_s, seat, hand, version)
+    # include the runout so two curated runouts on the same flop+seat+combo don't collide.
+    hand_id = record_id(flop_s + _c(turn) + _c(river), seat, hand, version)
 
     boards = [flopb, turnb, riverb]
     board_strs = [flop_s, flop_s + "".join(_c(x) for x in [turn]),
