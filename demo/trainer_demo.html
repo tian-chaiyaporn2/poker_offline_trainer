@@ -116,6 +116,10 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 .pc .center .psuit{width:21px;height:21px;filter:drop-shadow(0 2px 3px rgba(20,15,10,.4))}
 .pc.pc-heart .ix{color:#cf1a2c}.pc.pc-diam .ix{color:#d84a17}.pc.pc-club .ix{color:#2f3d35}.pc.pc-spade .ix{color:#26282e}
 .cards .pc:nth-child(2){animation-delay:.08s}.cards .pc:nth-child(3){animation-delay:.16s}.cards .pc:nth-child(4){animation-delay:.24s}.cards .pc:nth-child(5){animation-delay:.32s}
+/* continuation: cards already on the board don't re-deal (they just shift as the row grows);
+   only the freshly-revealed card bounces, and it bounces immediately (no stagger delay). */
+.pc.nodeal{animation:none}
+.pc.dealnew{animation-delay:0s}
 @keyframes dealIn{from{opacity:0;transform:translateY(16px) rotate(-8deg) scale(.9)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.pc{animation:none}}
 .hero{margin-top:5px}
@@ -661,7 +665,7 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
     <details class="tech">
       <summary>Solver and data details</summary>
     <div class="foot">
-    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>e1c8e79</code>.
+    Real solver output — pack <code>v1_fullrange</code>, <b>8275</b> signed records, build <code>a376cde</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
     <span class="demo">Turn / river</span> spots are now full-range solver output too, but
@@ -1154,15 +1158,18 @@ const RANK_NAME={A:"Ace",K:"King",Q:"Queen",J:"Jack",T:"Ten","9":"Nine","8":"Eig
 function svgUse(cls,id){const NS="http://www.w3.org/2000/svg";
   const svg=document.createElementNS(NS,"svg");svg.setAttribute("class",cls);
   const u=document.createElementNS(NS,"use");u.setAttribute("href","#"+id);svg.appendChild(u);return svg;}
-function card(t){const r=t[0],s=(t[1]||"").toLowerCase(),sy=SYM[s]||"spade";
-  const e=document.createElement("div");e.className="pc pc-"+sy;
+function card(t,noDeal,dealNew){const r=t[0],s=(t[1]||"").toLowerCase(),sy=SYM[s]||"spade";
+  const e=document.createElement("div");e.className="pc pc-"+sy+(noDeal?" nodeal":dealNew?" dealnew":"");
   e.setAttribute("role","img");e.setAttribute("aria-label",(RANK_NAME[r]||r)+" of "+(SUIT_NAME[s]||"spades"));
   const ix=document.createElement("span");ix.className="ix";
   const b=document.createElement("b");b.textContent=(r==="T"?"10":r);ix.appendChild(b);
   ix.appendChild(svgUse("mini","so-"+sy));
   const ct=document.createElement("span");ct.className="center";ct.appendChild(svgUse("psuit","sym-"+sy));
   e.appendChild(ix);e.appendChild(ct);return e;}
-function render(cs,el){el.innerHTML="";cs.forEach(c=>el.appendChild(card(c)));}
+// noDealBefore: cards before this index don't re-deal (continuation shift); the card AT that
+// index is the freshly-revealed one (bounces immediately). 0 = fresh deal, all cards bounce.
+function render(cs,el,noDealBefore){el.innerHTML="";const nd=noDealBefore||0;
+  cs.forEach((c,i)=>el.appendChild(card(c,i<nd,nd>0&&i>=nd)));}
 
 // --- pre-flop ("Chapter 0"): a distinct question kind, its own render/feedback path ---
 const PF_ACT={
@@ -1225,8 +1232,11 @@ function renderQuestion(q){
   renderSeats(q);   // build the unified felt table first (creates the #board/#hero slots)
   document.getElementById("boardcap").textContent="Board";
   document.getElementById("herocap").textContent="Your hand";
-  render(q.board,document.getElementById("board"));
-  render(q.hero,document.getElementById("hero"));
+  // Continuation step>0: keep the earlier board cards + hero in place (no re-bounce) and only
+  // deal the newly-revealed board card. Fresh hands / drills deal everything (noDealBefore=0).
+  const contStep=q.hand_id&&q.step_index>0;
+  render(q.board,document.getElementById("board"),contStep?q.board.length-1:0);
+  render(q.hero,document.getElementById("hero"),contStep?q.hero.length:0);
   const box=document.getElementById("acts");box.innerHTML="";box.className="acts n-"+q.actions.length;
   q.actions.forEach((a,i)=>addActionButton(box,a,i));
   setHint(q.actions.length);
@@ -1295,7 +1305,6 @@ function hbL(a,b,t){return a+(b-a)*t;}
 const GEO_GLOW='#f0d3a6',GEO_MOON='#e6ddcb';   // one soft warm light + a calm moon — the only accents, both blended
 const GEO_SUITHUE={h:'#623949',d:'#655031',s:'#37405e',c:'#31514a'};   // subtle palette tint by your suit
 const GEO_HZ=384,GEO_VP=344;
-function geoMoon(mx,my,r,sky){return '<circle cx="'+mx+'" cy="'+my+'" r="'+r+'" fill="'+GEO_MOON+'" opacity="0.5"/><circle cx="'+(mx+r*0.55)+'" cy="'+(my-r*0.3)+'" r="'+(r*0.92)+'" fill="'+sky+'"/>';}
 function geoAperture(ax,ay,rx,ry){return '<ellipse class="hb-pulse" cx="'+ax+'" cy="'+ay+'" rx="'+rx+'" ry="'+ry+'" fill="url(#geoglow)"/>';}
 function geoRunner(){const cx=150;return '<path d="M '+(cx-54)+' 600 L '+(cx-10)+' '+(GEO_HZ+2)+' L '+(cx+10)+' '+(GEO_HZ+2)+' L '+(cx+54)+' 600 Z" fill="url(#georunner)" opacity="0.7"/>';}
 function geoCol(x,topY,botY,w,tone){return '<rect x="'+(x-w).toFixed(1)+'" y="'+topY.toFixed(1)+'" width="'+(2*w).toFixed(1)+'" height="'+(botY-topY).toFixed(1)+'" rx="'+(w*0.5).toFixed(1)+'" fill="'+tone+'"/>'
@@ -1329,7 +1338,6 @@ function geoRoom(name,s1,s2,oop){
   s+='<rect x="-6" y="'+GEO_HZ+'" width="312" height="'+(612-GEO_HZ)+'" fill="url(#geofloor)"/>';
   s+='<ellipse class="hb-pulse" cx="150" cy="'+GEO_HZ+'" rx="150" ry="26" fill="url(#geoglow)"/>';
   if(name==='preflop'){
-    s+=geoMoon(122,92,13,sky1);
     const N=4;
     for(let i=0;i<N;i++){const k=i/(N-1),lx=hbL(40,cx-22,k),rx=300-lx,w=hbL(11,3.5,k),top=hbL(205,GEO_VP+4,k),bot=hbL(524,GEO_HZ,k),tn=hbMix(hbMix(wall,'#151225',0.25),wallHi,0.15+0.7*k);
       s+=geoCol(lx,top,bot,w,tn)+geoCol(rx,top,bot,w,tn);}
@@ -1337,7 +1345,7 @@ function geoRoom(name,s1,s2,oop){
     s+=geoAperture(cx,GEO_HZ-4,32,42)+geoRunner();
   }else if(name==='turn'){
     s+='<path d="M -6 250 A 156 152 0 0 1 306 250 Z" fill="url(#geodome)"/>';
-    s+=geoAperture(150,250,30,26)+geoMoon(120,112,9,hbMix(wallHi,wall,0.4));
+    s+=geoAperture(150,250,30,26);
     s+='<ellipse cx="150" cy="490" rx="104" ry="42" fill="url(#geomed)"/>';
   }else if(name==='river'){
     const dk=hbMix(wall,'#121020',0.5);
@@ -1347,7 +1355,7 @@ function geoRoom(name,s1,s2,oop){
   }else{   // flop (+ default) — arched gallery
     for(let i=0;i<4;i++){const k=i/3,hw=hbL(150,30,k),base=hbL(600,GEO_HZ,k),apex=hbL(96,GEO_VP,k),spring=(base+apex)/2,tn=hbMix(wall,wallHi,(1-k)*0.55);
       s+='<path d="M '+(cx-hw)+' '+base+' L '+(cx-hw)+' '+spring+' Q '+(cx-hw)+' '+apex+' '+cx+' '+apex+' Q '+(cx+hw)+' '+apex+' '+(cx+hw)+' '+spring+' L '+(cx+hw)+' '+base+' Z" fill="'+tn+'"/>';}
-    s+=geoAperture(cx,GEO_HZ-2,30,40)+geoMoon(124,80,11,sky1)+geoRunner();
+    s+=geoAperture(cx,GEO_HZ-2,30,40)+geoRunner();
   }
   s+=geoHeldSuits(s1,s2);   // your two suits, a faint radial-faded watermark over the room
   s+='</g><rect width="300" height="600" fill="url(#geovig)"/>';
