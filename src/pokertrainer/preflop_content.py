@@ -20,8 +20,9 @@ NAMES = {"A": "Aces", "K": "Kings", "Q": "Queens", "J": "Jacks", "T": "Tens",
          "4": "Fours", "3": "Threes", "2": "Twos"}
 ONE = {"A": "Ace", "K": "King", "Q": "Queen", "J": "Jack", "T": "Ten", "9": "Nine",
        "8": "Eight", "7": "Seven", "6": "Six", "5": "Five", "4": "Four", "3": "Three", "2": "Two"}
-POS_FULL = {"UTG": "UTG (first to act)", "HJ": "the Hijack", "CO": "the Cutoff",
-            "BTN": "the Button", "SB": "the Small Blind", "BB": "the Big Blind"}
+# Beginner-friendly seat names (jargon-free): early/middle/late seat rather than UTG/Hijack/Cutoff.
+POS_FULL = {"UTG": "an early seat", "HJ": "a middle seat", "CO": "a late seat",
+            "BTN": "the button", "SB": "the small blind", "BB": "the big blind"}
 
 
 def hand_read(cls):
@@ -87,9 +88,9 @@ VS3BET_WHY = {
     "call": "Strong enough to call the 3-bet and see a flop — but not to 4-bet.",
     "fold": "Good enough to open, but not to continue against a 3-bet — fold.",
 }
-RULES_RFI = "Position is everything here: the SAME hand can be a raise on the Button and a fold from UTG. You open wider the later you sit — fewer players left behind to wake up with a hand."
-RULES_DEF = "Defend wider in the Big Blind (you get a price), but 3-bet only your strongest — and fold the junk."
-RULES_SB = "In the Small Blind you're out of position with the BB still behind — defend tighter than the BB, leaning toward 3-bet-or-fold."
+RULES_RFI = "Position is everything here: the SAME hand can be a raise on the button and a fold from an early seat. You open wider the later you sit — fewer players left behind to wake up with a hand."
+RULES_DEF = "Defend wider in the big blind (you get a price), but 3-bet only your strongest — and fold the junk."
+RULES_SB = "In the small blind you're out of position with the big blind still behind — defend tighter, leaning toward 3-bet-or-fold."
 RULES_3BET = "Against a 3-bet, continue only with your strongest: 4-bet the premiums, call a few, fold the rest of your opens."
 
 
@@ -194,8 +195,8 @@ def build_questions():
 
     # Facing a 3-bet: you opened, a blind 3-bets — 4-bet / call / fold (over your opens)
     cont, fb = VS_3BET
-    for (seat, seat_full, tbettor, tb_seat) in [("CO", "the Cutoff", "the Big Blind", "BB"),
-                                                ("BTN", "the Button", "the Small Blind", "SB")]:
+    for (seat, seat_full, tbettor, tb_seat) in [("CO", "a late seat", "the big blind", "BB"),
+                                                ("BTN", "the button", "the small blind", "SB")]:
         opens = [c for c in classes if rfi[seat][c] == "open"]
         for act in ("4bet", "call", "fold"):
             pool = [c for c in opens if v3[c] == act]

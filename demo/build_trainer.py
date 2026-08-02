@@ -1568,7 +1568,7 @@ function addActionButton(box,a,i){
 }
 function shownStep(){const e=hist[hidx];return e&&Number.isInteger(e.step)?e.step:pos;}
 function renderPreflop(q){
-  const posEl=document.getElementById("pos");posEl.textContent=q.pos;posEl.className="pos "+q.pos;
+  const posEl=document.getElementById("pos");posEl.textContent=posChip(q.pos);posEl.className="pos "+q.pos;
   document.getElementById("sitcontext").textContent="Preflop";
   const bd=document.getElementById("demotag");bd.hidden=true;
   renderSeats(q);   // build the 6-max ring first (creates the centred #hero slot)
@@ -1621,6 +1621,9 @@ const RING_SLOTS=[[50,85,1],[15,67,1],[15,33,0],[50,15,0],[85,33,0],[85,67,1]]; 
 const RING_POKER={BTN:"the button",BB:"the big blind",SB:"the small blind",CO:"the cutoff",HJ:"the hijack",UTG:"under the gun"};
 const RING_PLAIN={BTN:"the button",BB:"the big blind",SB:"the small blind",CO:"a late seat",HJ:"a middle seat",UTG:"an early seat"};
 function posName(p){return (eff("positions")==="poker"?RING_POKER:RING_PLAIN)[p]||p;}
+// short label for the preflop seat chip: plain words for beginners, raw seat code only in expert mode
+const CHIP_PLAIN={BTN:"Button",SB:"Small blind",BB:"Big blind",CO:"Late seat",HJ:"Middle seat",UTG:"Early seat"};
+function posChip(p){return eff("positions")==="poker"?p:(CHIP_PLAIN[p]||p);}
 function posLine(hero,villain){   // header: where you and the opponent sit
   var s='<span class="hl-you">You</span> '+posName(hero);
   if(villain)s+=' <span class="fl-dot">·</span> <span class="hl-opp">Opponent</span> '+posName(villain);

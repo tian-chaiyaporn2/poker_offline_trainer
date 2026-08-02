@@ -31,7 +31,7 @@ def test_mobile_player_loop_contract_is_generated_from_source():
     required = (
         "const SESSION_SIZE=10",
         "class=\"session-hud\"",
-        "w.className=\"tv duel\"",
+        "w.className=\"stage duel\"",
         ".acts.n-3{grid-template-columns:repeat(3",
         "class=\"fb-actions\"",
         "function showSessionEnd()",
@@ -135,8 +135,8 @@ def test_mobile_ux_copy_and_compact_layout_contract():
     assert ".sit .demo{display:none}" in source
     assert '"Why "+actionPrimary(pref)+" is stronger"' in source
     assert '"How the choices compare"' in source
-    assert 'oppAct="bet "+(q.bet_pct||66)+"%"' in source
-    assert '"You are "+q.acting_player+" · "+cap1(q.street)' in source
+    assert 'oppAct="Bets "+(q.bet_pct||66)+"%"' in source
+    assert 'document.getElementById("sitcontext").textContent=cap1(q.street)' in source
     assert "with Fold/Call/Raise available on facing-a-bet nodes" in source
 
 
