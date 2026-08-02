@@ -74,7 +74,16 @@ def extract_records(flop_str, oop, ip, iters, make, pot, bet_frac,
     # streets counts remaining betting streets: 3 = flop board (flop/turn/river),
     # 2 = turn board (turn/river), 1 = river board (river then showdown).
     s = make(flop, oop, ip, np.ones(len(oop)), np.ones(len(ip)), pot, bet_frac, streets)
-    res = s.run(iters)
+    # Convergence gate (D1): solve in two halves on the same (resumable) instance, snapshot the
+    # preferred action at the mid checkpoint, then finish. A per-(node,hand) preferred that flips
+    # between mid and final on a NON-indifferent spot is an unconverged, unreliable answer — it
+    # must not ship as the graded key. `_done` makes the linear average continuous across the two
+    # run() calls, so this yields the same final profile as a single run(iters).
+    half = max(1, iters // 2)
+    s.run(half)
+    mid_pref = ({(r["node"], r["hand"]): r["preferred"] for r in s.flop_decisions_report()}
+                if iters >= 2 else {})
+    res = s.run(iters - half if iters - half > 0 else 1)
     ev_pct = res.get("root_ev_pct_pot", 50.0)     # OOP share of pot
     board_favored = ip_pos if ev_pct < 45 else (oop_pos if ev_pct > 55 else None)
     recs = s.flop_decisions_report()
@@ -99,8 +108,16 @@ def extract_records(flop_str, oop, ip, iters, make, pot, bet_frac,
         # Otherwise a 3-action spot with raise≈call but fold dominated gets the
         # "either is acceptable" headline while fold is a major error.
         r["mixed"] = all(g < CLEAR_SEP_PCT for g in regrets)
-        # Accepted: practically reached (unstable/reduced-range handled elsewhere).
-        r["accepted"] = r["reach_mass"] >= MIN_REACH
+        # Convergence gate (D1): unstable = the preferred action flipped between the mid and
+        # final snapshots AND the final top-2 EV gap is clear (>= CLEAR_SEP_PCT), i.e. the
+        # "clearly best" action changed — genuine non-convergence, not near-tie noise. A flip
+        # inside an indifferent (near-tied) spot is expected and fine. Keys use the still-role
+        # node (relabeled below), matching the mid snapshot.
+        prev = mid_pref.get((r["node"], r["hand"]))
+        r["stability"] = ("unstable" if (prev is not None and prev != r["preferred"]
+                                         and r["ev_sep_pct"] >= CLEAR_SEP_PCT) else "stable")
+        # Accepted: practically reached AND converged (an unstable answer must not ship).
+        r["accepted"] = (r["reach_mass"] >= MIN_REACH) and (r["stability"] == "stable")
         # explain() reads the ROLE node (first-action check) + the scenario
         # acting_player (note text) — so relabel the node only AFTER explaining.
         r["explanation"] = explain(r, board_favored)
@@ -154,6 +171,9 @@ def yield_report(all_recs, roots, hands_per_side, full_range_size) -> Dict:
         "records_raw": len(all_recs),
         "accepted": len(accepted),
         "accepted_deduped": len(deduped),
+        # Convergence gate (D1): records dropped because the preferred action was unstable
+        # (flipped mid->final on a non-indifferent spot). >0 means iters is too low.
+        "unstable_dropped": sum(1 for r in all_recs if r.get("stability") == "unstable"),
         "accepted_rate": round(len(accepted) / len(all_recs), 3) if all_recs else 0,
         "mixed_share": round(mixed / len(accepted), 3) if accepted else 0,
         "per_node_accepted": dict(per_node),
