@@ -313,7 +313,15 @@ class MultiStreetSpike:
         player's arriving range. Used to script a range-vs-range villain along one played line:
         the villain takes an action when its range predominantly does (>= 0.5)."""
         cap = self._ucache[bkey]
-        reach = cap["ro"] if node in ("root", "ovb") else cap["ri"]
+        # Weight over the acting player's range ARRIVING at the node. Only `ovb` has a prior
+        # same-street action by the acting player (OOP reaches it only by checking root), so its
+        # reach must be filtered by that check — mirrors the opponent-side filter in decision().
+        if node == "ovb":
+            reach = cap["ro"] * cap["s_root"][:, CHECK]
+        elif node == "root":
+            reach = cap["ro"]
+        else:                                    # ipc / ivb: acting player hasn't acted yet
+            reach = cap["ri"]
         s = cap["s_" + node]
         tot = float(reach.sum())
         return float((reach * s[:, action_idx]).sum() / tot) if tot > 1e-12 else 0.0
