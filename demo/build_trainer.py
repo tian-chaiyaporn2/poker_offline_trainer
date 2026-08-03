@@ -2429,7 +2429,17 @@ function renderFeedback(q,a,gained){
   // "Continue" mid-hand vs "Next hand" at the end. The villain_action text is authored per step
   // by the generator (it follows the solved line — the opponent bets when its range does).
   const nb=document.getElementById("next");
-  if(q.hand_id&&q.villain_action)v.appendChild(document.createTextNode(" "+q.villain_action));
+  if(q.hand_id&&q.villain_action){
+    // The hand always plays out the solver's recommended line (that IS the lesson), so when the
+    // player picked a different action the baked resolution ("opponent checks back", "you call")
+    // would contradict what they just did — e.g. betting and then being told the opponent checked.
+    // Frame it explicitly as the solver's line, and recast the hero-perspective "You call/fold"
+    // (which describes the solver playing the hero's spot) as the conditional "you'd call/fold".
+    const dev=a&&q.preferred&&a!==q.preferred;
+    let tail=q.villain_action;
+    if(dev)tail=tail.replace(/^You call/,"you'd call").replace(/^You fold/,"you'd fold");
+    v.appendChild(document.createTextNode(" "+(dev?"Continuing on the solver's line: "+tail:tail)));
+  }
   if(nb)nb.innerHTML=(q.hand_id&&!q.last)?"Continue &nbsp;&#8629;":"Next hand &nbsp;&#8629;";
   document.getElementById("fb").className="fb on";sheetOpen(true);
 }
