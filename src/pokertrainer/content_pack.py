@@ -360,7 +360,8 @@ def refresh_pack_lessons(db_path: str, signing_key: Optional[bytes] = None,
         # structured trajectory metadata in `detail`; this routine assumes solver EVs + a real
         # board and would wrongly flip `mixed` / overwrite `detail`, dropping that metadata.
         if (dtype in ("preflop", "continuation") or scenario == "preflop"
-                or (scenario or "").startswith("cont|") or not board):
+                or (scenario or "").startswith("cont|")
+                or (scenario or "").startswith("exploit|") or not board):
             continue
         ev = json.loads(ev_s)
         freq = json.loads(freq_s)

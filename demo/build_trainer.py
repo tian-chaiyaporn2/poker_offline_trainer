@@ -276,6 +276,7 @@ PF_Q = 16   # pre-flop spots blended in ("Chapter 0")
 
 PF_DB = "output/packs/flop_pack_preflop_v1.db"   # signed pre-flop pack (A5)
 CONT_DB = "output/packs/flop_pack_continuation_seed.db"   # signed continuation pack (C)
+EXPLOIT_DB = "output/packs/flop_pack_exploit_v1.db"       # signed exploit-mode pack (B)
 
 
 def _cards(s):
@@ -336,6 +337,64 @@ def load_continuation():
             s["last"] = (i == len(steps) - 1)
         out.append(steps)
     return out
+
+
+def load_exploit():
+    """Exploit hands (B): same linked play-a-hand steps as continuation, but the villain plays
+    an ARCHETYPE and the hero is graded on the exploit best response. Grouped by hand_id, then
+    bucketed by archetype so the trainer can drill one archetype at a time. Returns {} if absent.
+    Shape: {archetype: [ [step, step, ...], ... ]}."""
+    if not os.path.exists(EXPLOIT_DB):
+        return {}
+    try:
+        _require_verified(EXPLOIT_DB)
+    except SystemExit:
+        return {}
+    from pokertrainer.explanations import freq_pct_ints
+    cols = ("scenario board node acting_player hand actions ev freq preferred_action "
+            "action_grades pot_bb mixed detail headline").split()
+    conn = sqlite3.connect(EXPLOIT_DB)
+    try:
+        rows = [dict(zip(cols, r)) for r in
+                conn.execute(f"SELECT {','.join(cols)} FROM flop_decision").fetchall()]
+    finally:
+        conn.close()
+    hands = {}   # hand_id -> steps
+    hand_arch = {}
+    for d in rows:
+        det = json.loads(d["detail"] or "{}")
+        hid = det.get("hand_id") or d["scenario"].split("|")[2]
+        arch = det.get("archetype") or d["scenario"].split("|")[1]
+        acts = json.loads(d["actions"])
+        freq_raw = {k: float(v) for k, v in json.loads(d["freq"]).items()}
+        step = {
+            "street": det.get("street"), "board": _cards(d["board"]), "hero": _cards(d["hand"]),
+            "is_oop": bool(det.get("is_oop")), "acting_player": d["acting_player"],
+            "villain": det.get("villain"), "node": d["node"], "bet_pct": 66,
+            "actions": acts, "grades": json.loads(d["action_grades"]),
+            "ev": {k: round(v, 2) for k, v in json.loads(d["ev"]).items()},
+            "freq": freq_pct_ints(freq_raw, order=acts),
+            "preferred": d["preferred_action"], "mixed": bool(d["mixed"]),
+            "hand_id": hid, "step_index": int(det.get("step_index", 0)),
+            "villain_action": det.get("villain_action", ""),
+            "newcard": bool(det.get("newcard", True)),
+            "archetype": arch, "villain_label": det.get("villain_label", ""),
+            # reason "exploit" falls through the mode lookups like "continuation"; headline is the
+            # archetype-specific why; detail is the single exploit lesson bullet (must be a list).
+            "reason": "exploit",
+            "headline": d["headline"] or ("Versus this opponent, the exploitative play is to "
+                                          + d["preferred_action"] + "."),
+            "detail": [det["lesson"]] if det.get("lesson") else [],
+        }
+        hands.setdefault(hid, []).append(step)
+        hand_arch[hid] = arch
+    by_arch = {}
+    for hid, steps in hands.items():
+        steps.sort(key=lambda s: s["step_index"])
+        for i, s in enumerate(steps):
+            s["last"] = (i == len(steps) - 1)
+        by_arch.setdefault(hand_arch[hid], []).append(steps)
+    return by_arch
 
 
 def _pf_from_pack(n):
@@ -463,11 +522,15 @@ def build(allow_missing_demo_packs=False):
           f"{len(pf_qs)} pre-flop spots blended in; {len(cpool)} contrast-pool spots)")
     cont = load_continuation()
     print(f"  ({sum(len(h) for h in cont)} continuation step-records in {len(cont)} hands)")
+    exploit = load_exploit()
+    print(f"  ({sum(len(h) for hs in exploit.values() for h in hs)} exploit step-records in "
+          f"{sum(len(hs) for hs in exploit.values())} hands across {len(exploit)} archetypes)")
     # Escape </script> so pack strings cannot break out of the inline script.
     data = json.dumps(qs, separators=(",", ":")).replace("<", "\\u003c")
     cdata = json.dumps(cpool, separators=(",", ":")).replace("<", "\\u003c")
     contdata = json.dumps(cont, separators=(",", ":")).replace("<", "\\u003c")
-    body = TEMPLATE.replace("__DATA__", data).replace("__CPOOL__", cdata).replace("__CONT__", contdata).replace("__VERSION__", html.escape(meta.get("version", ""))) \
+    edata = json.dumps(exploit, separators=(",", ":")).replace("<", "\\u003c")
+    body = TEMPLATE.replace("__DATA__", data).replace("__CPOOL__", cdata).replace("__CONT__", contdata).replace("__EXPLOIT__", edata).replace("__VERSION__", html.escape(meta.get("version", ""))) \
                    .replace("__RECORDS__", html.escape(str(meta.get("record_count", "")))).replace("__COMMIT__", html.escape(commit)) \
                    .replace("__FONTFACE__", _fontface()).replace("__SUITDEFS__", _suitdefs()) \
                    .replace("__ROOMPHOTOS__", _roomphotos())
@@ -1134,6 +1197,11 @@ __SUITDEFS__
       <button data-c="all" type="button">All</button><button data-c="preflop" type="button">Pre-flop</button><button data-c="flop" type="button">Flop</button><button data-c="turn" type="button">Turn</button><button data-c="river" type="button">River</button>
     </div>
     <p class="lvl-hint">Pick a street to drill, or All for a mix. Changing this starts a fresh session.</p>
+    <div class="s-sec">Exploit an opponent</div>
+    <div class="street-seg" id="excats" role="group" aria-label="Which opponent to exploit">
+      <button data-c="ex:station" type="button">Station</button><button data-c="ex:nit" type="button">Nit</button><button data-c="ex:maniac" type="button">Maniac</button><button data-c="ex:lag" type="button">LAG</button><button data-c="ex:reg" type="button">Reg</button>
+    </div>
+    <p class="lvl-hint">Play a full hand versus a leaky opponent — graded on the exploit, not GTO.</p>
     <div class="s-sec">Language</div>
     <div class="seg" id="lang" role="group" aria-label="Language level">
       <button data-m="progressive" type="button">Adaptive</button><button data-m="plain" type="button">Beginner</button><button data-m="learning" type="button">Learning</button><button data-m="poker" type="button">Pro</button>
@@ -1238,6 +1306,8 @@ const ALLSPOTS = Q.concat(CPOOL);
 // Continuation hands (C): each is an ordered [flop,turn,river] list of linked step-questions
 // (same hero, growing board). Drives the "play a hand through" session (the default when present).
 const CONT = __CONT__;
+const EXPLOIT = __EXPLOIT__;   // {archetype: [[step,...],...]} — play-a-hand vs an archetype (B)
+const EX_LABEL = {station:"Calling Station",nit:"Nit",maniac:"Maniac",lag:"LAG",reg:"Reg"};
 
 // Plain-English hand reader — tells the player WHAT they hold and where they stand
 // (top pair / overpair / a set / just a draw). This is the piece beginners lack:
@@ -1453,7 +1523,7 @@ function recordGrade(bucket,tier,hit){
 function saveLifetime(){try{localStorage.setItem("trainer-progress",JSON.stringify(lifetime));}catch(e){}}
 let mode=(function(){try{const m=localStorage.getItem("lang");return (m==="poker"||m==="learning"||m==="plain"||m==="progressive")?m:"progressive";}catch(e){return "progressive";}})();
 // Which part to train (pre-flop / flop / turn / river / all).
-let cat=(function(){try{const c=localStorage.getItem("cat");return ["all","preflop","flop","turn","river"].includes(c)?c:"all";}catch(e){return "all";}})();
+let cat=(function(){try{const c=localStorage.getItem("cat");return (["all","preflop","flop","turn","river"].includes(c)||(typeof c==="string"&&c.startsWith("ex:")&&(EXPLOIT[c.slice(3)]||[]).length))?c:"all";}catch(e){return "all";}})();
 // Adaptive mode: each concept shows in plain words until you've EARNED it (played a
 // spot that uses it well); then it graduates to the poker term + its meaning.
 const VALID_TERMS=new Set(["positions","streets"].concat(Object.keys(TERMS.poker.reason).map(r=>"reason:"+r)));
@@ -1907,7 +1977,7 @@ function renderHand(){                                  // draw the current hist
   // continuation counts by HAND ("Hand 2 of 5"); drills count by spot ("Hand 3 of 10").
   const step=contMode?contHandNum(shownStep()):Math.min(shownStep()+1,order.length);
   const total=contMode?contHands:order.length;
-  document.getElementById("session-kind").textContent=bonus?"Compare practice":contMode?"Play a hand":({all:"All streets",preflop:"Preflop",flop:"Flop",turn:"Turn",river:"River"}[cat]||"Quick session");
+  document.getElementById("session-kind").textContent=bonus?"Compare practice":contMode?(cat.startsWith("ex:")?("Exploit: "+(EX_LABEL[cat.slice(3)]||cat.slice(3))):"Play a hand"):({all:"All streets",preflop:"Preflop",flop:"Flop",turn:"Turn",river:"River"}[cat]||"Quick session");
   document.getElementById("session-counter").hidden=bonus;
   document.getElementById("session-bonus").hidden=!bonus;
   document.getElementById("skip-bonus").hidden=!(bonus&&e.pick==null);
@@ -2386,7 +2456,9 @@ function renderFeedback(q,a,gained){
   const payoffView=(mode!=="poker");
   document.getElementById("mixhead").textContent=payoffView
     ?"How the choices compare"
-    :"Solver mix — how often the solver plays each action (★ = best EV), and its EV";
+    :(q.reason==="exploit"
+        ?"GTO baseline mix — ★ = the exploit play vs this opponent (deviate from GTO to punish the leak)"
+        :"Solver mix — how often the solver plays each action (★ = best EV), and its EV");
   const bars=document.getElementById("bars");bars.innerHTML="";
   const maxf=Math.max(1,...q.actions.map(x=>q.freq[x]));
   const GW={best:100,good:82,acceptable:58,costly:32,major_error:12};   // bar = how good
@@ -2606,6 +2678,14 @@ function spotAt(i){const o=order[i];return (o&&typeof o==="object")?o:Q[o];}
 function contHandNum(p){let n=0;for(let i=0;i<=p&&i<order.length;i++){const o=order[i];if(o&&typeof o==="object"&&o.step_index===0)n++;}return n;}
 function buildOrder(){
   contMode=false;contHands=0;
+  if(cat.startsWith("ex:")){                    // exploit: play whole hands vs an archetype
+    const hs=EXPLOIT[cat.slice(3)]||[];
+    if(hs.length){
+      const hands=shuffle(hs.slice()).slice(0,Math.min(CONT_HANDS_PER_SESSION,hs.length));
+      order=[];hands.forEach(h=>h.forEach(st=>order.push(st)));
+      contMode=true;contHands=hands.length;pos=0;hist=[];hidx=-1;return;
+    }
+  }
   if(cat==="all"&&CONT.length){                 // default: play whole hands flop->turn->river
     const hands=shuffle(CONT.slice()).slice(0,Math.min(CONT_HANDS_PER_SESSION,CONT.length));
     order=[];hands.forEach(h=>h.forEach(st=>order.push(st)));
@@ -2630,12 +2710,15 @@ function buildOrder(){
 function applyCatUI(){const cc=catCounts();
   document.querySelectorAll("#cats button").forEach(b=>{const on=b.dataset.c===cat;b.classList.toggle("on",on);
     b.setAttribute("aria-pressed",String(on));
-    const n=b.dataset.c==="all"?Q.length:(cc[b.dataset.c]||0);b.disabled=n===0;b.style.opacity=n===0?"0.4":"";});}
+    const n=b.dataset.c==="all"?Q.length:(cc[b.dataset.c]||0);b.disabled=n===0;b.style.opacity=n===0?"0.4":"";});
+  document.querySelectorAll("#excats button").forEach(b=>{const on=b.dataset.c===cat;b.classList.toggle("on",on);
+    b.setAttribute("aria-pressed",String(on));
+    const n=(EXPLOIT[b.dataset.c.slice(3)]||[]).length;b.disabled=n===0;b.style.opacity=n===0?"0.4":"";});}
 function setCat(c){
   cat=c;try{localStorage.setItem("cat",c);}catch(e){}
   stats=freshStats();sessionMisses=[];applyCatUI();buildOrder();newHand();
   setView("train");}   // picking what to train jumps you into a fresh session
-document.querySelectorAll("#cats button").forEach(b=>b.onclick=()=>setCat(b.dataset.c));
+document.querySelectorAll("#cats button, #excats button").forEach(b=>b.onclick=()=>setCat(b.dataset.c));
 // Collapsed by default so the game sits at the top; remember if the reader opens it.
 const intro=document.getElementById("intro");
 try{intro.open=localStorage.getItem("introOpen")==="1";}catch(e){intro.open=false;}

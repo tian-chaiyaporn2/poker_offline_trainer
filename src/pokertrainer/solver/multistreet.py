@@ -62,6 +62,10 @@ class MultiStreetSpike:
         # bkeys, so a linked flop->turn->river line can be read out. See eval_capture_targets.
         self._targets: set = set()
         self._ucache: Dict[tuple, dict] = {}
+        # exploit-mode: in eval, pin a node's strategy to an externally supplied profile
+        # (keyed by (bkey, node)) so the hero's captured utilities reflect a FIXED leaky
+        # villain and decision() returns the hero's best response vs it. See eval_capture_targets.
+        self._strat_override: Dict[tuple, np.ndarray] = {}
 
     @staticmethod
     def _compat(oc, ic):
@@ -76,6 +80,9 @@ class MultiStreetSpike:
         """Regret-matched strategy while training; average strategy in eval mode."""
         self._reg(key, n_actions)
         if self._eval:
+            ov = self._strat_override.get(key)
+            if ov is not None:
+                return ov                    # pinned villain policy (exploit mode)
             s = self.S[key]
             tot = s.sum(axis=1, keepdims=True)
             return np.where(tot > 0, s / np.where(tot > 0, tot, 1.0),
@@ -289,15 +296,22 @@ class MultiStreetSpike:
         self.S[key] += self._t * reach[:, None] * strat
 
     # --- continuation-mode extraction (call after run(); read the averaged strategy) ---
-    def eval_capture_targets(self, targets) -> Dict[tuple, dict]:
+    def eval_capture_targets(self, targets, override=None) -> Dict[tuple, dict]:
         """One eval-mode traversal that snapshots the per-combo utility/strategy arrays for
         every bkey in `targets`. Side-effect-free: under _eval, _t_update is a no-op and
-        _get_strat returns the averaged strategy (CFR+'s last iterate oscillates)."""
+        _get_strat returns the averaged strategy (CFR+'s last iterate oscillates).
+
+        `override` (exploit mode): a dict {(bkey, node): strategy_array} pinning specific
+        nodes (the villain's) to a fixed leaky profile. Because _get_strat returns it DURING
+        the traversal, the arriving reaches and the hero's captured utilities both reflect
+        that fixed villain, so decision() yields the hero's best response vs the archetype."""
         self._targets = set(targets)
         self._ucache = {}
+        self._strat_override = override or {}
         self._eval = True
         self._solve_street(1, self.flop, 0.0, 0.0, self.w_o.copy(), self.w_i.copy())
         self._eval = False
+        self._strat_override = {}
         return self._ucache
 
     def combo_index(self, seat: str, combo: Combo) -> int:
