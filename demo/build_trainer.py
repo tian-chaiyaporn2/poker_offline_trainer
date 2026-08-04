@@ -2415,11 +2415,14 @@ function renderFeedback(q,a,gained){
   // On a coordinated board a one-pair-ish hand is a bluff-catcher, so the trap/value
   // takeaway is replaced by a pot-control one.
   const bcRule=bcReframe(q,rd);
+  // Exploit steps carry their one crisp archetype lesson in detail[0]; surface it as the
+  // rule-of-thumb so beginner/adaptive modes (which hide the Pro #det bullets) still get the
+  // actionable "why", not just the headline. Pro still shows it in #det below.
   const ruleText=bcRule
     ? (q.preferred==="bet"
       ? "On a coordinated board, a one-pair-type hand is vulnerable — bets are thin and often get called by better."
       : "On a coordinated board, a one-pair-type hand is a bluff-catcher, not a monster — keep the pot small and don't bet into the likely straights and flushes.")
-    : ruleFor(q);
+    : ((q.reason==="exploit"&&q.detail&&q.detail.length)?q.detail[0]:ruleFor(q));
   // Rule of thumb: a compact always-visible takeaway (the factor panel is the depth now).
   // Hidden in Pro, which shows the solver detail bullets instead.
   if(ruleText&&rm!=="poker"){ruleEl.hidden=false;
