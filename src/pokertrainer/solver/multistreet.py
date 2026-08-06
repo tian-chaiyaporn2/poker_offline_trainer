@@ -66,6 +66,9 @@ class MultiStreetSpike:
         # (keyed by (bkey, node)) so the hero's captured utilities reflect a FIXED leaky
         # villain and decision() returns the hero's best response vs it. See eval_capture_targets.
         self._strat_override: Dict[tuple, np.ndarray] = {}
+        # exploit best-response: when set to "OOP"/"IP", that seat maximizes at its own nodes
+        # (true multi-street best response vs the pinned villain) instead of playing GTO.
+        self._hero_seat = None
 
     @staticmethod
     def _compat(oc, ic):
@@ -189,8 +192,14 @@ class MultiStreetSpike:
         u_ipc = np.stack([ui_cc, ip_bet_fold + ui_ovbcall], axis=1)
 
         # root (OOP): check -> ipc subtree; bet -> IP responds (ivb)
-        # OOP check value = IP checks (advance cc) + IP bets (OOP plays ovb)
-        oop_check_ipbet = s_ovb[:, CALL] * uo_ovbcall + s_ovb[:, FOLD] * (-eo * oppmass_ovb)
+        # OOP check value = IP checks (advance cc) + IP bets (OOP plays ovb).
+        # Exploit best-response (self._hero_seat=="OOP"): OOP maximizes at ovb (fold vs call)
+        # rather than playing its averaged strategy, so the captured check value assumes the
+        # hero best-responds downstream vs the pinned villain. See eval_capture_targets.
+        if self._hero_seat == "OOP":
+            oop_check_ipbet = np.maximum(uo_ovbcall, -eo * oppmass_ovb)
+        else:
+            oop_check_ipbet = s_ovb[:, CALL] * uo_ovbcall + s_ovb[:, FOLD] * (-eo * oppmass_ovb)
         u_check = uo_cc + oop_check_ipbet
         # OOP bet value = IP folds (OOP wins P0+ei) + IP calls (advance)
         oop_bet_fold = (self.P0 + ei) * (self.B @ (ri * s_ivb[:, FOLD]))
@@ -215,11 +224,15 @@ class MultiStreetSpike:
         self._t_update(k_ovb, s_ovb, u_ovb, ro_checked)
         self._t_update(k_ivb, s_ivb, u_ivb, ri)
 
-        # value to each player at street entry (both act per strategy)
-        uo = (s_root * u_root).sum(axis=1)
+        # value to each player at street entry (both act per strategy). Under exploit
+        # best-response the HERO seat maximizes (pure argmax per combo) instead of playing its
+        # averaged strategy, and this propagates up through the recursion so multi-street EVs
+        # reflect the hero best-responding at every node vs the pinned villain.
+        uo = u_root.max(axis=1) if self._hero_seat == "OOP" else (s_root * u_root).sum(axis=1)
         # IP's value at entry = over its infosets reached: but IP only acts after
         # OOP's move; combine ipc (OOP checked) and ivb (OOP bet):
-        ui = (s_ipc * u_ipc).sum(axis=1) + (s_ivb * u_ivb).sum(axis=1)
+        ui = ((u_ipc.max(axis=1) + u_ivb.max(axis=1)) if self._hero_seat == "IP"
+              else (s_ipc * u_ipc).sum(axis=1) + (s_ivb * u_ivb).sum(axis=1))
         return uo, ui
 
     # --- betting with a raise facing a bet: fold/call/raise, one raise/street ---
@@ -296,7 +309,7 @@ class MultiStreetSpike:
         self.S[key] += self._t * reach[:, None] * strat
 
     # --- continuation-mode extraction (call after run(); read the averaged strategy) ---
-    def eval_capture_targets(self, targets, override=None) -> Dict[tuple, dict]:
+    def eval_capture_targets(self, targets, override=None, hero_br=None) -> Dict[tuple, dict]:
         """One eval-mode traversal that snapshots the per-combo utility/strategy arrays for
         every bkey in `targets`. Side-effect-free: under _eval, _t_update is a no-op and
         _get_strat returns the averaged strategy (CFR+'s last iterate oscillates).
@@ -304,14 +317,24 @@ class MultiStreetSpike:
         `override` (exploit mode): a dict {(bkey, node): strategy_array} pinning specific
         nodes (the villain's) to a fixed leaky profile. Because _get_strat returns it DURING
         the traversal, the arriving reaches and the hero's captured utilities both reflect
-        that fixed villain, so decision() yields the hero's best response vs the archetype."""
+        that fixed villain, so decision() yields the hero's response vs the archetype.
+
+        `hero_br` ("OOP"/"IP"): compute a true multi-street BEST RESPONSE for that seat — it
+        maximizes at its own nodes instead of playing GTO, propagated bottom-up. Combine with
+        `override` (the opposite seat pinned) to grade the hero's full exploit best response.
+        (A seat's counterfactual values are independent of its own reach, so only the value
+        aggregation changes; reach threading is untouched.) Not supported with raises."""
+        if hero_br is not None and self.raise_x is not None:
+            raise ValueError("hero_br best-response is only implemented for the no-raise tree")
         self._targets = set(targets)
         self._ucache = {}
         self._strat_override = override or {}
+        self._hero_seat = hero_br
         self._eval = True
         self._solve_street(1, self.flop, 0.0, 0.0, self.w_o.copy(), self.w_i.copy())
         self._eval = False
         self._strat_override = {}
+        self._hero_seat = None
         return self._ucache
 
     def combo_index(self, seat: str, combo: Combo) -> int:
