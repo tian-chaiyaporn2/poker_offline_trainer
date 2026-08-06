@@ -10,38 +10,38 @@
     "pot_bb": 5.5,
     "bet_pct_pot": 66,
     "line": "continuation_solved_villain",
-    "note": "linked flop->turn->river; villain plays its solved main line (range argmax); CPU seed",
-    "solver_model": "multistreet_spike_cfr_plus",
+    "note": "linked flop->turn->river; villain plays its solved main line (range argmax)",
+    "solver_model": "batched_gpu_cfr_plus",
     "convergence": [
       {
         "flop": "7c6d2s",
-        "root_ev_pct_pot": 32.97,
+        "root_ev_pct_pot": 33.17,
         "stable": true,
-        "runtime_sec": 15148.4
+        "runtime_sec": 393.6
       },
       {
         "flop": "Ah7d2c",
-        "root_ev_pct_pot": 18.81,
+        "root_ev_pct_pot": 18.77,
         "stable": true,
-        "runtime_sec": 13708.4
+        "runtime_sec": 407.4
       },
       {
         "flop": "Qd9s4h",
-        "root_ev_pct_pot": 50.02,
+        "root_ev_pct_pot": 49.91,
         "stable": true,
-        "runtime_sec": 13817.3
+        "runtime_sec": 393.5
       },
       {
         "flop": "Ks8h5d",
-        "root_ev_pct_pot": 41.55,
+        "root_ev_pct_pot": 41.42,
         "stable": true,
-        "runtime_sec": 15001.2
+        "runtime_sec": 399.6
       }
     ]
   },
   "provenance": {
-    "git_commit": "7b0f6c60c08b8a90e1e555be3a86f1fd2513126b",
-    "solver_model": "multistreet_spike_cfr_plus"
+    "git_commit": "190d8fd7074aad68cb25a7583d0cd5169ba0b3bc",
+    "solver_model": "batched_gpu_cfr_plus"
   },
   "grade_thresholds_pct_pot": {
     "best": 0.25,
@@ -49,13 +49,13 @@
     "acceptable": 3.0,
     "costly": 10.0
   },
-  "record_count": "143",
+  "record_count": "139",
   "signing_scheme": "hmac-sha256-dev",
   "default_pot_bb": "5.5",
-  "content_hash": "304a84129100d51d3da7c3990c08081490a700d0e3900230e88c35237d4f03ec",
-  "signature": "823d010d98b5fed621c1f20181524f116f975439cbaa0ea672f96a832561bd20",
-  "db_bytes": 163840,
-  "gz_bytes": 28277,
-  "records_accepted": 143,
-  "records_after_dedup": 143
+  "content_hash": "cd2fc5b05630b0ff83c76b326c375ba0ea3488d0b03366123e5a790666796c8c",
+  "signature": "b9e2d68353c2a5775a986b784c53beee436f078a6315d3d0c71591260af7256e",
+  "db_bytes": 159744,
+  "gz_bytes": 27408,
+  "records_accepted": 139,
+  "records_after_dedup": 139
 }
