@@ -416,3 +416,47 @@ def _flop_decisions_from_cap(solver) -> List[Dict]:
                 "reach_mass": float(opp_mass[i]),
             })
     return recs
+
+
+# --- trajectory extraction read-side (continuation / exploit) -------------------------
+# Host-array ports of MultiStreetSpike.decision / node_action_share, so the batched solver's
+# eval_capture_targets (per-(path,board) capture) reads out identically. `cap` is one node's
+# capture dict (2D per-combo arrays s_root/s_ipc/s_ovb/s_ivb + u_* + arriving ro/ri), `B` the
+# host compat matrix. See solver/multistreet.py:329-364 (the oracle these must match).
+
+def node_action_share_from_cap(cap: Dict, node: str, action_idx: int) -> float:
+    """Reach-weighted frequency of one action at a captured node, over the ACTING player's
+    arriving range. `ovb` filters by the OOP check that leads into it (mirrors the oracle)."""
+    if node == "ovb":
+        reach = cap["ro"] * cap["s_root"][:, CHECK]
+    elif node == "root":
+        reach = cap["ro"]
+    else:                                               # ipc / ivb: acting player hasn't acted
+        reach = cap["ri"]
+    s = cap["s_" + node]
+    tot = float(reach.sum())
+    return float((reach * s[:, action_idx]).sum() / tot) if tot > 1e-12 else 0.0
+
+
+def decision_from_cap(cap: Dict, B, node: str, hero_idx: int, actions) -> Dict:
+    """Per-combo ev/freq/preferred for the hero at a captured node. Opp-mass uses the ARRIVING
+    reaches (upstream strategy + runout card-removal already folded in), not w_o/w_i."""
+    if node == "root":
+        opp = B @ cap["ri"]
+    elif node == "ipc":
+        opp = B.T @ (cap["ro"] * cap["s_root"][:, CHECK])
+    elif node == "ovb":
+        opp = B @ (cap["ri"] * cap["s_ipc"][:, BET])
+    elif node == "ivb":
+        opp = B.T @ (cap["ro"] * cap["s_root"][:, BET])
+    else:
+        raise ValueError(f"unknown node {node!r}")
+    u, s = cap["u_" + node], cap["s_" + node]
+    i = hero_idx
+    m = float(opp[i]) if opp[i] > 1e-12 else 1.0
+    ev = {a: float(u[i, k] / m) for k, a in enumerate(actions)}
+    fr = {a: float(s[i, k]) for k, a in enumerate(actions)}
+    tot = sum(fr.values()) or 1.0
+    fr = {a: v / tot for a, v in fr.items()}
+    return {"ev": ev, "freq": fr, "reach_mass": float(opp[i]),
+            "preferred": preferred_action(ev, fr)}

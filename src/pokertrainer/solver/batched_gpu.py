@@ -110,6 +110,14 @@ class BatchedGPUCFR:
         self._done = 0
         self._eval = False
         self._cap = None
+        # Trajectory extraction (continuation / exploit), mirroring MultiStreetSpike:
+        # per-(path,board) capture targets, the captured node dicts (host numpy), a villain
+        # strategy pin (exploit), and a hero best-response seat. See eval_capture_targets.
+        self._targets: set = set()
+        self._ucache: Dict[tuple, dict] = {}
+        self._strat_override: Dict[tuple, np.ndarray] = {}
+        self._hero_seat = None
+        self._Bh = None       # lazy host copy of B for decision()
 
     def _build_showdown_tensor(self):
         """Precompute win-matrix E for every showdown board -> one device tensor."""
@@ -277,6 +285,9 @@ class BatchedGPUCFR:
         s_ipc = self._get_strat(path, "P", C, False)
         s_ovb = self._get_strat(path, "V", C, True)
         s_ivb = self._get_strat(path, "I", C, False)
+        if self._strat_override:        # exploit: pin villain nodes before reaches thread through
+            self._apply_override(path, boards,
+                                 (("root", s_root), ("ipc", s_ipc), ("ovb", s_ovb), ("ivb", s_ivb)))
 
         ro_ck = ro * s_root[:, :, CHECK]; ro_bt = ro * s_root[:, :, BET]
         ri_ck = ri * s_ipc[:, :, CHECK]; ri_bt = ri * s_ipc[:, :, BET]
@@ -296,21 +307,31 @@ class BatchedGPUCFR:
         u_ivb = xp.stack([-ei[:, None] * oppmass_ivb, ui_L3], axis=2)
         ip_bet_fold = (self.P0 + eo)[:, None] * ((ro_ck * s_ovb[:, :, FOLD]) @ self.B)
         u_ipc = xp.stack([ui_L1, ip_bet_fold + ui_L2], axis=2)
-        u_check = (uo_L1 + s_ovb[:, :, CALL] * uo_L2
-                   + s_ovb[:, :, FOLD] * (-eo[:, None] * oppmass_ovb))
+        # OOP check value; exploit BR ("OOP") maximizes at ovb (fold vs call) instead of the
+        # averaged strategy, so the captured check value assumes the hero best-responds downstream.
+        if self._hero_seat == "OOP":
+            u_check = uo_L1 + xp.maximum(uo_L2, -eo[:, None] * oppmass_ovb)
+        else:
+            u_check = (uo_L1 + s_ovb[:, :, CALL] * uo_L2
+                       + s_ovb[:, :, FOLD] * (-eo[:, None] * oppmass_ovb))
         oop_bet_fold = (self.P0 + ei)[:, None] * ((ri * s_ivb[:, :, FOLD]) @ self.B.T)
         u_root = xp.stack([u_check, oop_bet_fold + uo_L3], axis=2)
 
         if self._eval and street == 1 and path == "":
             self._cap = {"s_root": s_root, "u_root": u_root, "s_ipc": s_ipc, "u_ipc": u_ipc,
                          "s_ovb": s_ovb, "u_ovb": u_ovb, "s_ivb": s_ivb, "u_ivb": u_ivb}
+        if self._eval and self._targets:      # trajectory extraction: snapshot matching boards
+            self._capture_targets(path, boards, s_root, u_root, s_ipc, u_ipc,
+                                  s_ovb, u_ovb, s_ivb, u_ivb, ro, ri)
 
         self._update(path + "R", s_root, u_root, ro)
         self._update(path + "P", s_ipc, u_ipc, ri)
         self._update(path + "V", s_ovb, u_ovb, ro_ck)
         self._update(path + "I", s_ivb, u_ivb, ri)
-        uo = (s_root * u_root).sum(axis=2)
-        ui = (s_ipc * u_ipc).sum(axis=2) + (s_ivb * u_ivb).sum(axis=2)
+        # exploit BR: the hero seat maximizes (pure argmax per combo), propagated up the recursion.
+        uo = u_root.max(axis=2) if self._hero_seat == "OOP" else (s_root * u_root).sum(axis=2)
+        ui = ((u_ipc.max(axis=2) + u_ivb.max(axis=2)) if self._hero_seat == "IP"
+              else (s_ipc * u_ipc).sum(axis=2) + (s_ivb * u_ivb).sum(axis=2))
         return uo, ui
 
     def _update(self, key, s, u, reach):
@@ -357,6 +378,72 @@ class BatchedGPUCFR:
         when raise_x is set."""
         from .batched import _flop_decisions_from_cap
         return _flop_decisions_from_cap(self)
+
+    # --- trajectory extraction (continuation / exploit): batched port of the
+    #     MultiStreetSpike API, so gen_continuation / gen_exploit are solver-agnostic ---
+    def _apply_override(self, path, boards, nodes):
+        """Overwrite villain-node strategy rows with a pinned profile (exploit), keyed by
+        ((path, sorted-board), node) so the pinned reaches thread downstream. `nodes` is a
+        sequence of (node_name, strategy_array); arrays are mutated in place (eval-only, and
+        _get_strat returns a fresh array in eval mode, so this is safe)."""
+        b2row = None
+        for name, arr in nodes:
+            for (bkey, nd), val in self._strat_override.items():
+                if nd != name or bkey[0] != path:
+                    continue
+                if b2row is None:
+                    b2row = {tuple(sorted(b)): k for k, b in enumerate(boards)}
+                row = b2row.get(bkey[1])
+                if row is not None:
+                    arr[row] = self.xp.asarray(val, dtype=self.dtype)
+
+    def _capture_targets(self, path, boards, s_root, u_root, s_ipc, u_ipc,
+                         s_ovb, u_ovb, s_ivb, u_ivb, ro, ri):
+        """Snapshot (to host numpy) every board in this batch whose (path, board) is a target,
+        including the arriving reaches ro/ri (needed for non-flop opp-mass normalization)."""
+        th = self.to_host
+        for k, b in enumerate(boards):
+            bkey = (path, tuple(sorted(b)))
+            if bkey in self._targets:
+                self._ucache[bkey] = {
+                    "s_root": th(s_root[k]), "u_root": th(u_root[k]),
+                    "s_ipc": th(s_ipc[k]), "u_ipc": th(u_ipc[k]),
+                    "s_ovb": th(s_ovb[k]), "u_ovb": th(u_ovb[k]),
+                    "s_ivb": th(s_ivb[k]), "u_ivb": th(u_ivb[k]),
+                    "ro": th(ro[k]), "ri": th(ri[k]),
+                }
+
+    def eval_capture_targets(self, targets, override=None, hero_br=None):
+        """One eval-mode traversal snapshotting each (path, board) node in `targets` to host
+        numpy. `override` pins villain nodes to a fixed profile (exploit); `hero_br` ("OOP"/
+        "IP") makes that seat best-respond. Mirrors MultiStreetSpike.eval_capture_targets."""
+        if hero_br is not None and self.raise_x is not None:
+            raise ValueError("hero_br best-response is only implemented for the no-raise tree")
+        xp = self.xp
+        self._targets = set(targets)
+        self._ucache = {}
+        self._strat_override = override or {}
+        self._hero_seat = hero_br
+        self._eval = True
+        self._cap = None
+        self._solve(1, [list(self.flop)], xp.zeros(1, dtype=self.dtype),
+                    xp.zeros(1, dtype=self.dtype), self.w_o[None, :] + 0,
+                    self.w_i[None, :] + 0, "")
+        self._eval = False
+        self._strat_override = {}
+        self._hero_seat = None
+        self._targets = set()
+        return self._ucache
+
+    def decision(self, bkey, node, hero_idx, actions):
+        from .batched import decision_from_cap
+        if self._Bh is None:
+            self._Bh = self.to_host(self.B)
+        return decision_from_cap(self._ucache[bkey], self._Bh, node, hero_idx, actions)
+
+    def node_action_share(self, bkey, node, action_idx):
+        from .batched import node_action_share_from_cap
+        return node_action_share_from_cap(self._ucache[bkey], node, action_idx)
 
     def run(self, iterations: int) -> Dict:
         if iterations <= 0:

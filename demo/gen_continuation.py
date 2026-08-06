@@ -200,8 +200,35 @@ def _pick_hero_indices(combos, board5, avoid, k=6):
     return [ranked[round(j * step)][1] for j in range(k)]
 
 
-def run(flops=2, n=40, iters=160, version="continuation_seed",
-        note="linked flop->turn->river; villain plays its solved main line (range argmax); CPU seed"):
+def make_solver(solver, flop, oop, ip):
+    """Construct the trajectory solver. 'batched' (default) is the vectorised BatchedGPUCFR
+    (NumPy backend locally, CuPy on GPU) — the CORRECT streets=3 engine and orders of magnitude
+    faster than the naive per-card oracle. 'gpu' forces the CuPy backend (Kaggle). 'oracle' =
+    MultiStreetSpike, kept only for streets<=2 cross-checks: it is KNOWN-WRONG at streets>=3 (a
+    river-betting bug an independent recompute exposed), so it must NOT be used for content."""
+    wo, wi = np.ones(len(oop)), np.ones(len(ip))
+    if solver == "oracle":
+        return MultiStreetSpike(flop, oop, ip, wo, wi, POT, BET, streets=3, raise_x=None)
+    from pokertrainer.solver.batched_gpu import BatchedGPUCFR
+    return BatchedGPUCFR(flop, oop, ip, wo, wi, POT, BET, streets=3, bet_streets=3,
+                         backend=("auto" if solver == "gpu" else "numpy"),
+                         dtype="float64", raise_x=None)
+
+
+def convergence(s, res, iters):
+    """(root_ev_pct_pot, stable). The naive solver reports an ev_curve; the batched solver does
+    not, so probe stability with a short resumable follow-up run (root EV should barely move)."""
+    if res.get("ev_curve"):
+        tail = res["ev_curve"]
+        stable = len(tail) >= 2 and abs(tail[-1][1] - tail[-2][1]) / POT < 0.01
+        return res["root_ev_pct_pot"], stable
+    ev1 = res["root_ev_pct_pot"]
+    ev2 = s.run(max(20, iters // 8))["root_ev_pct_pot"]     # resumable: accumulates iterations
+    return ev2, abs(ev2 - ev1) / 100.0 < 0.01               # < 1% of pot drift
+
+
+def run(flops=2, n=40, iters=160, version="continuation_seed", solver="batched",
+        note="linked flop->turn->river; villain plays its solved main line (range argmax)"):
     recs, conv = [], []
     for fi, (flop_s, turn_s, river_s) in enumerate(CURATED[:flops], 1):
         flop = parse_cards(flop_s)
@@ -210,12 +237,10 @@ def run(flops=2, n=40, iters=160, version="continuation_seed",
         flopb = list(flop)
         oop = subsample([c for c, _ in expand_range(BB_SRP, flop)], n)
         ip = subsample([c for c, _ in expand_range(BTN_SRP, flop)], n)
-        s = MultiStreetSpike(flop, oop, ip, np.ones(len(oop)), np.ones(len(ip)),
-                             POT, BET, streets=3, raise_x=None)
+        s = make_solver(solver, flop, oop, ip)
         res = s.run(iters)
-        tail = res["ev_curve"]
-        stable = len(tail) >= 2 and abs(tail[-1][1] - tail[-2][1]) / POT < 0.01
-        conv.append({"flop": flop_s, "root_ev_pct_pot": round(res["root_ev_pct_pot"], 2),
+        ev_pct, stable = convergence(s, res, iters)
+        conv.append({"flop": flop_s, "root_ev_pct_pot": round(ev_pct, 2),
                      "stable": stable, "runtime_sec": round(res["runtime_sec"], 1)})
         s.eval_capture_targets(_candidate_bkeys(flopb, flopb + [turn], flopb + [turn, river]))
         board5 = flopb + [turn, river]
@@ -232,7 +257,9 @@ def run(flops=2, n=40, iters=160, version="continuation_seed",
         print("VALIDATE WARNINGS:", errs[:5])
     config = {"positions": {"ip": "BTN", "oop": "BB"}, "stack_bb": 100, "pot_bb": POT,
               "bet_pct_pot": 66, "line": "continuation_solved_villain",
-              "note": note, "solver_model": "multistreet_spike_cfr_plus",
+              "note": note,
+              "solver_model": ("multistreet_spike_cfr_plus" if solver == "oracle"
+                               else "batched_gpu_cfr_plus"),
               "convergence": conv}
     build_pack(recs, config, "output/packs", version, pot=POT, dedup_cap=999)
     verdict = verify_pack(f"output/packs/flop_pack_{version}.db")
@@ -248,4 +275,5 @@ if __name__ == "__main__":
     ap.add_argument("--n", type=int, default=40)
     ap.add_argument("--iters", type=int, default=160)
     ap.add_argument("--version", default="continuation_seed")
+    ap.add_argument("--solver", choices=("batched", "gpu", "oracle"), default="batched")
     run(**{k: v for k, v in vars(ap.parse_args()).items()})
