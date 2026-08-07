@@ -200,19 +200,23 @@ def _pick_hero_indices(combos, board5, avoid, k=6):
     return [ranked[round(j * step)][1] for j in range(k)]
 
 
-def make_solver(solver, flop, oop, ip):
-    """Construct the trajectory solver. 'batched' (default) is the vectorised BatchedGPUCFR
-    (NumPy backend locally, CuPy on GPU) — the CORRECT streets=3 engine and orders of magnitude
-    faster than the naive per-card oracle. 'gpu' forces the CuPy backend (Kaggle). 'oracle' =
-    MultiStreetSpike, kept only for streets<=2 cross-checks: it is KNOWN-WRONG at streets>=3 (a
-    river-betting bug an independent recompute exposed), so it must NOT be used for content."""
+def make_solver(solver, flop, oop, ip, dtype="float64"):
+    """Construct the trajectory solver. 'batched' (default) is the vectorised BatchedGPUCFR on the
+    NumPy backend (local) — the CORRECT streets=3 engine and orders of magnitude faster than the
+    naive per-card oracle. 'gpu' PINS the CuPy backend so a misconfigured Kaggle session hard-fails
+    instead of silently burning CPU time on NumPy. 'oracle' = MultiStreetSpike, kept only for
+    streets<=2 cross-checks: it is KNOWN-WRONG at streets>=3 (a river-betting bug an independent
+    recompute exposed), so it must NOT be used for content.
+
+    dtype: float64 is exact (use locally); on a T4 GPU float64 is ~1/32 the speed of float32, so
+    GPU runs should pass float32 (the shipped turn/river GPU packs are float32)."""
     wo, wi = np.ones(len(oop)), np.ones(len(ip))
     if solver == "oracle":
         return MultiStreetSpike(flop, oop, ip, wo, wi, POT, BET, streets=3, raise_x=None)
     from pokertrainer.solver.batched_gpu import BatchedGPUCFR
     return BatchedGPUCFR(flop, oop, ip, wo, wi, POT, BET, streets=3, bet_streets=3,
-                         backend=("auto" if solver == "gpu" else "numpy"),
-                         dtype="float64", raise_x=None)
+                         backend=("cupy" if solver == "gpu" else "numpy"),
+                         dtype=dtype, raise_x=None)
 
 
 def convergence(s, res, iters):
@@ -228,6 +232,7 @@ def convergence(s, res, iters):
 
 
 def run(flops=2, n=40, iters=160, version="continuation_seed", solver="batched",
+        dtype="float64",
         note="linked flop->turn->river; villain plays its solved main line (range argmax)"):
     recs, conv = [], []
     for fi, (flop_s, turn_s, river_s) in enumerate(CURATED[:flops], 1):
@@ -237,8 +242,11 @@ def run(flops=2, n=40, iters=160, version="continuation_seed", solver="batched",
         flopb = list(flop)
         oop = subsample([c for c, _ in expand_range(BB_SRP, flop)], n)
         ip = subsample([c for c, _ in expand_range(BTN_SRP, flop)], n)
-        s = make_solver(solver, flop, oop, ip)
+        s = make_solver(solver, flop, oop, ip, dtype)
         res = s.run(iters)
+        if fi == 1:
+            print(f"solver backend={res.get('backend', 'multistreet')} dtype={res.get('dtype', dtype)}",
+                  flush=True)
         ev_pct, stable = convergence(s, res, iters)
         conv.append({"flop": flop_s, "root_ev_pct_pot": round(ev_pct, 2),
                      "stable": stable, "runtime_sec": round(res["runtime_sec"], 1)})
@@ -276,4 +284,5 @@ if __name__ == "__main__":
     ap.add_argument("--iters", type=int, default=160)
     ap.add_argument("--version", default="continuation_seed")
     ap.add_argument("--solver", choices=("batched", "gpu", "oracle"), default="batched")
+    ap.add_argument("--dtype", choices=("float64", "float32"), default="float64")
     run(**{k: v for k, v in vars(ap.parse_args()).items()})
