@@ -149,8 +149,11 @@ class MultiStreetSpike:
         if self.raise_x is not None:
             return self._solve_street_raise(street, board, eo, ei, ro, ri, path)
         # Infoset key includes the betting-line path so different histories that
-        # reach the same board are distinct infosets (full-history game).
-        bkey = (path, tuple(sorted(board)))
+        # reach the same board are distinct infosets (full-history game). Board is in DEALT
+        # order (flop..turn..river), NOT sorted: a river board reached turn=X/river=Y is a
+        # different infoset than turn=Y/river=X (different turn history), so sorting would
+        # wrongly merge them. (Streets<=2 have no river node, so this is a no-op there.)
+        bkey = (path, tuple(board))
         pot = self.P0 + eo + ei
         b = self.bet_frac * pot
 
@@ -237,7 +240,7 @@ class MultiStreetSpike:
 
     # --- betting with a raise facing a bet: fold/call/raise, one raise/street ---
     def _solve_street_raise(self, street, board, eo, ei, ro, ri, path=""):
-        bkey = (path, tuple(sorted(board)))
+        bkey = (path, tuple(board))            # dealt order (see _solve_street)
         pot = self.P0 + eo + ei
         b = self.bet_frac * pot
         R = self.raise_x * b                     # raise-to (raiser's street investment)

@@ -51,7 +51,12 @@ CURATED = [
 
 
 def _bk(path, board):
-    return (path, tuple(sorted(board)))
+    # Key by the board in DEALT order (flop cards, then turn, then river) — NOT sorted. A 5-card
+    # river board is reached by two dealing orders (turn=X/river=Y and turn=Y/river=X) that are
+    # DIFFERENT infosets (different turn history -> different ranges/strategy); sorting collides
+    # them, so the extraction would capture/override the wrong ordering. The solvers' board lists
+    # are already in dealt order, so this key selects the exact intended line.
+    return (path, tuple(board))
 
 
 def _candidate_bkeys(flopb, turnb, riverb):
@@ -142,6 +147,8 @@ def _build_trajectory(s, flopb, turn, river, flop_s, seat, hero_idx, version):
                 if s.node_action_share(bkey, "ipc", 1) >= 0.5:       # villain bets -> hero faces it
                     after(r, "Opponent bets " + str(PCT) + "% of the pot.")
                     d2 = s.decision(bkey, "ovb", hero_idx, ["fold", "call"])
+                    if d2["reach_mass"] < 0.05:      # facing-bet node can be far thinner than root
+                        return []
                     r2 = rec(street, "ovb", ["fold", "call"], d2, False)
                     if d2["preferred"] == "call":
                         after(r2, "You call — the " + nxt(street) + " comes."); path += "2"

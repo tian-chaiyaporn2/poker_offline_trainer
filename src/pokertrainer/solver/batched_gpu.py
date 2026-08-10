@@ -392,7 +392,7 @@ class BatchedGPUCFR:
                 if nd != name or bkey[0] != path:
                     continue
                 if b2row is None:
-                    b2row = {tuple(sorted(b)): k for k, b in enumerate(boards)}
+                    b2row = {tuple(b): k for k, b in enumerate(boards)}   # dealt order (see _bk)
                 row = b2row.get(bkey[1])
                 if row is not None:
                     arr[row] = self.xp.asarray(val, dtype=self.dtype)
@@ -403,7 +403,7 @@ class BatchedGPUCFR:
         including the arriving reaches ro/ri (needed for non-flop opp-mass normalization)."""
         th = self.to_host
         for k, b in enumerate(boards):
-            bkey = (path, tuple(sorted(b)))
+            bkey = (path, tuple(b))            # dealt order: distinguishes river turn/river swap
             if bkey in self._targets:
                 self._ucache[bkey] = {
                     "s_root": th(s_root[k]), "u_root": th(u_root[k]),
@@ -417,8 +417,11 @@ class BatchedGPUCFR:
         """One eval-mode traversal snapshotting each (path, board) node in `targets` to host
         numpy. `override` pins villain nodes to a fixed profile (exploit); `hero_br` ("OOP"/
         "IP") makes that seat best-respond. Mirrors MultiStreetSpike.eval_capture_targets."""
-        if hero_br is not None and self.raise_x is not None:
-            raise ValueError("hero_br best-response is only implemented for the no-raise tree")
+        # The raise tree (_solve_raise) wires neither the target capture nor the override, so
+        # extraction is only supported for the no-raise tree. Reject rather than silently return
+        # an empty _ucache (which would KeyError in decision()) or ignore a pin.
+        if self.raise_x is not None:
+            raise ValueError("eval_capture_targets is only implemented for the no-raise tree")
         xp = self.xp
         self._targets = set(targets)
         self._ucache = {}

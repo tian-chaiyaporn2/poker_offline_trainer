@@ -79,11 +79,25 @@ def test_batched_streets3_matches_independent_oracle():
     assert abs(got - ind) < 1e-9, f"batched streets=3 {got} != independent {ind}"
 
 
+def test_river_dealing_orders_captured_distinctly():
+    """A river board reached turn=X/river=Y is a DIFFERENT infoset than turn=Y/river=X (different
+    turn history -> different ranges). The dealt-order capture key must keep them separate; the
+    old sorted key collided them and kept only one arbitrary ordering (corrupting river records)."""
+    s = _solver(); s.run(60)
+    flopb = [int(c) for c in FLOP]
+    turn, river = int(parse_cards("Kd")[0]), int(parse_cards("2c")[0])
+    b_int, b_swp = tuple(flopb + [turn, river]), tuple(flopb + [river, turn])
+    s.eval_capture_targets({("11", b_int), ("11", b_swp)})
+    assert ("11", b_int) in s._ucache and ("11", b_swp) in s._ucache, "orderings collided to one key"
+    # different turn history => different arriving reaches (a deterministic gap, not float noise)
+    assert not np.allclose(s._ucache[("11", b_int)]["ro"], s._ucache[("11", b_swp)]["ro"])
+
+
 def test_extraction_self_consistent():
     # The ported decision() extraction must equal the solver's own trusted flop report.
     s = _solver()
     s.run(20)
-    bkey = ("", tuple(sorted(int(c) for c in FLOP)))
+    bkey = ("", tuple(int(c) for c in FLOP))    # dealt order (matches the solver's board list)
     s.eval_capture_targets({bkey})
     rep = {r["hand"]: r for r in s.flop_decisions_report() if r["node"] == "bb_first"}
     for h in range(len(OOP)):
