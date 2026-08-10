@@ -15,32 +15,35 @@
     "convergence": [
       {
         "flop": "7c6d2s",
-        "root_ev_pct_pot": 33.17,
+        "root_ev_pct_pot": 35.11,
         "stable": true,
-        "runtime_sec": 393.6
+        "runtime_sec": 101.5
       },
       {
         "flop": "Ah7d2c",
-        "root_ev_pct_pot": 18.77,
+        "root_ev_pct_pot": 25.97,
         "stable": true,
-        "runtime_sec": 407.4
+        "runtime_sec": 100.6
       },
       {
         "flop": "Qd9s4h",
-        "root_ev_pct_pot": 49.91,
+        "root_ev_pct_pot": 37.04,
         "stable": true,
-        "runtime_sec": 393.5
+        "runtime_sec": 101.0
       },
       {
         "flop": "Ks8h5d",
-        "root_ev_pct_pot": 41.42,
+        "root_ev_pct_pot": 31.09,
         "stable": true,
-        "runtime_sec": 399.6
+        "runtime_sec": 100.9
       }
     ]
   },
+  "record_count": 132,
+  "content_hash": "0ca1f065a7fddac31cba5b5926355d3fb5bb3e4c9a6b31f46c20a6ad50591d22",
+  "signature": "dc466e476427d069bd0da88b4a44c4fd5f7633f1c42d489cb98cbcd7a69eba3d",
   "provenance": {
-    "git_commit": "190d8fd7074aad68cb25a7583d0cd5169ba0b3bc",
+    "git_commit": "f399f8dd7f160a6aec37dd530afaf2a8b1d484c9",
     "solver_model": "batched_gpu_cfr_plus"
   },
   "grade_thresholds_pct_pot": {
@@ -49,13 +52,6 @@
     "acceptable": 3.0,
     "costly": 10.0
   },
-  "record_count": "139",
   "signing_scheme": "hmac-sha256-dev",
-  "default_pot_bb": "5.5",
-  "content_hash": "cd2fc5b05630b0ff83c76b326c375ba0ea3488d0b03366123e5a790666796c8c",
-  "signature": "b9e2d68353c2a5775a986b784c53beee436f078a6315d3d0c71591260af7256e",
-  "db_bytes": 159744,
-  "gz_bytes": 27408,
-  "records_accepted": 139,
-  "records_after_dedup": 139
+  "default_pot_bb": "5.5"
 }
