@@ -15,35 +15,35 @@
     "convergence": [
       {
         "flop": "7c6d2s",
-        "root_ev_pct_pot": 35.11,
+        "root_ev_pct_pot": 33.17,
         "stable": true,
-        "runtime_sec": 101.5
+        "runtime_sec": 403.5
       },
       {
         "flop": "Ah7d2c",
-        "root_ev_pct_pot": 25.97,
+        "root_ev_pct_pot": 18.77,
         "stable": true,
-        "runtime_sec": 100.6
+        "runtime_sec": 403.0
       },
       {
         "flop": "Qd9s4h",
-        "root_ev_pct_pot": 37.04,
+        "root_ev_pct_pot": 49.91,
         "stable": true,
-        "runtime_sec": 101.0
+        "runtime_sec": 412.2
       },
       {
         "flop": "Ks8h5d",
-        "root_ev_pct_pot": 31.09,
+        "root_ev_pct_pot": 41.42,
         "stable": true,
-        "runtime_sec": 100.9
+        "runtime_sec": 402.1
       }
     ]
   },
-  "record_count": 132,
-  "content_hash": "0ca1f065a7fddac31cba5b5926355d3fb5bb3e4c9a6b31f46c20a6ad50591d22",
-  "signature": "dc466e476427d069bd0da88b4a44c4fd5f7633f1c42d489cb98cbcd7a69eba3d",
+  "record_count": 139,
+  "content_hash": "79798f6f7f7dfbb6c494f0fa1381be687875db4cf8aaaebe4886dd94d0d0959d",
+  "signature": "36caa4665df578b97aeb12d6fc0eaf2329d159d443917999fd865a89ba3c56ab",
   "provenance": {
-    "git_commit": "f399f8dd7f160a6aec37dd530afaf2a8b1d484c9",
+    "git_commit": "38179512df450dfdb911fc14a511df9d0fda4554",
     "solver_model": "batched_gpu_cfr_plus"
   },
   "grade_thresholds_pct_pot": {
