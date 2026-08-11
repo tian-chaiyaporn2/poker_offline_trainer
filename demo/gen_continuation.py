@@ -291,9 +291,11 @@ def _write_continuation_pack(recs, conv, version, note, solver):
 
 
 def run(flops=2, n=40, iters=160, version="continuation_seed", solver="batched",
-        dtype="float64", boards=0, checkpoint_every=0,
+        dtype="float64", boards=0, board_start=0, checkpoint_every=0,
         note="linked flop->turn->river; villain plays its solved main line (range argmax)"):
-    board_set = _diverse_boards(boards) if boards else CURATED[:flops]
+    # board_start lets a long run be split into resumable chunks across GPU sessions:
+    # each chunk does boards[board_start : board_start+boards] into its own --version.
+    board_set = _diverse_boards(board_start + boards)[board_start:] if boards else CURATED[:flops]
     total = len(board_set)
     recs, conv = [], []
     for fi, (flop_s, turn_s, river_s) in enumerate(board_set, 1):
@@ -338,6 +340,8 @@ if __name__ == "__main__":
     ap.add_argument("--dtype", choices=("float64", "float32"), default="float64")
     ap.add_argument("--boards", type=int, default=0,
                     help="use N texture-diverse boards (bulk library) instead of --flops curated")
+    ap.add_argument("--board-start", dest="board_start", type=int, default=0,
+                    help="skip the first S diverse boards (chunk a long run across sessions)")
     ap.add_argument("--checkpoint-every", dest="checkpoint_every", type=int, default=0,
                     help="write a valid partial pack every K boards (survives GPU session limits)")
     run(**{k: v for k, v in vars(ap.parse_args()).items()})

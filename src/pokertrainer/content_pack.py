@@ -230,10 +230,18 @@ def build_pack(records: List[Dict], config: Dict, out_dir: str, version: str,
     meta["content_hash"] = content_hash
     meta["signature"] = signature
 
+    # Write atomically: build the .db (+ .gz) at temp paths, then os.replace into
+    # place. A crash/kill mid-write (e.g. a Kaggle session hitting its time limit
+    # during a checkpoint) leaves the previous good pack untouched instead of a
+    # truncated/absent file — critical for long checkpointed runs.
     db_path = os.path.join(out_dir, f"flop_pack_{version}.db")
-    if os.path.exists(db_path):
-        os.remove(db_path)
-    conn = sqlite3.connect(db_path)
+    gz_path = db_path + ".gz"
+    tmp_db = db_path + ".tmp"
+    tmp_gz = gz_path + ".tmp"
+    for p in (tmp_db, tmp_gz):
+        if os.path.exists(p):
+            os.remove(p)
+    conn = sqlite3.connect(tmp_db)
     conn.executescript(SCHEMA)
     conn.executemany("INSERT INTO flop_decision VALUES (%s)" % ",".join("?" * 26), rows)
     conn.executemany("INSERT INTO foundation_template VALUES (?,?,?,?)", foundation_rows)
@@ -242,9 +250,11 @@ def build_pack(records: List[Dict], config: Dict, out_dir: str, version: str,
     conn.close()
 
     # gzip the pack (compressed distribution, §10.1)
-    gz_path = db_path + ".gz"
-    with open(db_path, "rb") as f, gzip.open(gz_path, "wb") as g:
+    with open(tmp_db, "rb") as f, gzip.open(tmp_gz, "wb") as g:
         shutil.copyfileobj(f, g)
+
+    os.replace(tmp_db, db_path)
+    os.replace(tmp_gz, gz_path)
 
     report = {**{k: json.loads(v) if k in ("config", "provenance", "grade_thresholds_pct_pot")
                  else v for k, v in meta.items()},
