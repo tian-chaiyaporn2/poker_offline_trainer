@@ -50,6 +50,40 @@ CURATED = [
 ]
 
 
+# A larger deterministic, texture-diverse board set for bulk GPU library runs (--boards N).
+# Each flop is paired with `per_flop` distinct runouts drawn from the remaining deck, rotated
+# per flop for variety. Deterministic -> reproducible content.
+_DIVERSE_FLOPS = [
+    "7c6d2s", "Ah7d2c", "Qd9s4h", "Ks8h5d",            # dry (the original curated flops)
+    "Jh6s2c", "Qc8d3h", "As7c2d", "Ad9h4s",            # dry / ace-high
+    "7h7d2c", "KsKd4h", "3c3d9s", "ThTs5c", "2h2d8s",  # paired
+    "Ah9h4h", "Ks8s3s", "Qd7d2d",                      # monotone
+    "Th8h3c", "9s7s2h", "AcKc5d", "6h5h2c",            # two-tone
+    "7c6d5s", "9h8d7c", "5h4c3d", "JsTd9h",            # connected
+    "AsKhQd", "KsQhJd", "AhKd9c",                      # broadway / high
+    "6s5h3c", "8c5d2h", "7d4s2c",                      # low
+]
+
+
+def _diverse_boards(n, per_flop=6):
+    """Up to n texture-diverse (flop, turn, river) runouts, deterministic. Turn/river are drawn
+    (rotated per flop) from the deck remaining after the flop, so no card ever repeats. Ordered
+    runout-major (all distinct flops first, then a second runout each, ...) so any prefix spans
+    the widest set of flop textures."""
+    rots = []
+    for fi, f in enumerate(_DIVERSE_FLOPS):
+        deck = [c for c in range(52) if c not in set(parse_cards(f))]
+        start = (fi * 11) % (len(deck) - 1)
+        rots.append((f, deck[start:] + deck[:start]))
+    out = []
+    for k in range(per_flop):
+        for f, rot in rots:
+            out.append((f, _c(rot[2 * k]), _c(rot[2 * k + 1])))
+            if len(out) >= n:
+                return out
+    return out
+
+
 def _bk(path, board):
     # Key by the board in DEALT order (flop cards, then turn, then river) — NOT sorted. A 5-card
     # river board is reached by two dealing orders (turn=X/river=Y and turn=Y/river=X) that are
@@ -238,11 +272,31 @@ def convergence(s, res, iters):
     return ev2, abs(ev2 - ev1) / 100.0 < 0.01               # < 1% of pot drift
 
 
+def _write_continuation_pack(recs, conv, version, note, solver):
+    """Sign + write the pack from the records accumulated so far. Called at each checkpoint AND
+    at the end, so a bulk run that outlives its GPU session still leaves a valid, verified pack."""
+    errs = validate_records(recs)
+    if errs:
+        print("VALIDATE WARNINGS:", errs[:5])
+    config = {"positions": {"ip": "BTN", "oop": "BB"}, "stack_bb": 100, "pot_bb": POT,
+              "bet_pct_pot": 66, "line": "continuation_solved_villain", "note": note,
+              "solver_model": ("multistreet_spike_cfr_plus" if solver == "oracle"
+                               else "batched_gpu_cfr_plus"), "convergence": conv}
+    build_pack(recs, config, "output/packs", version, pot=POT, dedup_cap=999)
+    verdict = verify_pack(f"output/packs/flop_pack_{version}.db")
+    hands = len({r["scenario"].split("|")[1] for r in recs})
+    print(f"wrote continuation pack ({version}): {len(recs)} records / {hands} hands; "
+          f"VERIFY: {verdict}", flush=True)
+    return verdict
+
+
 def run(flops=2, n=40, iters=160, version="continuation_seed", solver="batched",
-        dtype="float64",
+        dtype="float64", boards=0, checkpoint_every=0,
         note="linked flop->turn->river; villain plays its solved main line (range argmax)"):
+    board_set = _diverse_boards(boards) if boards else CURATED[:flops]
+    total = len(board_set)
     recs, conv = [], []
-    for fi, (flop_s, turn_s, river_s) in enumerate(CURATED[:flops], 1):
+    for fi, (flop_s, turn_s, river_s) in enumerate(board_set, 1):
         flop = parse_cards(flop_s)
         turn = parse_cards(turn_s)[0]
         river = parse_cards(river_s)[0]
@@ -264,22 +318,12 @@ def run(flops=2, n=40, iters=160, version="continuation_seed", solver="batched",
             combos = s.oc if seat == "OOP" else s.ic
             for idx in _pick_hero_indices(combos, board5, avoid):
                 recs.extend(_build_trajectory(s, flopb, turn, river, flop_s, seat, idx, version))
-        print(f"[{fi}/{flops}] {flop_s}->{turn_s}{river_s}: "
+        print(f"[{fi}/{total}] {flop_s}->{turn_s}{river_s}: "
               f"{len(recs)} records so far, stable={stable}", flush=True)
+        if checkpoint_every and fi % checkpoint_every == 0 and fi < total:
+            _write_continuation_pack(recs, conv, version, note, solver)   # partial, session-safe
 
-    errs = validate_records(recs)
-    if errs:
-        print("VALIDATE WARNINGS:", errs[:5])
-    config = {"positions": {"ip": "BTN", "oop": "BB"}, "stack_bb": 100, "pot_bb": POT,
-              "bet_pct_pot": 66, "line": "continuation_solved_villain",
-              "note": note,
-              "solver_model": ("multistreet_spike_cfr_plus" if solver == "oracle"
-                               else "batched_gpu_cfr_plus"),
-              "convergence": conv}
-    build_pack(recs, config, "output/packs", version, pot=POT, dedup_cap=999)
-    verdict = verify_pack(f"output/packs/flop_pack_{version}.db")
-    hands = len({r["scenario"].split("|")[1] for r in recs})
-    print(f"wrote continuation pack: {len(recs)} records / {hands} hands; VERIFY: {verdict}")
+    verdict = _write_continuation_pack(recs, conv, version, note, solver)
     if not (verdict.get("hash_ok") and verdict.get("signature_ok")):
         raise SystemExit("continuation pack failed integrity verification")
 
@@ -292,4 +336,8 @@ if __name__ == "__main__":
     ap.add_argument("--version", default="continuation_seed")
     ap.add_argument("--solver", choices=("batched", "gpu", "oracle"), default="batched")
     ap.add_argument("--dtype", choices=("float64", "float32"), default="float64")
+    ap.add_argument("--boards", type=int, default=0,
+                    help="use N texture-diverse boards (bulk library) instead of --flops curated")
+    ap.add_argument("--checkpoint-every", dest="checkpoint_every", type=int, default=0,
+                    help="write a valid partial pack every K boards (survives GPU session limits)")
     run(**{k: v for k, v in vars(ap.parse_args()).items()})
