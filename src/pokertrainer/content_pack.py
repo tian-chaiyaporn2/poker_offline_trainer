@@ -72,9 +72,14 @@ def _action_grades(rec: Dict, pot: float) -> Dict[str, str]:
 
 def _require_finite(rec: Dict) -> None:
     """Refuse non-finite / incoherent numerics before they enter a signed pack."""
-    for key in ("ev_sep_pct", "reach_mass"):
+    for key in ("ev_sep_pct", "reach_mass", "pot_bb"):
         val = rec.get(key)
-        if val is not None and isinstance(val, (int, float)) and not math.isfinite(val):
+        if val is None:
+            continue
+        # Reject non-numeric outright (a string "nan" would otherwise slip into a REAL
+        # column) and non-finite numerics — both with the offending record identified,
+        # rather than an opaque failure later in canonicalization or at app runtime.
+        if not isinstance(val, (int, float)) or not math.isfinite(val):
             raise ValueError(f"non-finite {key}={val!r} in record {rec.get('hand')}")
     actions = rec.get("actions") or []
     for group in ("ev", "freq"):
@@ -194,22 +199,41 @@ def build_pack(records: List[Dict], config: Dict, out_dir: str, version: str,
     deduped = [r for g in buckets.values() for r in g[:dedup_cap]]
 
     rows = []
+    seen_rids = {}
     for r in deduped:
         expl = r.get("explanation") or explain(r, r.get("board_favored"))
         scenario = r.get("scenario", "")
         rec_pot = float(r["pot_bb"]) if r.get("pot_bb") is not None else float(pot)
         rid = record_id(r["board"], r["node"], r["hand"], version, scenario)
+        # The concept-dedup key above is orthogonal to the primary key, so two records
+        # sharing (board, node, hand, scenario) — e.g. merged record sets where a
+        # re-solve flipped `preferred` — can both survive dedup with the same rid and
+        # crash executemany with an opaque IntegrityError. Keep the last (freshest)
+        # and report loudly instead.
+        if rid in seen_rids:
+            rows[seen_rids[rid]] = None
+        seen_rids[rid] = len(rows)
         rows.append((
             rid, r["board"], json.dumps(r.get("board_texture", [])), r.get("board_favored"),
             r["node"], r["acting_player"], r.get("decision_type", ""),
             r["hand"], r["hand_category"],
             json.dumps(r["actions"]), json.dumps(r["ev"]), json.dumps(r["freq"]),
             r["preferred"], json.dumps(_action_grades(r, rec_pot)),
-            r.get("ev_sep_pct"), int(bool(r.get("mixed"))), r.get("reach_mass"),
+            # coerce REAL-column values: an int here (e.g. ev_sep_pct=4) would serialize
+            # as "4" in the build-time canonical but read back "4.0" after SQLite REAL
+            # affinity — making the pack fail its own signature verification.
+            None if r.get("ev_sep_pct") is None else float(r["ev_sep_pct"]),
+            int(bool(r.get("mixed"))),
+            None if r.get("reach_mass") is None else float(r["reach_mass"]),
             expl["reason"], expl["headline"], json.dumps(expl["detail"]),
             config.get("solver_model", "full_street_cfr_plus"), "passed",
             scenario, rec_pot, r.get("oop_pos"), r.get("ip_pos"),
         ))
+    rid_dupes = sum(1 for row in rows if row is None)
+    if rid_dupes:
+        print(f"WARNING: build_pack dropped {rid_dupes} records with duplicate ids "
+              f"(same board|node|hand|scenario; kept the last of each)", flush=True)
+        rows = [row for row in rows if row is not None]
 
     foundation_rows = list(FOUNDATION_SEEDS)
     meta = {
@@ -253,15 +277,24 @@ def build_pack(records: List[Dict], config: Dict, out_dir: str, version: str,
     with open(tmp_db, "rb") as f, gzip.open(tmp_gz, "wb") as g:
         shutil.copyfileobj(f, g)
 
-    os.replace(tmp_db, db_path)
+    # Replace the .gz FIRST: a kill between the two replaces then leaves a new .gz
+    # beside the previous .db — and the .db is what both the report below and the
+    # index.html embed read, so everything downstream stays mutually consistent.
+    # (db-first would leave a new .db with a stale .gz: a validly-signed *older*
+    # checkpoint that nothing would detect if only the .gz were downloaded.)
     os.replace(tmp_gz, gz_path)
+    os.replace(tmp_db, db_path)
 
     report = {**{k: json.loads(v) if k in ("config", "provenance", "grade_thresholds_pct_pot")
                  else v for k, v in meta.items()},
               "db_bytes": os.path.getsize(db_path), "gz_bytes": os.path.getsize(gz_path),
               "records_accepted": len(accepted), "records_after_dedup": len(rows)}
-    with open(os.path.join(out_dir, f"build_report_{version}.json"), "w") as f:
+    # Atomic for the same reason as the pack: a kill mid-write must not leave
+    # truncated JSON for a downstream json.load.
+    report_path = os.path.join(out_dir, f"build_report_{version}.json")
+    with open(report_path + ".tmp", "w") as f:
         json.dump(report, f, indent=2)
+    os.replace(report_path + ".tmp", report_path)
     return report
 
 
@@ -312,10 +345,12 @@ def resign_pack(db_path: str, signing_key: Optional[bytes] = None) -> Dict:
                  ("signature", signature))
     conn.commit()
     conn.close()
-    # refresh gzip sidecar (always rewrite so .db and .db.gz stay in sync)
+    # refresh gzip sidecar (always rewrite so .db and .db.gz stay in sync);
+    # atomic so a kill mid-write can't leave a truncated .gz beside a valid db
     gz_path = db_path + ".gz"
-    with open(db_path, "rb") as f, gzip.open(gz_path, "wb") as g:
+    with open(db_path, "rb") as f, gzip.open(gz_path + ".tmp", "wb") as g:
         shutil.copyfileobj(f, g)
+    os.replace(gz_path + ".tmp", gz_path)
     return verify_pack(db_path, signing_key=signing_key)
 
 

@@ -66,6 +66,7 @@ class MultiStreetSpike:
         # (keyed by (bkey, node)) so the hero's captured utilities reflect a FIXED leaky
         # villain and decision() returns the hero's best response vs it. See eval_capture_targets.
         self._strat_override: Dict[tuple, np.ndarray] = {}
+        self._override_applied: set = set()
         # exploit best-response: when set to "OOP"/"IP", that seat maximizes at its own nodes
         # (true multi-street best response vs the pinned villain) instead of playing GTO.
         self._hero_seat = None
@@ -85,6 +86,7 @@ class MultiStreetSpike:
         if self._eval:
             ov = self._strat_override.get(key)
             if ov is not None:
+                self._override_applied.add(key)
                 return ov                    # pinned villain policy (exploit mode)
             s = self.S[key]
             tot = s.sum(axis=1, keepdims=True)
@@ -327,17 +329,37 @@ class MultiStreetSpike:
         `override` (the opposite seat pinned) to grade the hero's full exploit best response.
         (A seat's counterfactual values are independent of its own reach, so only the value
         aggregation changes; reach threading is untouched.) Not supported with raises."""
-        if hero_br is not None and self.raise_x is not None:
-            raise ValueError("hero_br best-response is only implemented for the no-raise tree")
+        # The raise tree (_solve_street_raise) wires neither the target capture nor a full
+        # override (pins would half-apply via _get_strat with nothing captured). Reject
+        # rather than silently return an empty _ucache.
+        if self.raise_x is not None:
+            raise ValueError("eval_capture_targets is only implemented for the no-raise tree")
         self._targets = set(targets)
         self._ucache = {}
         self._strat_override = override or {}
+        self._override_applied = set()
         self._hero_seat = hero_br
         self._eval = True
-        self._solve_street(1, self.flop, 0.0, 0.0, self.w_o.copy(), self.w_i.copy())
-        self._eval = False
-        self._strat_override = {}
-        self._hero_seat = None
+        try:
+            self._solve_street(1, self.flop, 0.0, 0.0, self.w_o.copy(), self.w_i.copy())
+            # Fail loudly on silent misses (see BatchedGPUCFR.eval_capture_targets).
+            missing_t = self._targets - set(self._ucache)
+            if missing_t:
+                raise ValueError(f"targets never captured (bad path/board key?): "
+                                 f"{sorted(missing_t)[:3]}...")
+            missing_o = set(self._strat_override) - self._override_applied
+            if missing_o:
+                raise ValueError(f"overrides never applied (key must be ((path, dealt-order "
+                                 f"board tuple), node)): {sorted(missing_o)[:3]}...")
+        finally:
+            # Always restore training mode — and clear _targets too: leaving them set would
+            # let a later run()'s eval pass silently overwrite the pinned/BR capture with
+            # plain GTO data under the same keys.
+            self._eval = False
+            self._strat_override = {}
+            self._override_applied = set()
+            self._hero_seat = None
+            self._targets = set()
         return self._ucache
 
     def combo_index(self, seat: str, combo: Combo) -> int:

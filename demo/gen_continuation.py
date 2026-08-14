@@ -70,6 +70,8 @@ def _diverse_boards(n, per_flop=6):
     (rotated per flop) from the deck remaining after the flop, so no card ever repeats. Ordered
     runout-major (all distinct flops first, then a second runout each, ...) so any prefix spans
     the widest set of flop textures."""
+    if n <= 0:
+        return []
     rots = []
     for fi, f in enumerate(_DIVERSE_FLOPS):
         deck = [c for c in range(52) if c not in set(parse_cards(f))]
@@ -82,6 +84,21 @@ def _diverse_boards(n, per_flop=6):
             if len(out) >= n:
                 return out
     return out
+
+
+def _check_board_chunk(board_set, boards, board_start):
+    """Refuse to burn a GPU session on a mistyped chunk. The diverse set caps at 180
+    (30 flops x 6 runouts): past it, slicing would silently yield fewer boards — or none,
+    completing 'successfully' with a valid, signed, EMPTY pack after hours of session."""
+    if board_start and not boards:
+        raise SystemExit("--board-start has no effect without --boards (curated mode); "
+                         "pass --boards for chunked bulk runs")
+    if boards and not board_set:
+        raise SystemExit(f"empty board chunk: board_start={board_start} is past the "
+                         f"{len(_DIVERSE_FLOPS) * 6}-board diverse set (or boards <= 0)")
+    if boards and len(board_set) < boards:
+        print(f"WARNING: chunk truncated by the {len(_DIVERSE_FLOPS) * 6}-board cap: "
+              f"running {len(board_set)} boards, not {boards}", flush=True)
 
 
 def _bk(path, board):
@@ -296,6 +313,7 @@ def run(flops=2, n=40, iters=160, version="continuation_seed", solver="batched",
     # board_start lets a long run be split into resumable chunks across GPU sessions:
     # each chunk does boards[board_start : board_start+boards] into its own --version.
     board_set = _diverse_boards(board_start + boards)[board_start:] if boards else CURATED[:flops]
+    _check_board_chunk(board_set, boards, board_start)
     total = len(board_set)
     recs, conv = [], []
     for fi, (flop_s, turn_s, river_s) in enumerate(board_set, 1):

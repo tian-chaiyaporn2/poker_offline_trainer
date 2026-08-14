@@ -116,6 +116,7 @@ class BatchedGPUCFR:
         self._targets: set = set()
         self._ucache: Dict[tuple, dict] = {}
         self._strat_override: Dict[tuple, np.ndarray] = {}
+        self._override_applied: set = set()
         self._hero_seat = None
         self._Bh = None       # lazy host copy of B for decision()
 
@@ -383,9 +384,12 @@ class BatchedGPUCFR:
     #     MultiStreetSpike API, so gen_continuation / gen_exploit are solver-agnostic ---
     def _apply_override(self, path, boards, nodes):
         """Overwrite villain-node strategy rows with a pinned profile (exploit), keyed by
-        ((path, sorted-board), node) so the pinned reaches thread downstream. `nodes` is a
-        sequence of (node_name, strategy_array); arrays are mutated in place (eval-only, and
-        _get_strat returns a fresh array in eval mode, so this is safe)."""
+        ((path, DEALT-order board tuple), node) — the same key convention as _bk / capture;
+        a sorted board would silently miss. Applied keys are tracked so eval_capture_targets
+        can raise on any pin that never landed (a missed pin would otherwise produce
+        GTO-vs-GTO content silently labeled as exploit content). `nodes` is a sequence of
+        (node_name, strategy_array); arrays are mutated in place (eval-only, and _get_strat
+        returns a fresh array in eval mode, so this is safe)."""
         b2row = None
         for name, arr in nodes:
             for (bkey, nd), val in self._strat_override.items():
@@ -396,6 +400,7 @@ class BatchedGPUCFR:
                 row = b2row.get(bkey[1])
                 if row is not None:
                     arr[row] = self.xp.asarray(val, dtype=self.dtype)
+                    self._override_applied.add((bkey, nd))
 
     def _capture_targets(self, path, boards, s_root, u_root, s_ipc, u_ipc,
                          s_ovb, u_ovb, s_ivb, u_ivb, ro, ri):
@@ -426,16 +431,34 @@ class BatchedGPUCFR:
         self._targets = set(targets)
         self._ucache = {}
         self._strat_override = override or {}
+        self._override_applied = set()
         self._hero_seat = hero_br
         self._eval = True
         self._cap = None
-        self._solve(1, [list(self.flop)], xp.zeros(1, dtype=self.dtype),
-                    xp.zeros(1, dtype=self.dtype), self.w_o[None, :] + 0,
-                    self.w_i[None, :] + 0, "")
-        self._eval = False
-        self._strat_override = {}
-        self._hero_seat = None
-        self._targets = set()
+        try:
+            self._solve(1, [list(self.flop)], xp.zeros(1, dtype=self.dtype),
+                        xp.zeros(1, dtype=self.dtype), self.w_o[None, :] + 0,
+                        self.w_i[None, :] + 0, "")
+            # Fail loudly on silent misses — a target that never captured would KeyError
+            # only later in decision(); a pin that never landed would silently produce
+            # GTO-vs-GTO content labeled as exploit content.
+            missing_t = self._targets - set(self._ucache)
+            if missing_t:
+                raise ValueError(f"targets never captured (bad path/board key or "
+                                 f"non-betting street?): {sorted(missing_t)[:3]}...")
+            missing_o = set(self._strat_override) - self._override_applied
+            if missing_o:
+                raise ValueError(f"overrides never applied (key must be ((path, dealt-order "
+                                 f"board tuple), node)): {sorted(missing_o)[:3]}...")
+        finally:
+            # Always restore training mode: a swallowed exception mid-eval must not leave
+            # _eval=True (which would make every subsequent run() iteration a silent no-op)
+            # or stale pins/targets contaminating the next eval.
+            self._eval = False
+            self._strat_override = {}
+            self._override_applied = set()
+            self._hero_seat = None
+            self._targets = set()
         return self._ucache
 
     def decision(self, bkey, node, hero_idx, actions):
@@ -447,6 +470,15 @@ class BatchedGPUCFR:
     def node_action_share(self, bkey, node, action_idx):
         from .batched import node_action_share_from_cap
         return node_action_share_from_cap(self._ucache[bkey], node, action_idx)
+
+    def combo_index(self, seat: str, combo) -> int:
+        """API parity with MultiStreetSpike (oc/ic are host arrays; see __init__)."""
+        arr = self.oc if seat == "OOP" else self.ic
+        want = {int(combo[0]), int(combo[1])}
+        for i in range(len(arr)):
+            if {int(arr[i, 0]), int(arr[i, 1])} == want:
+                return i
+        raise ValueError(f"combo {combo} not in {seat} range")   # never index [-1] silently
 
     def run(self, iterations: int) -> Dict:
         if iterations <= 0:

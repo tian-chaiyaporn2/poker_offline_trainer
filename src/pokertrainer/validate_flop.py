@@ -97,9 +97,11 @@ def _make_solver(solver, dtype, raise_x=None, eff_stack=None):
     the correct number of runout cards (not a hard-coded flop tree).
     """
     if solver == "gpu":
+        # backend="cupy" (not "auto"): an explicit gpu request must hard-fail if cupy is
+        # broken/missing rather than silently grinding a multi-hour Kaggle session on CPU.
         return lambda f, o, i, wo, wi, pot, bf, bet_streets: BatchedGPUCFR(
             f, o, i, wo, wi, pot, bf, streets=_streets_for_board(f),
-            bet_streets=bet_streets, backend="auto", dtype=dtype, raise_x=raise_x, eff_stack=eff_stack)
+            bet_streets=bet_streets, backend="cupy", dtype=dtype, raise_x=raise_x, eff_stack=eff_stack)
     return lambda f, o, i, wo, wi, pot, bf, bet_streets: BatchedCFR(
         f, o, i, wo, wi, pot, bf, streets=_streets_for_board(f),
         bet_streets=bet_streets, raise_x=raise_x, eff_stack=eff_stack)
