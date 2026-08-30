@@ -275,8 +275,8 @@ PF_Q = 16   # pre-flop spots blended in ("Chapter 0")
 
 
 PF_DB = "output/packs/flop_pack_preflop_v1.db"   # signed pre-flop pack (A5)
-CONT_DB = "output/packs/flop_pack_continuation_seed.db"   # signed continuation pack (C)
-EXPLOIT_DB = "output/packs/flop_pack_exploit_v1.db"       # signed exploit-mode pack (B)
+CONT_DB = "output/packs/flop_pack_continuation_full.db"   # signed continuation pack (C) — 48-board GPU library
+EXPLOIT_DB = "output/packs/flop_pack_exploit_full.db"       # signed exploit-mode pack (B) — 48-board GPU library
 
 
 def _cards(s):
