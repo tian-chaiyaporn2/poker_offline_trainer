@@ -288,12 +288,11 @@ def load_continuation():
     grouped by hand_id and ordered by step_index. Each step is a postflop-shaped question the
     trainer renders/grades on its normal path, plus continuation fields (hand_id / step_index /
     villain_action / last) that drive the play-a-hand session flow. Returns [] if absent."""
+    # Continuation is core shipped content: a missing or verification-failing pack must
+    # fail the build loudly, not silently ship an app with the whole mode empty.
     if not os.path.exists(CONT_DB):
-        return []
-    try:
-        _require_verified(CONT_DB)
-    except SystemExit:
-        return []
+        raise SystemExit(f"missing core pack {CONT_DB} — continuation mode would ship empty")
+    _require_verified(CONT_DB)
     from pokertrainer.explanations import freq_pct_ints
     cols = ("scenario board node acting_player hand actions ev freq preferred_action "
             "action_grades pot_bb mixed detail").split()
@@ -333,6 +332,10 @@ def load_continuation():
     out = []
     for hid, steps in hands.items():
         steps.sort(key=lambda s: s["step_index"])
+        idxs = [s["step_index"] for s in steps]
+        if len(set(idxs)) != len(idxs):
+            raise SystemExit(f"duplicate step_index in continuation hand {hid} — "
+                             f"a hand_id collision would merge two hands into one")
         for i, s in enumerate(steps):
             s["last"] = (i == len(steps) - 1)
         out.append(steps)
@@ -344,12 +347,10 @@ def load_exploit():
     an ARCHETYPE and the hero is graded on the exploit best response. Grouped by hand_id, then
     bucketed by archetype so the trainer can drill one archetype at a time. Returns {} if absent.
     Shape: {archetype: [ [step, step, ...], ... ]}."""
+    # Same loud-failure contract as load_continuation: exploit mode is core content.
     if not os.path.exists(EXPLOIT_DB):
-        return {}
-    try:
-        _require_verified(EXPLOIT_DB)
-    except SystemExit:
-        return {}
+        raise SystemExit(f"missing core pack {EXPLOIT_DB} — exploit mode would ship empty")
+    _require_verified(EXPLOIT_DB)
     from pokertrainer.explanations import freq_pct_ints
     cols = ("scenario board node acting_player hand actions ev freq preferred_action "
             "action_grades pot_bb mixed detail headline").split()
@@ -387,10 +388,16 @@ def load_exploit():
             "detail": [det["lesson"]] if det.get("lesson") else [],
         }
         hands.setdefault(hid, []).append(step)
-        hand_arch[hid] = arch
+        if hand_arch.setdefault(hid, arch) != arch:
+            raise SystemExit(f"exploit hand {hid} spans archetypes ({hand_arch[hid]} vs "
+                             f"{arch}) — hand_id collision would interleave two hands")
     by_arch = {}
     for hid, steps in hands.items():
         steps.sort(key=lambda s: s["step_index"])
+        idxs = [s["step_index"] for s in steps]
+        if len(set(idxs)) != len(idxs):
+            raise SystemExit(f"duplicate step_index in exploit hand {hid} — "
+                             f"a hand_id collision would merge two hands into one")
         for i, s in enumerate(steps):
             s["last"] = (i == len(steps) - 1)
         by_arch.setdefault(hand_arch[hid], []).append(steps)
@@ -535,8 +542,6 @@ def build(allow_missing_demo_packs=False):
                    .replace("__FONTFACE__", _fontface()).replace("__SUITDEFS__", _suitdefs()) \
                    .replace("__ROOMPHOTOS__", _roomphotos())
     os.makedirs("demo", exist_ok=True)
-    with open("demo/trainer_demo.html", "w", encoding="utf-8") as demo_file:
-        demo_file.write(body)
     # Locked-down CSP: the app is fully self-contained (inline script/style, data-URI fonts
     # and images) and only ever reaches out to the two BYOK coach providers over the network.
     csp = ("default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; "
@@ -549,6 +554,10 @@ def build(allow_missing_demo_packs=False):
            '<title>Full-Street Flop Trainer</title>\n'
            '<meta name="description" content="Interactive GTO flop trainer — pick an action, '
            'get graded, learn why.">\n</head>\n<body>\n' + body + '\n</body>\n</html>\n')
+    # Both outputs get the full hardened document: the demo copy is deployed too, and as a
+    # bare fragment it ran in quirks mode with no charset declaration and no CSP lockdown.
+    with open("demo/trainer_demo.html", "w", encoding="utf-8") as demo_file:
+        demo_file.write(doc)
     with open("index.html", "w", encoding="utf-8") as index_file:
         index_file.write(doc)     # Pages landing = the interactive trainer
     print(f"wrote demo/trainer_demo.html + index.html | {len(qs)} questions | "
@@ -1354,10 +1363,13 @@ function handRead(hero,board){
   function pairOf(pr){
     made="a pair of "+MANY[pr];cat="pair";
     overs=[...new Set(bv.filter(v=>v>pr))].sort((a,b)=>b-a);
+    // Rank against DISTINCT board ranks: on a paired board (K K 4) matching the 4 is
+    // bottom pair, not "middle pair" (sortB keeps duplicates, so index 1 can repeat the top rank).
+    const db=[...new Set(sortB)];
     if(pocket&&hv[0]===pr){if(pr>maxB){pairKind="over";strength="an overpair (higher than every shared card)";}
       else{pairKind="under";strength="the "+ONE[maxB]+" among the shared cards outranks it";}}
-    else if(pr===sortB[0]){pairKind="top";strength="top pair (you matched the highest shared card)";}
-    else if(pr===sortB[1]){pairKind="mid";strength="middle pair";}
+    else if(pr===db[0]){pairKind="top";strength="top pair (you matched the highest shared card)";}
+    else if(db.length>=3&&pr===db[1]){pairKind="mid";strength="middle pair";}
     else{pairKind="low";strength="a low pair";}
   }
   if(sflush){made="a straight flush";cat="sflush";}
@@ -1439,8 +1451,12 @@ function standingText(rd){
     case "straight":return (rd.boardStraighty>=2||rd.boardFlushy>=1)
       ?"A straight — strong, but a better straight or a flush can still beat you."
       :"A big hand — only a flush or a full house beats you here.";
-    case "flush":return (rd.boardFlushy>=2)
-      ?"A flush — strong, but a higher flush card (or a full house) still beats you."
+    // A two-card flush always means the board shows 3+ of the suit (boardFlushy>=1), so a
+    // HIGHER flush is live on every flush the hero can make — monotone flops included.
+    // The old >=2 gate hedged only on 4-suited boards and told monotone-flop flushes
+    // "only a full house or better beats you", which is exactly backwards there.
+    case "flush":return (rd.boardFlushy>=1)
+      ?"A flush — strong, but a higher flush (or a full house) can still beat you."
       :"A big hand — only a full house or better beats you.";
     case "full":case "quads":case "sflush":return "You've got a monster — just about nothing beats this.";
     default:return rd.draw
@@ -1977,7 +1993,7 @@ function renderHand(){                                  // draw the current hist
   // continuation counts by HAND ("Hand 2 of 5"); drills count by spot ("Hand 3 of 10").
   const step=contMode?contHandNum(shownStep()):Math.min(shownStep()+1,order.length);
   const total=contMode?contHands:order.length;
-  document.getElementById("session-kind").textContent=bonus?"Compare practice":contMode?(cat.startsWith("ex:")?("Exploit: "+(EX_LABEL[cat.slice(3)]||cat.slice(3))):"Play a hand"):({all:"All streets",preflop:"Preflop",flop:"Flop",turn:"Turn",river:"River"}[cat]||"Quick session");
+  document.getElementById("session-kind").textContent=bonus?"Compare practice":contMode?(cat.startsWith("ex:")?("Exploit: "+(EX_LABEL[cat.slice(3)]||cat.slice(3))):"Play a hand"):({all:"All streets",preflop:"Preflop",flop:"Flop",turn:"Turn",river:"River"}[cat]||(cat.startsWith("ex:")?"Exploit review":"Quick session"));
   document.getElementById("session-counter").hidden=bonus;
   document.getElementById("session-bonus").hidden=!bonus;
   document.getElementById("skip-bonus").hidden=!(bonus&&e.pick==null);
@@ -2400,7 +2416,7 @@ function renderFeedback(q,a,gained){
   const unit=(rm==="plain")?"chips":"bb";     // plain mode avoids the "bb" jargon
   const rp=document.getElementById("reason");
   if(rm==="plain"){rp.style.display="none";}
-  else{rp.style.display="";rp.textContent=TERMS.poker.reason[q.reason]||q.reason;}
+  else{rp.style.display="";rp.textContent=TERMS.poker.reason[q.reason]||({continuation:"Play a hand",exploit:"Exploit"})[q.reason]||q.reason;}
   document.getElementById("head").textContent=(rm==="poker")?q.headline:(rm==="plain")?(plainHead(q)||q.headline):(TERMS[rm].reason[q.reason]||q.headline);
   // Learning mode: flop TERMS still say "improve" / "free card" — use river tags.
   if(rm==="learning"&&q.street==="river"&&RIVER_LEARNING[q.reason]){
@@ -2571,8 +2587,9 @@ function showSessionEnd(){
   document.getElementById("hint").hidden=true;
   document.getElementById("fwd").disabled=true;
   document.getElementById("prev").disabled=true;
-  // Freeze street filters so changing All/Flop/… can't wipe the completion summary / leak list.
-  document.querySelectorAll("#cats button").forEach(b=>{b.disabled=true;});
+  // Freeze street AND archetype filters so changing All/Flop/…/opponent can't wipe the
+  // completion summary / leak list (applyCatUI re-enables both on the next session).
+  document.querySelectorAll("#cats button, #excats button").forEach(b=>{b.disabled=true;});
   document.getElementById("session-solid").textContent=stats.solid;
   document.getElementById("session-ok").textContent=stats.ok;
   document.getElementById("session-leak").textContent=stats.leak;
@@ -2594,7 +2611,10 @@ function retryLeakSession(){
   // spotAt() resolves both, so order holds the objects directly (no Q.indexOf, which returns
   // -1 for continuation steps and would blank the session). Force `last` so a retried mid-hand
   // step reads as a standalone spot ("Next hand"), not a dangling "Next street".
-  const misses=sessionMisses.map(q=>(q&&typeof q==="object"&&q.hand_id)?Object.assign({},q,{last:true}):q);
+  // step_index:0 restores the full deal animation for what is now a first viewing, and
+  // clearing villain_action drops the mid-hand narration ("You call — the turn comes.")
+  // that would dangle before an unrelated next spot in a retry session.
+  const misses=sessionMisses.map(q=>(q&&typeof q==="object"&&q.hand_id)?Object.assign({},q,{last:true,step_index:0,villain_action:"",newcard:false}):q);
   stats=freshStats();sessionMisses=[];order=shuffle(misses);pos=0;hist=[];hidx=-1;
   applyCatUI();newHand();
   document.getElementById("play-card").focus({preventScroll:true});
@@ -2644,8 +2664,11 @@ function tryUnlock(q,g){
   if(mode!=="progressive"||!(g==="best"||g==="good"))return [];
   const gained=[];
   ["positions","streets"].forEach(t=>{if(!learned.has(t)){learned.add(t);gained.push(t);}});
+  // Only real vocabulary terms unlock — continuation/exploit steps carry the internal
+  // reasons "continuation"/"exploit", which must not enter `learned` (an invalid term
+  // inflates the vocab count to 18/17 and flips eff() off the plain-English path).
   const rt="reason:"+q.reason;
-  if(!learned.has(rt)){learned.add(rt);gained.push(rt);}
+  if(VALID_TERMS.has(rt)&&!learned.has(rt)){learned.add(rt);gained.push(rt);}
   if(gained.length){try{localStorage.setItem("learned",JSON.stringify([...learned]));}catch(e){}updateVocab();}
   return gained;
 }
@@ -2823,6 +2846,15 @@ function coachSpot(q){
   L.push("Your hand: "+cardsText(q.hero)+".");
   L.push("You "+(q.is_oop?"act first":"act last")+" ("+(q.is_oop?"out of position":"in position")+").");
   try{L.push("Situation: "+situation(q)+".");}catch(e){}
+  if(q.reason==="exploit"){
+    // Exploit steps: the EVs/preferred are the best response vs a PINNED archetype, while
+    // freq is the balanced GTO mix — without this context the coach would explain an
+    // exploit deviation as GTO and contradict the on-screen lesson.
+    L.push("Opponent type: "+(q.villain_label||EX_LABEL[q.archetype]||q.archetype||"unknown")+". The EVs and preferred play below are the EXPLOITATIVE best response versus this opponent type; the 'played %' shown is the balanced (GTO) mix, kept for reference.");
+    if(q.detail&&q.detail[0])L.push("Exploit lesson shown to the learner: "+q.detail[0]);
+  }else if(q.hand_id){
+    L.push("This spot is one step of a full hand played flop to river; the opponent follows the solver's own line.");
+  }
   L.push("Your options — solver EV (in pot units, higher is better), how often the solver takes each, and its grade:");
   q.actions.forEach(a=>{const lab=(q.labels&&q.labels[a])||a;
     L.push("  • "+lab+": EV "+q.ev[a]+", played "+q.freq[a]+"% of the time, grade "+String(q.grades[a]).replace("_"," ")+(a===q.preferred?"  <- solver's preferred play":""));});

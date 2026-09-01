@@ -4,7 +4,7 @@ name: Deploy Pages (self-contained trainer only)
 # published site needs ONLY that file — not the 60+ MB of solver source, tests, notebooks and
 # signed .db packs in the repo. The default "Deploy from a branch" builder shipped the whole
 # repo, which crept up to GitHub's ~10-min Pages build limit and started timing out / wedging
-# deployments. This workflow stages just index.html (+ the demo copy) into a ~1.3 MB artifact,
+# deployments. This workflow stages just index.html (+ the demo copy) into a small artifact (a few MB),
 # so builds finish in seconds, and `cancel-in-progress` clears any stuck deployment.
 #
 # Requires repo Settings -> Pages -> Source = "GitHub Actions".

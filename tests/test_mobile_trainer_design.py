@@ -164,7 +164,8 @@ def test_persisted_state_and_modal_escape_are_hardened():
     assert 'if(e.key==="Escape"){e.preventDefault();closeSheet();return;}' in source
     assert 'if(!document.getElementById("session-end").hidden)return;' in source
     assert 'e.target.closest("button,summary,a[href],input,select,textarea"))return;' in source
-    assert 'document.querySelectorAll("#cats button").forEach(b=>{b.disabled=true;});' in source
+    # session-end freezes BOTH filter groups (street cats and exploit archetypes)
+    assert 'document.querySelectorAll("#cats button, #excats button").forEach(b=>{b.disabled=true;});' in source
 
 
 def test_modal_and_view_transitions_restore_or_contain_focus():
