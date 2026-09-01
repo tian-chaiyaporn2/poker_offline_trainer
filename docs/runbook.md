@@ -113,7 +113,9 @@ python demo/gen_turn_river.py --raise-x 3 --n 6 --iters 15 --version tr_raise_sm
 python -m pokertrainer.content_pack \
     --records output/content_yield/records.json --version v1_fullrange \
     --out output/packs
-# -> output/packs/flop_pack_v1_fullrange.db (+ .db.gz), HMAC-SHA256 signed
+# -> output/packs/flop_pack_v1_fullrange.db (+ .db.gz), HMAC-SHA256 integrity-checked
+#    (dev scheme: the default key is public in the repo, so this is tamper-EVIDENCE /
+#    corruption detection, not third-party authentication — see content_pack.py)
 python -c "from pokertrainer.content_pack import verify_pack; \
     print(verify_pack('output/packs/flop_pack_v1_fullrange.db'))"
 # expect: hash_ok=True, signature_ok=True

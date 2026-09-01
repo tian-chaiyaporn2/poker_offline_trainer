@@ -1236,7 +1236,7 @@ __SUITDEFS__
     <details class="tech">
       <summary>Solver and data details</summary>
     <div class="foot">
-    Real solver output — pack <code>__VERSION__</code>, <b>__RECORDS__</b> signed records, build <code>__COMMIT__</code>.
+    Real solver output — pack <code>__VERSION__</code>, <b>__RECORDS__</b> integrity-checked records, build <code>__COMMIT__</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
     <span class="demo">Turn / river</span> spots are now full-range solver output too, but
@@ -1363,8 +1363,9 @@ function handRead(hero,board){
   function pairOf(pr){
     made="a pair of "+MANY[pr];cat="pair";
     overs=[...new Set(bv.filter(v=>v>pr))].sort((a,b)=>b-a);
-    // Rank against DISTINCT board ranks: on a paired board (K K 4) matching the 4 is
-    // bottom pair, not "middle pair" (sortB keeps duplicates, so index 1 can repeat the top rank).
+    // Rank against the board's DISTINCT ranks: on a paired board (K K 4) there are only
+    // two distinct ranks, so matching the 4 is a low pair — "middle pair" needs at least
+    // three distinct board ranks (the db.length guard below), or it mislabels bottom pair.
     const db=[...new Set(sortB)];
     if(pocket&&hv[0]===pr){if(pr>maxB){pairKind="over";strength="an overpair (higher than every shared card)";}
       else{pairKind="under";strength="the "+ONE[maxB]+" among the shared cards outranks it";}}
