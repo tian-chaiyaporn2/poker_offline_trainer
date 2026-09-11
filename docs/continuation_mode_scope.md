@@ -23,11 +23,11 @@ Continuation mode needs **trajectories**: an ordered sequence of steps sharing a
 same hero cards, growing board, each street's correct play solved *consistent with the line so
 far* (including villain's between-street action).
 
-**The engine already exists.** `src/pokertrainer/solver/multistreet.py` (`MultiStreetSpike`)
-is a full flop→turn→river CFR: chance nodes deal the turn/river, tables keyed by
-`(street, board_key, node)`, exact runout enumeration. It was built to prove multi-street
-solving is practical. What's missing is (a) an **extractor that walks one line** down the
-solved tree into ordered steps, and (b) a **"play a hand" session flow** in the trainer.
+**The engine and Phase 0/1 trainer are shipped.** `demo/gen_continuation.py` walks
+the solved tree; villain plays its range-argmax main line; `flop_pack_continuation_full.db`
+is a 48-board GPU library (1,475 steps / 576 hands) and is the default session.
+What's left is **Phase 2** (branching / sampled villain) — **held, needs Kaggle**
+to regenerate the library with raise / check-raise lines.
 
 ---
 
@@ -95,7 +95,8 @@ The cheapest version that delivers the feeling. One deterministic line per hand.
 - Multi-street multiple bet sizes / all-in (separate, already scoped and parked).
 - Full villain range-vs-range replay UI.
 
-## Recommendation
-Do this as its own phase, and **before phase B** — sequential play is more foundational than
-exploit deviations, and B's contrast content is richer over a whole hand. Start with Phase 0
-(scripted, villain-calls) to validate the format cheaply before investing in Phase 1's content.
+## Recommendation / status
+Phase 0/1 and exploit (phase B) both shipped. **Phase 2 is held** until a GPU
+commit can regenerate continuation (+ optionally exploit) with sampled villain
+branches. Do not invent branching lines on CPU at n=40 and ship them as the
+library — the live pack is the 48-board GPU set.

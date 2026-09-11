@@ -44,6 +44,51 @@ def test_collision_rejected():
         preflop_equity(ca, ca)  # same cards -> collision
 
 
+def test_action_evs_jam_aa_over_fold():
+    """Solved action EVs: AA's jam EV exceeds fold EV in the exact push/fold game."""
+    import numpy as np
+    from pokertrainer.solver.preflop import PreflopCFR, push_fold_game, combo_weights
+    from pokertrainer.preflop_equity import hand_classes
+    classes = hand_classes()
+    n = len(classes)
+    strength = np.linspace(1.0, 0.0, n)
+    E = 0.5 + 0.5 * (strength[:, None] - strength[None, :])
+    np.fill_diagonal(E, 0.5)
+    cfr = PreflopCFR(push_fold_game(stack=10.0), E, combo_weights(classes),
+                     ip_player=0, realize=0.0)
+    avg = cfr.run(iters=800)
+    evs = cfr.action_evs(avg)
+    keys = cfr.nodes_by_actions()
+    root = evs[keys[("fold", "jam")]]
+    aa = classes.index("AA")
+    trash = classes.index("72o")
+    assert root[aa, 1] > root[aa, 0]          # AA: jam > fold
+    assert root[trash, 0] > root[trash, 1]    # 72o: fold > jam
+
+
+def test_pack_records_solver_evs_only_on_btn_bb_tree():
+    """Solver EVs attach only to BTN-vs-BB spots; early-seat chart answers stay put."""
+    from pokertrainer.preflop_content import pack_records, build_questions
+    qs = build_questions()
+    btn = next(q for q in qs if q.get("ctx") == "rfi" and q["pos"] == "BTN")
+    utg = next(q for q in qs if q.get("ctx") == "rfi" and q["pos"] == "UTG")
+    book = {"rfi": {
+        btn["cls"]: {a: float(i) for i, a in enumerate(btn["actions"])},
+        utg["cls"]: {a: float(i) for i, a in enumerate(utg["actions"])},
+    }, "def": {}, "vs3bet": {}}
+    recs = pack_records(ev_book=book)
+    hit = next(r for r in recs if r["hand_category"] == btn["cls"]
+               and r["explanation"]["detail"]["ctx"] == "rfi"
+               and r["acting_player"] == "BTN")
+    early = next(r for r in recs if r["hand_category"] == utg["cls"]
+                 and r["explanation"]["detail"]["ctx"] == "rfi"
+                 and r["acting_player"] == "UTG")
+    assert hit["explanation"]["detail"]["ev_source"] == "cfr"
+    assert hit["preferred"] == max(hit["ev"], key=hit["ev"].get)
+    assert early["explanation"]["detail"]["ev_source"] == "chart_sentinel"
+    assert early["preferred"] == utg["answer"]
+
+
 def test_pushfold_cfr_converges_and_is_monotone():
     """CFR engine correctness on the EXACT push/fold game (all-in terminals, no
     realization model) using a synthetic monotone equity matrix — fast + deterministic."""

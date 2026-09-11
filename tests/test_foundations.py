@@ -47,6 +47,28 @@ def test_hand_reading_matches_evaluator():
         assert q["answer"] == describe_hand(h, b)
 
 
+def test_trainer_questions_are_auto_gradeable():
+    qs = F.to_trainer_questions()
+    assert 8 <= len(qs) <= 16
+    units = {q["unit"] for q in qs}
+    assert units >= {"board_reading", "pot_odds", "hand_reading", "equity"}
+    ids_or_prompts = [q["prompt"] for q in qs]
+    assert len(ids_or_prompts) == len(set(ids_or_prompts))
+    for q in qs:
+        assert q["foundations"] is True
+        assert q["answer"] in q["actions"]
+        assert 2 <= len(q["actions"]) <= 5
+        assert q["prompt"] and q["why"] and q["unit_label"]
+        cards = q["board"] + q["hero"]
+        assert len(cards) == len(set(cards))
+        if q["unit"] == "pot_odds":
+            assert q["board"] == [] and q["hero"] == []
+        if q["unit"] == "board_reading":
+            assert len(q["board"]) == 3
+        if q["unit"] in ("hand_reading", "equity"):
+            assert len(q["hero"]) == 2 and len(q["board"]) == 3
+
+
 def test_equity_answer_matches_band():
     for q in F.equity_questions():
         eq = mc_equity(parse_cards(q["data"]["board"]), parse_hand(q["data"]["hero"]),

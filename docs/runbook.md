@@ -68,15 +68,15 @@ Resume / rebuild from partial checkpoints without re-solving:
 python -m pokertrainer.content_yield --aggregate-only --out output/content_yield
 ```
 
-**Full-range RAISE pass (FR-011) — gives every facing-a-bet spot a Raise option.**
-The launch pack solves `*_vs_bet` nodes as Fold/Call only (raising blows up the tree).
-To add raises, re-solve BTN-vs-BB with `--raise-x 3`. The raise tree is bigger, so it
-runs in **3 parts** (~4–6 h each) via `colab/kaggle_content_raise.ipynb`: set `PART`
-to `'A'` (boards 0–5), `'B'` (6–11), `'C'` (12–16), Save & Run All each time, and
-download `records_raise_<PART>.json`. Merge the three board-wise, then build/sign as
-in §4 (records → `v1_fullrange`, this becomes the new full-range pack — a superset:
-same Check/Bet spots + Fold/Call/Raise on the vs-bet nodes). First-to-act and
-checked-to spots stay Check/Bet (no bet to raise). Local one-board check:
+**Full-range RAISE pass (FR-011) — HELD, needs Kaggle.** Gives every facing-a-bet
+spot a Raise option. The launch pack still solves `*_vs_bet` as Fold/Call only
+(raising blows up the tree). Solver flag `--raise-x 3` and
+`colab/kaggle_content_raise.ipynb` (3 parts, ~4–6 h each) are ready; a 240-record
+`flop_pack_v1_raise_demo.db` exists for smoke. Do **not** blend into
+`build_trainer.py` until the GPU parts are merged and signed as the new
+`v1_fullrange` (superset: same Check/Bet spots + Fold/Call/Raise on vs-bet).
+First-to-act and checked-to spots stay Check/Bet (no bet to raise). Local
+one-board check:
 ```bash
 python -m pokertrainer.content_yield --solver cpu --n 8 --iters 25 --roots 0 \
     --raise-x 3 --scenario btn_vs_bb_srp --out /tmp/raise_smoke   # vs_bet -> fold/call/raise
@@ -133,8 +133,18 @@ python -m pokertrainer.foundations --out output/foundations
 ```
 Deterministic — same output every run, so it can go into a signed pack. Answers are
 computed from the same primitives as the solver pipeline (evaluator, board texture,
-pot-odds arithmetic, MC equity). Trainer integration (serving these alongside flop
-decisions) is the next step.
+pot-odds arithmetic, MC equity). **Trainer integration is shipped:**
+`demo/build_trainer.py` calls `foundations.to_trainer_questions()` at build time
+and the app exposes a Foundations filter (board reading / pot odds / hand reading /
+equity). Re-run the generator only if you want a fresh `questions.json` artifact;
+the live deck is generated from the module, not that file.
+
+**Preflop pack with solved EVs (CPU):**
+```bash
+PYTHONPATH=src python demo/gen_preflop.py --solve   # builds output/preflop/equity_169.npz if missing
+```
+Chart-sampled spots; `ev` / preferred come from the 2-player raise-ladder CFR.
+Without `--solve` the pack keeps honest chart-sentinel EVs.
 
 ## 5b. Prioritize what to solve/teach next
 
