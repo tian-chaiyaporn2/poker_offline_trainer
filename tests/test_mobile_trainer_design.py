@@ -150,7 +150,7 @@ def test_mobile_ux_copy_and_compact_layout_contract():
     assert "with Fold/Call/Raise available on facing-a-bet nodes" in source
     assert 'data-c="foundations"' in source
     assert "function renderFoundations(q)" in source
-    assert "function load_foundations" in source
+    assert "def load_foundations" in source
 
 
 def test_session_history_and_comparison_practice_are_accounted_correctly():
