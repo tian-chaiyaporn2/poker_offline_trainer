@@ -193,10 +193,12 @@ def build_questions():
                     "situation": f"You're in the Small Blind, and {POS_FULL[opener]} opens. It's on you.",
                 })
 
-    # Facing a 3-bet: you opened, a blind 3-bets — 4-bet / call / fold (over your opens)
+    # Facing a 3-bet: you opened, a blind 3-bets — 4-bet / call / fold (over your opens).
+    # BTN-vs-BB is the raise-ladder tree; keep CO-vs-BB and BTN-vs-SB as chart seats.
     cont, fb = VS_3BET
     for (seat, seat_full, tbettor, tb_seat) in [("CO", "a late seat", "the big blind", "BB"),
-                                                ("BTN", "the button", "the small blind", "SB")]:
+                                                ("BTN", "the button", "the small blind", "SB"),
+                                                ("BTN", "the button", "the big blind", "BB")]:
         opens = [c for c in classes if rfi[seat][c] == "open"]
         for act in ("4bet", "call", "fold"):
             pool = [c for c in opens if v3[c] == act]

@@ -64,6 +64,30 @@ def test_action_evs_jam_aa_over_fold():
     trash = classes.index("72o")
     assert root[aa, 1] > root[aa, 0]          # AA: jam > fold
     assert root[trash, 0] > root[trash, 1]    # 72o: fold > jam
+    # Facing the jam, fold forfeits the 1bb blind — chip units, not reach-scaled.
+    vs_jam = evs[keys[("fold", "call")]]
+    assert np.allclose(vs_jam[:, 0], -1.0, atol=1e-6)
+
+
+def test_action_evs_fold_is_forfeit_in_chips():
+    """Deeper-node fold EV is −inv, not counterfactual value × reach mass."""
+    import numpy as np
+    from pokertrainer.solver.preflop import PreflopCFR, raise_ladder_game, combo_weights
+    from pokertrainer.preflop_equity import hand_classes
+    classes = hand_classes()
+    n = len(classes)
+    strength = np.linspace(1.0, 0.0, n)
+    E = 0.5 + 0.5 * (strength[:, None] - strength[None, :])
+    np.fill_diagonal(E, 0.5)
+    cfr = PreflopCFR(raise_ladder_game(), E, combo_weights(classes),
+                     ip_player=0, realize=0.0)
+    avg = cfr.run(iters=40)
+    evs = cfr.action_evs(avg)
+    keys = cfr.nodes_by_actions()
+    vs_open = evs[keys[("fold", "call", "3bet")]]
+    vs_3bet = evs[keys[("fold", "call", "4bet")]]
+    assert np.allclose(vs_open[:, 0], -1.0, atol=1e-6)    # BB folds the 1bb blind
+    assert np.allclose(vs_3bet[:, 0], -2.5, atol=1e-6)    # BTN folds the 2.5bb open
 
 
 def test_pack_records_solver_evs_only_on_btn_bb_tree():
@@ -72,10 +96,20 @@ def test_pack_records_solver_evs_only_on_btn_bb_tree():
     qs = build_questions()
     btn = next(q for q in qs if q.get("ctx") == "rfi" and q["pos"] == "BTN")
     utg = next(q for q in qs if q.get("ctx") == "rfi" and q["pos"] == "UTG")
+    bb = next(q for q in qs if q.get("ctx") == "def" and q["pos"] == "BB"
+              and q.get("opener") == "BTN")
+    v3 = next(q for q in qs if q.get("ctx") == "vs3bet" and q["pos"] == "BTN"
+              and q.get("tbettor") == "BB")
+    sb3 = next(q for q in qs if q.get("ctx") == "vs3bet" and q.get("tbettor") == "SB")
     book = {"rfi": {
         btn["cls"]: {a: float(i) for i, a in enumerate(btn["actions"])},
         utg["cls"]: {a: float(i) for i, a in enumerate(utg["actions"])},
-    }, "def": {}, "vs3bet": {}}
+    }, "def": {
+        bb["cls"]: {a: float(i) for i, a in enumerate(bb["actions"])},
+    }, "vs3bet": {
+        v3["cls"]: {a: float(i) for i, a in enumerate(v3["actions"])},
+        sb3["cls"]: {a: float(i) for i, a in enumerate(sb3["actions"])},
+    }}
     recs = pack_records(ev_book=book)
     hit = next(r for r in recs if r["hand_category"] == btn["cls"]
                and r["explanation"]["detail"]["ctx"] == "rfi"
@@ -83,10 +117,25 @@ def test_pack_records_solver_evs_only_on_btn_bb_tree():
     early = next(r for r in recs if r["hand_category"] == utg["cls"]
                  and r["explanation"]["detail"]["ctx"] == "rfi"
                  and r["acting_player"] == "UTG")
+    defn = next(r for r in recs if r["hand_category"] == bb["cls"]
+                and r["explanation"]["detail"]["ctx"] == "def"
+                and r["acting_player"] == "BB"
+                and r["explanation"]["detail"].get("opener") == "BTN")
+    vs_bb = next(r for r in recs if r["hand_category"] == v3["cls"]
+                 and r["explanation"]["detail"]["ctx"] == "vs3bet"
+                 and r["acting_player"] == "BTN"
+                 and r["explanation"]["detail"].get("tbettor") == "BB")
+    vs_sb = next(r for r in recs if r["hand_category"] == sb3["cls"]
+                 and r["explanation"]["detail"]["ctx"] == "vs3bet"
+                 and r["explanation"]["detail"].get("tbettor") == "SB")
     assert hit["explanation"]["detail"]["ev_source"] == "cfr"
     assert hit["preferred"] == max(hit["ev"], key=hit["ev"].get)
+    assert defn["explanation"]["detail"]["ev_source"] == "cfr"
+    assert vs_bb["explanation"]["detail"]["ev_source"] == "cfr"
     assert early["explanation"]["detail"]["ev_source"] == "chart_sentinel"
     assert early["preferred"] == utg["answer"]
+    assert vs_sb["explanation"]["detail"]["ev_source"] == "chart_sentinel"
+    assert vs_sb["preferred"] == sb3["answer"]
 
 
 def test_pushfold_cfr_converges_and_is_monotone():

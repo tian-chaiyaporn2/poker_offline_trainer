@@ -290,12 +290,14 @@ class PreflopCFR:
             nid = self._id[id(node)]
             actor = node["actor"]
             acts = node["actions"]
+            # `_pval` expects a normalized opponent combo prior (see exploitability).
+            # After the root, reach is strategy-weighted mass (open frequency, …).
+            # Renormalize so action EVs stay in chip units, not CF values × reach.
+            opp = (r1 if actor == 0 else r0)
+            opp = opp / (opp.sum() + 1e-12)
             cols = []
             for _, child in acts:
-                if actor == 0:
-                    cols.append(self._pval(child, r1, avg, 0, best=False))
-                else:
-                    cols.append(self._pval(child, r0, avg, 1, best=False))
+                cols.append(self._pval(child, opp, avg, actor, best=False))
             result[nid] = np.stack(cols, axis=1)
             for k, (_, child) in enumerate(acts):
                 if actor == 0:
