@@ -1,19 +1,13 @@
 """Wrap the pre-flop chart ranges into a signed, verifiable content pack (MIT).
 
-A5 — parity with the post-flop packs on the *distribution / provenance* axis: the
-pre-flop spots that `preflop_content.build_questions()` produces are chart-based (a single
-correct action + plain-language coaching, no per-action solver EV). We store them in the
-same signed SQLite schema so the trainer loads + verifies them exactly like every other
-pack, instead of importing the range code at build time.
+Spots are sampled from the calibrated 6-max charts. When the 169×169 equity table
+is available (or built with --solve), per-action EVs come from the 2-player
+raise-ladder CFR and preferred is max-EV. Without --solve, EVs stay honest
+chart sentinels (not solver numbers).
 
-Because the schema (and `content_pack._require_finite`) expects an `ev`/`freq` map keyed by
-the action list with `preferred` a max-EV action, we encode each chart decision honestly as
-a PURE strategy: freq = 1.0 on the correct action, and a FLAT neutral EV (all 0.0) that is
-explicitly *not* solver-derived. The pre-flop-only fields (ctx / opener / tbettor / alt /
-why / rule / situation) ride in the row's `detail` JSON so they round-trip losslessly.
-
-Run:  python demo/gen_preflop.py       # writes output/packs/flop_pack_preflop_v1.db(.gz)
+Run:  PYTHONPATH=src python demo/gen_preflop.py --solve
 """
+import argparse
 import os
 import sys
 
@@ -27,12 +21,28 @@ OUT_DIR = "output/packs"
 
 
 def main():
-    records = pack_records()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--solve", action="store_true",
+                    help="attach 2-player CFR EVs (builds equity table if missing)")
+    ap.add_argument("--samples", type=int, default=400)
+    ap.add_argument("--iters", type=int, default=800)
+    a = ap.parse_args()
+    ev_book = None
+    solver_model = "preflop_chart_ranges_v1"
+    note = ("Chart-based opening/defense ranges; freq is a pure strategy, "
+            "ev is flat (not solver EV).")
+    if a.solve:
+        from pokertrainer.preflop_solve import solve_action_evs
+        ev_book = solve_action_evs(iters=a.iters, samples=a.samples)
+        solver_model = "preflop_cfr_hu_subgame_v1"
+        note = ("Chart-sampled spots; ev/preferred from 2-player raise-ladder CFR "
+                "(BTN-vs-BB tree, realization model). Not exact 6-max GTO.")
+    records = pack_records(ev_book=ev_book)
     config = {
         "content_kind": "preflop_ranges",
-        "solver_model": "preflop_chart_ranges_v1",
+        "solver_model": solver_model,
         "positions": {"format": "6-max", "seats": ["UTG", "HJ", "CO", "BTN", "SB", "BB"]},
-        "note": "Chart-based opening/defense ranges; freq is a pure strategy, ev is flat (not solver EV).",
+        "note": note,
     }
     report = build_pack(records, config, OUT_DIR, VERSION,
                         pot=2.5, dedup_cap=99)   # 2.5bb ~ preflop pot; cap high so no spots drop

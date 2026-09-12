@@ -193,10 +193,12 @@ def build_questions():
                     "situation": f"You're in the Small Blind, and {POS_FULL[opener]} opens. It's on you.",
                 })
 
-    # Facing a 3-bet: you opened, a blind 3-bets — 4-bet / call / fold (over your opens)
+    # Facing a 3-bet: you opened, a blind 3-bets — 4-bet / call / fold (over your opens).
+    # BTN-vs-BB is the raise-ladder tree; keep CO-vs-BB and BTN-vs-SB as chart seats.
     cont, fb = VS_3BET
     for (seat, seat_full, tbettor, tb_seat) in [("CO", "a late seat", "the big blind", "BB"),
-                                                ("BTN", "the button", "the small blind", "SB")]:
+                                                ("BTN", "the button", "the small blind", "SB"),
+                                                ("BTN", "the button", "the big blind", "BB")]:
         opens = [c for c in classes if rfi[seat][c] == "open"]
         for act in ("4bet", "call", "fold"):
             pool = [c for c in opens if v3[c] == act]
@@ -223,45 +225,85 @@ def _pf_node(q):
     return f"pf_{q['pos'].lower()}_{ctx}" + (f"_{tail}" if tail else "")
 
 
-def pack_records():
+def pack_records(ev_book=None):
     """Map the chart spots into signed-pack record dicts (A5).
 
-    Pre-flop content is chart-based (a single correct action, no per-action solver EV), so
-    each decision is encoded HONESTLY as a pure strategy: freq = 1.0 on the correct action,
-    with a flat neutral EV (all 0.0) that is explicitly not solver-derived. The pre-flop-only
-    fields ride in `explanation.detail` so the trainer can round-trip them losslessly.
+    Spots are still sampled from the calibrated charts. When `ev_book` is supplied
+    (from `preflop_solve.solve_action_evs`), per-action EVs are the 2-player CFR
+    values and preferred is max-EV. Without a book, EVs stay honest chart sentinels
+    (answer = 0.0, close alt = −0.05, else −1.0) so the pack never pretends to have
+    solver numbers it does not.
     """
     recs = []
     for q in build_questions():
         acts = q["actions"]
-        ans = q["answer"]
+        chart_ans = q["answer"]
         alt = q.get("alt") if q.get("mixed") else None
-        # Chart-based EV sentinels so the pack's grades are correct even though we have no
-        # solver EV: the answer is best (0.0); a flagged close alternative is a near-tie
-        # (small penalty); any other action is a clear mistake. freq stays a pure strategy.
-        def _ev(a):
-            if a == ans:
+
+        def _sentinel(a):
+            if a == chart_ans:
                 return 0.0
             if a == alt:
-                return -0.05   # ~2% of a 2.5bb pot -> grades "acceptable" (a close, fine alt)
+                return -0.05   # ~2% of a 2.5bb pot -> grades "acceptable"
             return -1.0
+
+        # Only the BTN-vs-BB subgame is what raise_ladder_game solves. Applying those
+        # EVs to UTG/HJ opens would teach "open A3o from early" — a lie. Other seats
+        # keep chart sentinels.
+        ctx = q.get("ctx", "rfi")
+        use_solve = (
+            ev_book is not None and (
+                (ctx == "rfi" and q.get("pos") == "BTN")
+                or (ctx == "def" and q.get("pos") == "BB" and q.get("opener") == "BTN")
+                or (ctx == "vs3bet" and q.get("pos") == "BTN" and q.get("tbettor") == "BB")
+            )
+        )
+        if use_solve:
+            from .preflop_solve import apply_evs
+            ev = apply_evs(acts, q["cls"], ctx, ev_book, _sentinel)
+            if set(ev) != set(acts):
+                ev = {a: _sentinel(a) for a in acts}
+                use_solve = False
+        if use_solve:
+            # Pack integrity: preferred must be a max-EV action.
+            ans = max(acts, key=lambda a: ev[a])
+            best = ev[ans]
+            close = [a for a in acts if a != ans and best - ev[a] <= 0.05]
+            mixed = bool(close)
+            alt_out = close[0] if close else None
+            why = q["why"]
+            if ans != chart_ans and mixed:
+                why = (f"The solver is nearly indifferent — {ans} edges {chart_ans} "
+                       f"by a fraction of a big blind, so either is fine. " + why)
+            elif ans != chart_ans:
+                why = (f"The solver prefers {ans} here (higher EV than {chart_ans}). "
+                       + why)
+        else:
+            ev = {a: _sentinel(a) for a in acts}
+            ans = chart_ans
+            mixed = bool(q.get("mixed"))
+            alt_out = alt
+            why = q["why"]
+
         recs.append({
             "board": "", "board_texture": [], "board_favored": None,
             "node": _pf_node(q), "acting_player": q["pos"], "decision_type": "preflop",
             "hand": "".join(q["hand"]), "hand_category": q["cls"],
             "actions": acts,
-            "ev": {a: _ev(a) for a in acts},
+            "ev": ev,
             "freq": {a: (1.0 if a == ans else 0.0) for a in acts},
             "preferred": ans,
-            "mixed": bool(q.get("mixed")),
+            "mixed": mixed,
             "scenario": "preflop",
             "explanation": {
                 "reason": q.get("ctx", "rfi"),
                 "headline": q["read"],
                 "detail": {
-                    "why": q["why"], "rule": q["rule"], "ctx": q.get("ctx"),
+                    "why": why, "rule": q["rule"], "ctx": q.get("ctx"),
                     "opener": q.get("opener"), "tbettor": q.get("tbettor"),
-                    "alt": q.get("alt"), "situation": q.get("situation"),
+                    "alt": alt_out, "situation": q.get("situation"),
+                    "chart_answer": chart_ans,
+                    "ev_source": "cfr" if use_solve else "chart_sentinel",
                 },
             },
         })

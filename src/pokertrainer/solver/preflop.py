@@ -260,6 +260,54 @@ class PreflopCFR:
             v += self._pval(c, reach_opp * avg[nid][:, k], avg, player, best)
         return v
 
+    def nodes_by_actions(self) -> Dict[Tuple[str, ...], int]:
+        """Map the action-name tuple at a decision node to its info-set id."""
+        found: Dict[Tuple[str, ...], int] = {}
+
+        def walk(node):
+            if "term" in node:
+                return
+            key = tuple(name for name, _ in node["actions"])
+            found[key] = self._id[id(node)]
+            for _, child in node["actions"]:
+                walk(child)
+
+        walk(self.root)
+        return found
+
+    def action_evs(self, avg) -> Dict[int, np.ndarray]:
+        """Per-node, per-hand EV of each action when everyone plays `avg` after.
+
+        Returns nid -> (n_hands, n_actions) net-chip EV. Used to replace chart-flat
+        sentinels in the preflop pack with solved values.
+        """
+        wn = self.w / self.w.sum()
+        result: Dict[int, np.ndarray] = {}
+
+        def walk(node, r0, r1):
+            if "term" in node:
+                return
+            nid = self._id[id(node)]
+            actor = node["actor"]
+            acts = node["actions"]
+            # `_pval` expects a normalized opponent combo prior (see exploitability).
+            # After the root, reach is strategy-weighted mass (open frequency, …).
+            # Renormalize so action EVs stay in chip units, not CF values × reach.
+            opp = (r1 if actor == 0 else r0)
+            opp = opp / (opp.sum() + 1e-12)
+            cols = []
+            for _, child in acts:
+                cols.append(self._pval(child, opp, avg, actor, best=False))
+            result[nid] = np.stack(cols, axis=1)
+            for k, (_, child) in enumerate(acts):
+                if actor == 0:
+                    walk(child, r0 * avg[nid][:, k], r1)
+                else:
+                    walk(child, r0, r1 * avg[nid][:, k])
+
+        walk(self.root, wn.copy(), wn.copy())
+        return result
+
     def exploitability(self, avg) -> float:
         """(BR gain of player 0) + (BR gain of player 1) over the equilibrium value, in
         bb per normalized hand. ~0 means `avg` is a Nash equilibrium."""

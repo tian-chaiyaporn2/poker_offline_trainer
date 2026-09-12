@@ -1,58 +1,50 @@
-# Poker Offline Trainer — Open-Source Solver POC
+# Poker Offline Trainer — Open-Source Solver + Offline App
 
-A proof of concept testing whether **free, permissively licensed software** can
-generate stable poker strategy data, cross-check it against an independent
-solver, turn it into training questions, and serve them in a **fully offline**
-local trainer — with no paid or copyleft dependencies.
+An MIT-licensed poker trainer: our own Discounted CFR+ generates strategy data,
+signed packs turn it into graded questions, and a **fully offline** web app
+serves them. No paid or copyleft runtime dependencies.
 
-See [`PRD.md`](PRD.md) for the full product requirements and
-[`docs/feasibility_report.md`](docs/feasibility_report.md) for the results and
-recommendation.
+See [`PRD.md`](PRD.md) for product requirements and
+[`docs/runbook.md`](docs/runbook.md) for the solve → pack → serve pipeline.
 
-## Result at a glance
+## What's in the app today
 
-- ✅ All **12 boards** solved; **120 training questions** generated.
-- ✅ Our own **MIT CFR+ solver** converges to **< 0.004% of pot** exploitability
-  and is **deterministic** (bit-for-bit stable across runs).
-- ✅ **100%** preferred-action agreement vs an **independent** vanilla-CFR solver
-  (max root-EV diff **0.004% of pot**); equities match an independent Monte-Carlo
-  check.
-- ✅ **Zero licensing risk**: solver + evaluator are our MIT code; only NumPy
-  (BSD) + Python stdlib at runtime. TexasSolver is never bundled or required.
-- ⚠️ Scope limit: models a **flop-only** abstraction (no turn/river betting).
-  Recommendation: **Proceed with limitations** — extend to multi-street next.
+The GitHub Pages landing page (`index.html`) is a self-contained trainer:
 
-## The permissive-solver decision
+- **Play a hand** (default) — flop→turn→river continuation on a 48-board GPU library.
+- **Exploit** — same linked hands vs 5 opponent archetypes (station / nit / maniac / LAG / reg).
+- **Isolated drills** — flop, turn, river, plus preflop and **foundations** (board reading, pot odds, hand reading, equity).
+- **Position packs** — BTN-vs-BB, SB-vs-BB, BTN-vs-SB, CO/UTG/HJ-vs-BB, and a low-SPR 3-bet pot.
+- Language ladder (Beginner / Learning / Pro / Adaptive) and optional BYOK coach.
 
-Rather than depend on a third-party solver (the exact licensing risk the PRD
-worries about), **the solver is our own MIT code** — a vectorised Discounted
-CFR+. That makes the licensing story airtight and directly answers the core
-question. TexasSolver stays a dev-only, out-of-process reference (its licence is
-copyleft and unverified); the codebase enforces its isolation.
+The original flop-only POC (12 boards, 120 questions) is still in `output/trainer.db`
+and `trainer/server.py`. The live product is the full-street pack + demo trainer.
+
+## Held (needs a Kaggle GPU commit)
+
+These are implemented in code or notebooks, but the **production library** is
+not regenerated yet:
+
+- **Raise pass (FR-011)** — solver supports `--raise-x 3`; only a 240-record demo pack is shipped. Full-range re-solves of BTN-vs-BB, SB-vs-BB, and turn/river wait on GPU.
+- **Continuation Phase 2** — branching / sampled villain (raises, check-raises). Phase 0/1 (solved main line) is shipped.
+- **Next solve families** — 4-bet pots, extra stack depths, multiple bet sizes.
 
 ## Layout
 
 ```
-PRD.md                     Product requirements
+PRD.md                     Product requirements + current roadmap status
 docs/
-  licenses.md              Dependency & licence inventory (Deliverable 1)
-  scenario_format.md       Canonical scenario spec (Deliverable 2)
+  runbook.md               Solve → pack → serve
+  licenses.md              Dependency & licence inventory
+  scenario_format.md       Canonical scenario spec
   solver_design.md         The modeled game / abstraction
-  feasibility_report.md    Final feasibility report (Deliverable 9)
-src/pokertrainer/
-  cards.py evaluator.py    Card model + fast 5–7 card evaluator (MIT, ours)
-  ranges.py presets.py     Range expansion, 12 boards, HU SRP ranges
-  scenario.py              Scenario loading + PRD §6 validation
-  showdown.py mc_equity.py Exact equity (enumeration) + Monte-Carlo check
-  solver/cfr.py            CFR+ solver (Deliverable 3)
-  reference_solver.py      Independent vanilla-CFR reference
-  normalize.py compare.py  Output normalization + comparison (Deliverables 5,6)
-  benchmark_texassolver.py TexasSolver adapter stub (Deliverable 4, gated)
-  runner.py export.py      Solve runner + training-question export (Deliverable 7)
-  generate.py benchmark.py CLIs
-trainer/                   Offline local web trainer (Deliverable 8)
-tests/                     pytest suite (evaluator, equity, solver, pipeline)
-output/                    Generated library + reports (committed)
+  preflop_and_exploit_plan.md   Preflop + exploit (both shipped; raise held)
+  continuation_mode_scope.md    Play-a-hand (Phase 0/1 shipped; Phase 2 held)
+src/pokertrainer/          Solver, packs, explanations, foundations, preflop
+demo/build_trainer.py      Builds the self-contained app → index.html
+colab/                     Kaggle/Colab GPU notebooks
+output/packs/              Signed SQLite content packs
+tests/                     pytest suite
 ```
 
 ## Quick start
@@ -61,23 +53,22 @@ output/                    Generated library + reports (committed)
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-# 1) Generate the training library (solves all 12 boards -> questions.json + trainer.db)
-PYTHONPATH=src python -m pokertrainer.generate
+# Offline trainer (uses committed packs — no regenerate required)
+python trainer/server.py          # http://127.0.0.1:8000  (legacy flop-only)
+python trainer/pack_server.py     # newest signed pack
+# or open index.html / demo/trainer_demo.html (no server)
 
-# 2) Cross-check our CFR+ vs the independent reference solver
-PYTHONPATH=src python -m pokertrainer.benchmark        # writes output/comparison_report.md
+# Rebuild the self-contained app after pack or UI changes
+PYTHONPATH=src python demo/build_trainer.py
 
-# 3) Run the offline trainer, then open http://127.0.0.1:8000
-python trainer/server.py
-
-# 4) Tests
+# Tests
 python -m pytest
 ```
 
-The generated library is committed under `output/`, so the trainer runs
-out-of-the-box without regenerating.
+GPU library generation (full-range / raise / bulk continuation) is documented
+in [`docs/runbook.md`](docs/runbook.md) and `colab/`.
 
 ## Licence
 
-MIT — see [`LICENSE`](LICENSE). All runtime dependencies are permissive
+MIT — see [`LICENSE`](LICENSE). Runtime dependencies are permissive
 (MIT / BSD / PSF); see [`docs/licenses.md`](docs/licenses.md).

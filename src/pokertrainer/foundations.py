@@ -204,6 +204,53 @@ GENERATORS = {
     "equity": equity_questions,
 }
 
+UNIT_LABEL = {
+    "board_reading": "Board reading",
+    "pot_odds": "Pot odds",
+    "hand_reading": "Hand reading",
+    "equity": "Equity",
+}
+
+
+def _cards(s: str) -> List[str]:
+    s = (s or "").replace(" ", "")
+    return [s[i:i + 2] for i in range(0, len(s), 2)] if s else []
+
+
+def to_trainer_questions(n: int = 16, seed: int = 11) -> List[Dict]:
+    """Stratified sample in the trainer Q shape (foundations=True, MC options as actions)."""
+    raw = generate_all()
+    by: Dict[str, List[Dict]] = {u: [] for u in GENERATORS}
+    for q in raw:
+        by[q["unit"]].append(q)
+    rng = random.Random(seed)
+    quotas = {"board_reading": 5, "pot_odds": 4, "hand_reading": 4, "equity": 3}
+    picked: List[Dict] = []
+    for unit, cap in quotas.items():
+        pool = by[unit][:]
+        rng.shuffle(pool)
+        picked.extend(pool[:cap])
+    rng.shuffle(picked)
+    picked = picked[:n]
+    out = []
+    for q in picked:
+        data = q.get("data") or {}
+        out.append({
+            "foundations": True,
+            "badge": "Foundations",
+            "unit": q["unit"],
+            "unit_label": UNIT_LABEL[q["unit"]],
+            "kind": q["kind"],
+            "prompt": q["prompt"],
+            "actions": list(q["options"]),
+            "answer": q["answer"],
+            "why": q["explanation"],
+            "board": _cards(data.get("board") or ""),
+            "hero": _cards(data.get("hand") or data.get("hero") or ""),
+            "street": "foundations",
+        })
+    return out
+
 
 def generate_all() -> List[Dict]:
     out: List[Dict] = []

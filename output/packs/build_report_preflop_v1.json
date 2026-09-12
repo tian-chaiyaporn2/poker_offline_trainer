@@ -3,7 +3,7 @@
   "version": "preflop_v1",
   "config": {
     "content_kind": "preflop_ranges",
-    "solver_model": "preflop_chart_ranges_v1",
+    "solver_model": "preflop_cfr_hu_subgame_v1",
     "positions": {
       "format": "6-max",
       "seats": [
@@ -15,11 +15,11 @@
         "BB"
       ]
     },
-    "note": "Chart-based opening/defense ranges; freq is a pure strategy, ev is flat (not solver EV)."
+    "note": "Chart-sampled spots; ev/preferred from 2-player raise-ladder CFR (BTN-vs-BB tree, realization model). Not exact 6-max GTO."
   },
   "provenance": {
-    "git_commit": "e5e042cec4499c713700822235041ba880e21c20",
-    "solver_model": "preflop_chart_ranges_v1"
+    "git_commit": "42ecb765b8507fe3ff2a55a86daae2d3171139b2",
+    "solver_model": "preflop_cfr_hu_subgame_v1"
   },
   "grade_thresholds_pct_pot": {
     "best": 0.25,
@@ -27,13 +27,13 @@
     "acceptable": 3.0,
     "costly": 10.0
   },
-  "record_count": "83",
+  "record_count": "89",
   "signing_scheme": "hmac-sha256-dev",
   "default_pot_bb": "2.5",
-  "content_hash": "754216884fa40fcaccdd53eca64a90d76c1a7fae306c1e2e1a7a4011c438b38f",
-  "signature": "8e236ab122a13ae8bebc538776c91a00692f97ad8c00c3dc050323355c40afeb",
-  "db_bytes": 118784,
-  "gz_bytes": 12097,
-  "records_accepted": 83,
-  "records_after_dedup": 83
+  "content_hash": "5c695a144980e830ab64794cb2cbb6af8ba9026a063e8430e52f71437c753967",
+  "signature": "d2aa3ad6125713c767d865167307439affe3fa0299ad1d5f75706257a5469510",
+  "db_bytes": 126976,
+  "gz_bytes": 12886,
+  "records_accepted": 89,
+  "records_after_dedup": 89
 }

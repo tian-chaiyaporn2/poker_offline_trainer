@@ -86,8 +86,10 @@ We extended to full flop→turn→river and ran three spikes (details in
   600; likely fewer) — quick to nail down and it directly scales runtime/cost.
 - Commercial-scale runtime **depends on GPU tier**; budget an A100-class GPU (or
   the showdown optimisation) before committing to a large library.
-- **Preflop ranges** are hand-crafted (out of POC scope); a product needs solved
-  ranges.
+- **Preflop ranges** in the live pack are calibrated charts (not exact-CFR EVs).
+  The preflop solver exists; attaching solved EVs is CPU work, not a Kaggle hold.
+- **Raise pass / continuation Phase 2 / 4-bet+ families** wait on GPU commits
+  (`docs/runbook.md`, PRD §13.3).
 - **Provenance:** solver and evaluator are our own MIT code — fully known.
 
 **Bottom line:** the permissive approach is not the constraint. Flop-only ships

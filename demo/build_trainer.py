@@ -93,9 +93,9 @@ DB = "output/packs/flop_pack_v1_fullrange.db"
 TR_DB = "output/packs/flop_pack_turnriver_fullrange.db"  # turn/river decisions (full range; still unconditioned)
 SB_DB = "output/packs/flop_pack_sb_vs_bb.db"           # 2nd scenario: SB vs BB (full range)
 BTNSB_DB = "output/packs/flop_pack_btn_vs_sb.db"       # BTN vs SB single-raised pot
-CO_DB = "output/packs/flop_pack_co_vs_bb.db"           # CO vs BB single-raised pot (pending)
-UTG_DB = "output/packs/flop_pack_utg_vs_bb.db"         # UTG vs BB single-raised pot (pending)
-HJ_DB = "output/packs/flop_pack_hj_vs_bb.db"           # HJ vs BB single-raised pot (pending)
+CO_DB = "output/packs/flop_pack_co_vs_bb.db"           # CO vs BB single-raised pot
+UTG_DB = "output/packs/flop_pack_utg_vs_bb.db"         # UTG vs BB single-raised pot
+HJ_DB = "output/packs/flop_pack_hj_vs_bb.db"           # HJ vs BB single-raised pot
 BB3BET_DB = "output/packs/flop_pack_btn_bb_3bet.db"    # BB 3-bets, BTN calls — low-SPR 3-bet pot
 PER_REASON = 6          # cap questions per reason for variety
 MAX_Q = 60
@@ -272,6 +272,7 @@ def load_scenario(db, badge, n):
 
 
 PF_Q = 16   # pre-flop spots blended in ("Chapter 0")
+FOUND_Q = 16  # foundations drills (board reading / pot odds / hand reading / equity)
 
 
 PF_DB = "output/packs/flop_pack_preflop_v1.db"   # signed pre-flop pack (A5)
@@ -437,6 +438,13 @@ def _pf_from_pack(n):
     return out
 
 
+def load_foundations(n=FOUND_Q):
+    """Deterministic fundamentals drills — board reading, pot odds, hand reading, equity.
+    Generated at build time from pokertrainer.foundations (no solver, no pack)."""
+    from pokertrainer.foundations import to_trainer_questions
+    return to_trainer_questions(n=n)
+
+
 def load_preflop(n=PF_Q):
     """Pre-flop spots (open/fold + BB/SB defense + vs-3bet) — a different question KIND the
     trainer renders on its own path (no board). Prefers the signed pack (A5); falls back to
@@ -519,14 +527,16 @@ def build(allow_missing_demo_packs=False):
     hj_qs = load_scenario(HJ_DB, "HJ vs BB", CO_Q)
     bb3bet_qs = load_scenario(BB3BET_DB, "3-bet pot", BB3BET_Q)
     pf_qs = load_preflop()
-    qs = qs + tr_qs + sb_qs + btnsb_qs + co_qs + utg_qs + hj_qs + bb3bet_qs + pf_qs
+    fd_qs = load_foundations()
+    qs = qs + tr_qs + sb_qs + btnsb_qs + co_qs + utg_qs + hj_qs + bb3bet_qs + pf_qs + fd_qs
     cpool = load_contrast_pool()
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
                             capture_output=True, text=True).stdout.strip() or "local"
     print(f"  ({len(tr_qs)} turn/river + {len(sb_qs)} SB-vs-BB + {len(btnsb_qs)} BTN-vs-SB + "
           f"{len(co_qs)} CO-vs-BB + {len(utg_qs)} UTG-vs-BB + {len(hj_qs)} HJ-vs-BB + "
           f"{len(bb3bet_qs)} 3-bet-pot + "
-          f"{len(pf_qs)} pre-flop spots blended in; {len(cpool)} contrast-pool spots)")
+          f"{len(pf_qs)} pre-flop + {len(fd_qs)} foundations spots blended in; "
+          f"{len(cpool)} contrast-pool spots)")
     cont = load_continuation()
     print(f"  ({sum(len(h) for h in cont)} continuation step-records in {len(cont)} hands)")
     exploit = load_exploit()
@@ -927,7 +937,11 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .prow .pn{font-family:var(--label);font-size:11px;text-transform:uppercase;width:62px;color:var(--ink);font-weight:700}
 .prow .pbar{flex:1;height:9px;background:var(--panel2);border-radius:5px;overflow:hidden}
 .prow .pbar>i{display:block;height:100%;border-radius:5px;transition:width .5s ease}
-.c-pre{background:linear-gradient(90deg,#8aa0ff,#5b74ff)}.c-flop{background:linear-gradient(90deg,#5ee7a8,#2fd08a)}.c-turn{background:linear-gradient(90deg,#ffd67a,#ffb020)}.c-river{background:linear-gradient(90deg,#ff8a6e,#ff6a4d)}
+.c-pre{background:linear-gradient(90deg,#8aa0ff,#5b74ff)}.c-flop{background:linear-gradient(90deg,#5ee7a8,#2fd08a)}.c-turn{background:linear-gradient(90deg,#ffd67a,#ffb020)}.c-river{background:linear-gradient(90deg,#ff8a6e,#ff6a4d)}.c-found{background:linear-gradient(90deg,#c9a0ff,#9b6dff)}
+.acts.found{grid-template-columns:1fr}
+.acts.found.n-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.acts.found .act{min-height:48px;padding:10px 12px}
+.acts.found .act .al{font-size:13px;font-weight:600;text-align:center;white-space:normal}
 .prow .pv{font-family:var(--mono);font-size:11px;color:var(--muted);width:36px;text-align:right}
 /* settings view */
 .s-sec{font-family:var(--label);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;margin:20px 0 8px}
@@ -1203,9 +1217,9 @@ __SUITDEFS__
     <div class="phead"><div class="ptitle">Settings</div></div>
     <div class="s-sec">What to train</div>
     <div class="street-seg" id="cats" role="group" aria-label="Which part to train">
-      <button data-c="all" type="button">All</button><button data-c="preflop" type="button">Pre-flop</button><button data-c="flop" type="button">Flop</button><button data-c="turn" type="button">Turn</button><button data-c="river" type="button">River</button>
+      <button data-c="all" type="button">All</button><button data-c="foundations" type="button">Foundations</button><button data-c="preflop" type="button">Pre-flop</button><button data-c="flop" type="button">Flop</button><button data-c="turn" type="button">Turn</button><button data-c="river" type="button">River</button>
     </div>
-    <p class="lvl-hint">Pick a street to drill, or All for a mix. Changing this starts a fresh session.</p>
+    <p class="lvl-hint">Pick a street to drill, Foundations for the basics, or All for a mix. Changing this starts a fresh session.</p>
     <div class="s-sec">Exploit an opponent</div>
     <div class="street-seg" id="excats" role="group" aria-label="Which opponent to exploit">
       <button data-c="ex:station" type="button">Station</button><button data-c="ex:nit" type="button">Nit</button><button data-c="ex:maniac" type="button">Maniac</button><button data-c="ex:lag" type="button">LAG</button><button data-c="ex:reg" type="button">Reg</button>
@@ -1242,7 +1256,8 @@ __SUITDEFS__
     <span class="demo">Turn / river</span> spots are now full-range solver output too, but
     <b>unconditioned</b> (ranges are card-removal only, not filtered by a prior check/check line),
     with Fold/Call/Raise available on facing-a-bet nodes.
-    Pre-flop spots are calibrated ranges (solver-approximate, tuned to standard frequencies).<br>
+    Pre-flop spots are calibrated ranges (solver-approximate, tuned to standard frequencies).
+    Foundations spots are deterministic drills (board reading, pot odds, hand reading, equity) — no solver strategy.<br>
     Prefer to review the answers at a glance? See the <a href="preview.html">content gallery</a>.
     </div>
     </details>
@@ -1516,7 +1531,7 @@ function normalizeStats(x){
   const classified=out.solid+out.ok+out.leak;out.n=classified;
   const streets=x.street&&typeof x.street==="object"?x.street:{};
   let remaining=out.n;
-  ["preflop","flop","turn","river"].forEach(k=>{
+  ["foundations","preflop","flop","turn","river"].forEach(k=>{
     const s=streets[k];if(!s||typeof s!=="object")return;
     const n=Math.min(remaining,safeCount(s.n)),hit=Math.min(n,safeCount(s.hit));
     out.street[k]={n:n,hit:hit};remaining-=n;
@@ -1540,7 +1555,7 @@ function recordGrade(bucket,tier,hit){
 function saveLifetime(){try{localStorage.setItem("trainer-progress",JSON.stringify(lifetime));}catch(e){}}
 let mode=(function(){try{const m=localStorage.getItem("lang");return (m==="poker"||m==="learning"||m==="plain"||m==="progressive")?m:"progressive";}catch(e){return "progressive";}})();
 // Which part to train (pre-flop / flop / turn / river / all).
-let cat=(function(){try{const c=localStorage.getItem("cat");return (["all","preflop","flop","turn","river"].includes(c)||(typeof c==="string"&&c.startsWith("ex:")&&(EXPLOIT[c.slice(3)]||[]).length))?c:"all";}catch(e){return "all";}})();
+let cat=(function(){try{const c=localStorage.getItem("cat");return (["all","foundations","preflop","flop","turn","river"].includes(c)||(typeof c==="string"&&c.startsWith("ex:")&&(EXPLOIT[c.slice(3)]||[]).length))?c:"all";}catch(e){return "all";}})();
 // Adaptive mode: each concept shows in plain words until you've EARNED it (played a
 // spot that uses it well); then it graduates to the poker term + its meaning.
 const VALID_TERMS=new Set(["positions","streets"].concat(Object.keys(TERMS.poker.reason).map(r=>"reason:"+r)));
@@ -1775,9 +1790,9 @@ function pfHeadline(q){
 function addActionButton(box,a,i){
   const b=document.createElement("button");b.type="button";b.className="act";b.dataset.a=a;
   // Preflop buttons share the same labels as feedback (Open 2.5bb / 3-bet / …).
-  const preflop=!!(cur&&cur.preflop);
-  const l=document.createElement("span");l.className="al";l.textContent=preflop?pfActLabel(a):actionPrimary(a);
-  const sub=document.createElement("span");sub.className="asub";sub.textContent=preflop?"":actionSecondary(a);
+  const preflop=!!(cur&&cur.preflop),found=!!(cur&&cur.foundations);
+  const l=document.createElement("span");l.className="al";l.textContent=found?a:preflop?pfActLabel(a):actionPrimary(a);
+  const sub=document.createElement("span");sub.className="asub";sub.textContent=(preflop||found)?"":actionSecondary(a);
   const k=document.createElement("span");k.className="k";k.textContent=String(i+1);
   b.appendChild(l);if(sub.textContent)b.appendChild(sub);b.appendChild(k);
   b.onclick=()=>answer(a);box.appendChild(b);
@@ -1802,9 +1817,22 @@ function decisionHeadline(q){
   if(node.endsWith("_vs_bet"))return villain+" bets "+(q.bet_pct||66)+"% pot";
   return "Your action";
 }
+function renderFoundations(q){
+  const posEl=document.getElementById("pos");posEl.textContent=q.unit_label||"Foundations";posEl.className="pos";
+  document.getElementById("sitcontext").textContent="Foundations";
+  const bd=document.getElementById("demotag");bd.hidden=!q.badge;bd.textContent=q.badge||"";
+  renderSeats(q);
+  if(q.board&&q.board.length){const b=document.getElementById("board");if(b)render(q.board,b);}
+  if(q.hero&&q.hero.length){const h=document.getElementById("hero");if(h)render(q.hero,h);}
+  const box=document.getElementById("acts");box.innerHTML="";box.className="acts found n-"+q.actions.length;
+  q.actions.forEach((a,i)=>addActionButton(box,a,i));
+  setHint(q.actions.length);
+  document.getElementById("prog").style.width=(100*(shownStep()+1)/Math.max(1,order.length))+"%";
+}
 function renderQuestion(q){
   var mc=document.getElementById("movecue");if(mc)mc.hidden=false;   // show the decision cue on a fresh hand
   updateHall(q);   // refresh the suit-tinted ambient hall for this hand
+  if(q.foundations)return renderFoundations(q);
   if(q.preflop)return renderPreflop(q);
   const posEl=document.getElementById("pos");posEl.textContent=q.is_oop?"Out of position":"In position";posEl.className="pos "+(q.is_oop?"oop":"ip");
   // Position is already the coloured lead label; keep the supporting line compact on phones.
@@ -1833,7 +1861,7 @@ function setHint(n){const el=document.getElementById("hint");if(!el)return;
 function renderSeats(q){
   const el=document.getElementById("seats");if(!el)return;
   el.innerHTML="";el.hidden=false;
-  el.appendChild(q.preflop?preflopRing(q):ringTable(q));
+  el.appendChild(q.foundations?foundationsStage(q):q.preflop?preflopRing(q):ringTable(q));
 }
 // Seat helpers shared by the postflop heads-up duel and the preflop 6-max ring.
 const RING_ORDER=["BTN","SB","BB","UTG","HJ","CO"];
@@ -1948,9 +1976,9 @@ const ROOMPHOTOS=__ROOMPHOTOS__;   // street -> illustrated room, shown faintly 
 function updateHall(q){
   const room=document.getElementById("hall-room"),photo=document.getElementById("hall-photo");
   if(!room)return;
-  const h=q.preflop?q.hand:q.hero;
-  const street=q.preflop?"preflop":(q.street||"flop");
-  const oop=q.preflop?!(q.pos==="BTN"||q.pos==="CO"||q.pos==="HJ"):!!q.is_oop;
+  const h=q.foundations?(q.hero&&q.hero.length?q.hero:(q.board||[])):q.preflop?q.hand:q.hero;
+  const street=q.foundations?(q.board&&q.board.length?"flop":"preflop"):q.preflop?"preflop":(q.street||"flop");
+  const oop=q.foundations?false:q.preflop?!(q.pos==="BTN"||q.pos==="CO"||q.pos==="HJ"):!!q.is_oop;
   const s1=(h&&h[0])?h[0][1]:"s",s2=(h&&h[1])?h[1][1]:"s";
   room.style.backgroundImage="none";room.innerHTML=geoRoom(street,s1,s2,oop);   // geometry bakes suit tint + position temperature
   if(photo){const img=ROOMPHOTOS[street];photo.style.backgroundImage=img?("url("+img+")"):"none";}
@@ -1971,6 +1999,26 @@ function ringTable(q){
   html+='<div class="t-mid"><div class="cap" id="boardcap">Flop</div><div class="cards" id="board"></div>'
     +'<div class="cap" id="herocap">Your hand</div><div class="cards" id="hero"></div></div>';
   const w=document.createElement("div");w.className="stage duel";w.innerHTML=html;return w;
+}
+function foundationsStage(q){
+  const w=document.createElement("div");
+  w.className="stage"+(q.board&&q.board.length?" duel":"");
+  const dial=document.createElement("div");dial.className="posdial";
+  const line=document.createElement("div");line.className="action-line";line.textContent=q.prompt;
+  dial.appendChild(line);w.appendChild(dial);
+  const mid=document.createElement("div");mid.className="t-mid";
+  if(q.board&&q.board.length){
+    const c=document.createElement("div");c.className="cap";c.id="boardcap";c.textContent="Board";
+    const cards=document.createElement("div");cards.className="cards";cards.id="board";
+    mid.appendChild(c);mid.appendChild(cards);
+  }
+  if(q.hero&&q.hero.length){
+    const c=document.createElement("div");c.className="cap";c.id="herocap";c.textContent="Your hand";
+    const cards=document.createElement("div");cards.className="cards";cards.id="hero";
+    mid.appendChild(c);mid.appendChild(cards);
+  }
+  w.appendChild(mid);
+  return w;
 }
 function preflopRing(q){
   const hero=q.pos, villain=q.tbettor||q.opener||null;
@@ -1994,7 +2042,7 @@ function renderHand(){                                  // draw the current hist
   // continuation counts by HAND ("Hand 2 of 5"); drills count by spot ("Hand 3 of 10").
   const step=contMode?contHandNum(shownStep()):Math.min(shownStep()+1,order.length);
   const total=contMode?contHands:order.length;
-  document.getElementById("session-kind").textContent=bonus?"Compare practice":contMode?(cat.startsWith("ex:")?("Exploit: "+(EX_LABEL[cat.slice(3)]||cat.slice(3))):"Play a hand"):({all:"All streets",preflop:"Preflop",flop:"Flop",turn:"Turn",river:"River"}[cat]||(cat.startsWith("ex:")?"Exploit review":"Quick session"));
+  document.getElementById("session-kind").textContent=bonus?"Compare practice":contMode?(cat.startsWith("ex:")?("Exploit: "+(EX_LABEL[cat.slice(3)]||cat.slice(3))):"Play a hand"):({all:"All streets",foundations:"Foundations",preflop:"Preflop",flop:"Flop",turn:"Turn",river:"River"}[cat]||(cat.startsWith("ex:")?"Exploit review":"Quick session"));
   document.getElementById("session-counter").hidden=bonus;
   document.getElementById("session-bonus").hidden=!bonus;
   document.getElementById("skip-bonus").hidden=!(bonus&&e.pick==null);
@@ -2037,6 +2085,27 @@ function skipBonus(){
   pos++;newHand();document.getElementById("play-card").focus({preventScroll:true});
 }
 
+function renderFoundationsFeedback(q,a,gained){
+  const correct=a===q.answer;
+  document.querySelectorAll("#acts .act").forEach(b=>{b.disabled=true;b.className="act";
+    if(b.dataset.a===q.answer)b.classList.add("g-best");
+    if(b.dataset.a===a)b.classList.add("chosen");
+    if(b.dataset.a===a&&!correct)b.classList.add("g-major_error");});
+  const v=document.getElementById("verdict");
+  if(correct){v.className="verdict v-best";v.textContent="✓ Correct — "+a+".";}
+  else{v.className="verdict v-major_error";v.textContent="✗ Not quite — the answer is "+q.answer+".";}
+  document.getElementById("learn-summary").textContent=correct?"Why that's right":"Why "+q.answer+" is right";
+  const rd=document.getElementById("read");rd.hidden=true;rd.innerHTML="";
+  document.getElementById("reason").style.display="none";
+  document.getElementById("head").textContent=q.why;
+  document.getElementById("cost").hidden=true;document.getElementById("det").innerHTML="";
+  const ut=document.getElementById("unlock");ut.hidden=true;
+  const ruleEl=document.getElementById("rule");ruleEl.hidden=false;ruleEl.innerHTML="";
+  const lb=document.createElement("b");lb.textContent="Rule of thumb";ruleEl.appendChild(lb);
+  ruleEl.appendChild(document.createTextNode("This is a fundamentals check — the answer is computed from the cards and the math, not a solver strategy."));
+  document.querySelector(".mix").style.display="none";
+  document.getElementById("fb").className="fb on";sheetOpen(true);
+}
 function renderPreflopFeedback(q,a,gained){
   const correct=a===q.answer, closeOk=q.mixed&&a===q.alt;
   document.querySelectorAll("#acts .act").forEach(b=>{b.disabled=true;b.className="act";
@@ -2134,7 +2203,7 @@ function strengthTag(lv,drawing){if(lv==null)return"";
 function renderFactors(q){
   const el=document.getElementById("factors"),wrap=document.getElementById("analytics"),sum=document.getElementById("analytics-sum");
   if(!el||!wrap)return;
-  if(q.preflop||eff("reason:"+q.reason)==="poker"){wrap.hidden=true;el.innerHTML="";return;}
+  if(q.foundations||q.preflop||eff("reason:"+q.reason)==="poker"){wrap.hidden=true;el.innerHTML="";return;}
   wrap.hidden=false;el.innerHTML="";
   const rd=handRead(q.hero,q.board),items=decisionFactors(q,rd),hand=items[0];
   const drawing=rd.cat==="high"&&!!rd.draw;   // no made hand, but a draw
@@ -2221,7 +2290,7 @@ function renderHandDetail(q){
   const st=sec("Where you stand");const p=document.createElement("p");p.className="hd-now";p.textContent=d.standing;st.appendChild(p);
 }
 let handDetailReturn=null;
-function openHandDetail(){if(!cur||cur.preflop||!(cur.board&&cur.board.length>=3))return;
+function openHandDetail(){if(!cur||cur.preflop||cur.foundations||!(cur.board&&cur.board.length>=3))return;
   handDetailReturn=document.activeElement;
   renderHandDetail(cur);document.getElementById("handdetail").className="hd on";
   var s=document.getElementById("hd-scrim");if(s)s.hidden=false;
@@ -2276,7 +2345,7 @@ const RIVER_AXIS_WHY={
 };
 function cap1(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
 function findContrast(q){
-  if(q.preflop||!CONTRAST[q.reason])return null;
+  if(q.preflop||q.foundations||!CONTRAST[q.reason])return null;
   const rd=handRead(q.hero,q.board),vs=CONTRAST[q.reason].vs;
   // A twin is only instructive if the HAND is genuinely similar — otherwise the strength gap
   // IS the reason it plays differently (two pair calls / one pair folds is trivial, not a
@@ -2286,7 +2355,7 @@ function findContrast(q){
   const myFam=fam(q);
   let best=null,bs=-1;
   for(let i=0;i<ALLSPOTS.length;i++){const o=ALLSPOTS[i];   // deck + contrast-only pool
-    if(o===q||o.preflop||vs.indexOf(o.reason)<0)continue;
+    if(o===q||o.preflop||o.foundations||vs.indexOf(o.reason)<0)continue;
     const ord=handRead(o.hero,o.board);
     if(ord.cat!==rd.cat)continue;                                    // same made-hand category only
     // strongly prefer the SAME situation (both check/bet, or both facing-a-bet), then same
@@ -2371,6 +2440,7 @@ function renderContrast(q){
 function renderFeedback(q,a,gained){
   var mc=document.getElementById("movecue");if(mc)mc.hidden=true;   // decision made — hide the cue
   renderContrast(q);renderFactors(q);
+  if(q.foundations)return renderFoundationsFeedback(q,a,gained);
   if(q.preflop)return renderPreflopFeedback(q,a,gained);
   document.querySelector(".mix").style.display="";
   document.querySelectorAll("#acts .act").forEach(b=>{
@@ -2550,6 +2620,15 @@ function answer(a){
   if(answered)return;answered=true;chosen=a;if(hist[hidx])hist[hidx].pick=a;updateNav();
   document.getElementById("coach").hidden=false;
   const inSession=!(hist[hidx]&&hist[hidx].bonus);
+  if(cur.foundations){
+    const hit=a===cur.answer,tier=hit?"solid":"leak";
+    if(inSession){recordGrade(stats,tier,hit);recordGrade(lifetime,tier,hit);saveLifetime();}
+    if(inSession&&!hit)sessionMisses.push(cur);
+    syncStatsUI();
+    renderFeedback(cur,a,[]);
+    document.getElementById("next").focus({preventScroll:true});
+    return;
+  }
   if(cur.preflop){
     const correct=a===cur.answer, closeOk=!correct&&cur.mixed&&a===cur.alt;
     const hit=correct||closeOk,tier=hit?"solid":"leak";
@@ -2697,8 +2776,8 @@ function setMode(m){mode=m;try{localStorage.setItem("lang",m);}catch(e){}applyMo
     if(!document.getElementById("v-train").classList.contains("on"))closeSheet(false);}}}
 document.querySelectorAll("#lang button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
 // --- train-category selector: filter the deck to one street (or all) ---
-function qcat(q){return q.preflop?"preflop":(q.street||"flop");}
-function catCounts(){const c={all:Q.length,preflop:0,flop:0,turn:0,river:0};Q.forEach(q=>{const k=qcat(q);c[k]=(c[k]||0)+1;});return c;}
+function qcat(q){return q.foundations?"foundations":q.preflop?"preflop":(q.street||"flop");}
+function catCounts(){const c={all:Q.length,foundations:0,preflop:0,flop:0,turn:0,river:0};Q.forEach(q=>{const k=qcat(q);c[k]=(c[k]||0)+1;});return c;}
 const CONT_HANDS_PER_SESSION=5;
 // order entries are either a Q index (drills) or a continuation step-object (play-a-hand).
 function spotAt(i){const o=order[i];return (o&&typeof o==="object")?o:Q[o];}
@@ -2723,12 +2802,12 @@ function buildOrder(){
     order=pool.slice(0,Math.min(SESSION_SIZE,pool.length));
   }else{
     // "All streets" fallback (no continuation pack): deliberate spread so it isn't ~83% flop.
-    const g={preflop:[],flop:[],turn:[],river:[]};
+    const g={foundations:[],preflop:[],flop:[],turn:[],river:[]};
     for(const i of Q.keys()){(g[qcat(Q[i])]||g.flop).push(i);}
     for(const k in g)shuffle(g[k]);
-    const target={preflop:3,flop:4,turn:1,river:2},pick=[];
-    for(const k of ["preflop","flop","turn","river"]){const n=Math.min(target[k],g[k].length);for(let j=0;j<n;j++)pick.push(g[k].shift());}
-    const rest=shuffle([].concat(g.preflop,g.flop,g.turn,g.river));   // top up from whatever remains
+    const target={foundations:2,preflop:2,flop:3,turn:1,river:2},pick=[];
+    for(const k of ["foundations","preflop","flop","turn","river"]){const n=Math.min(target[k],g[k].length);for(let j=0;j<n;j++)pick.push(g[k].shift());}
+    const rest=shuffle([].concat(g.foundations,g.preflop,g.flop,g.turn,g.river));   // top up from whatever remains
     while(pick.length<SESSION_SIZE&&rest.length)pick.push(rest.shift());
     order=shuffle(pick).slice(0,SESSION_SIZE);
   }
@@ -2831,6 +2910,17 @@ let coachMsgs=[],coachBusy=false,coachErr=null,coachGen=0;
 // generic theory. Everything here already drives the on-screen feedback.
 function coachSpot(q){
   const L=[];
+  if(q.foundations){
+    L.push("This is a FUNDAMENTALS quiz (not a GTO decision).");
+    L.push("Unit: "+(q.unit_label||q.unit||"foundations")+".");
+    L.push("Question: "+q.prompt);
+    if(q.board&&q.board.length)L.push("Board: "+cardsText(q.board)+".");
+    if(q.hero&&q.hero.length)L.push("Hero hand: "+cardsText(q.hero)+".");
+    L.push("Options: "+q.actions.join(" | "));
+    L.push("Correct answer: "+q.answer+".");
+    if(q.why)L.push("Explanation: "+q.why);
+    return L.join("\n");
+  }
   if(q.preflop){
     L.push("Street: PRE-FLOP.");
     L.push("Your position: "+(q.pos||"?")+".");
@@ -2971,7 +3061,7 @@ function coachReset(){coachGen++;coachMsgs=[];coachErr=null;coachBusy=false;coac
 // ===== mobile-app shell: view switching, progress, settings =====
 function renderProgress(){
   const el=document.getElementById("mastery");if(!el)return;el.innerHTML="";
-  [["preflop","Preflop","c-pre"],["flop","Flop","c-flop"],["turn","Turn","c-turn"],["river","River","c-river"]].forEach(function(r){
+  [["foundations","Foundations","c-found"],["preflop","Preflop","c-pre"],["flop","Flop","c-flop"],["turn","Turn","c-turn"],["river","River","c-river"]].forEach(function(r){
     const s=lifetime.street[r[0]]||{n:0,hit:0};const pct=s.n?Math.round(100*s.hit/s.n):0;
     const row=document.createElement("div");row.className="prow";
     const nm=document.createElement("span");nm.className="pn";nm.textContent=r[1];

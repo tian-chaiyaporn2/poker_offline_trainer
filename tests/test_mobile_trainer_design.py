@@ -104,6 +104,16 @@ def test_generated_question_data_is_internally_consistent():
             actions = q["actions"]
             assert len(actions) >= 2
             assert len(actions) == len(set(actions))
+            if q.get("foundations"):
+                target = q["answer"]
+                assert target in actions
+                assert q["prompt"] and q["why"]
+                cards = q.get("board", []) + q.get("hero", [])
+                assert len(cards) == len(set(cards))
+                signature = ("foundations", q.get("unit"), q.get("kind"), q["prompt"], tuple(actions))
+                assert signature not in signatures
+                signatures.add(signature)
+                continue
             target = q["answer"] if q.get("preflop") else q["preferred"]
             assert target in actions
             cards = q["hand"] if q.get("preflop") else q["board"] + q["hero"]
@@ -138,6 +148,9 @@ def test_mobile_ux_copy_and_compact_layout_contract():
     assert 'oppAct="Bets "+(q.bet_pct||66)+"%"' in source
     assert 'document.getElementById("sitcontext").textContent=cap1(q.street)' in source
     assert "with Fold/Call/Raise available on facing-a-bet nodes" in source
+    assert 'data-c="foundations"' in source
+    assert "function renderFoundations(q)" in source
+    assert "def load_foundations" in source
 
 
 def test_session_history_and_comparison_practice_are_accounted_correctly():

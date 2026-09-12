@@ -388,38 +388,29 @@ The scorer emits two backlogs that drive planning:
 > [`docs/preflop_and_exploit_plan.md`](preflop_and_exploit_plan.md).
 
 
-1. **MVP (current)** — flop decisions for one scenario (BTN opens, BB calls,
-   single-raised pot, 100 bb, 66% c-bet), on a prioritized board set. Launch gate:
-   ≥1,200 accepted records with coverage across nodes, textures, hand categories,
-   and reasons (measured by the content-yield report). **Status: met** — the
-   full-range run produced 5,737 signed records; ~95.5% flop-texture coverage after
-   the coverage boards (§13.2 solve backlog).
-2. **Breadth first — additional positions (committed, next).** The highest-value
-   expansion is *more scenarios*, not more depth on one: a player faces many
-   position matchups daily, so covering them widens what the trainer teaches far
-   more than adding an action to a single spot. The pipeline is scenario-
-   parameterized (`--scenario`); each matchup supplies its own preflop ranges and
-   reuses the board/priority machinery. **Next scenario: SB vs BB single-raised
-   pot** (blind-vs-blind; note the OOP player is the pre-flop aggressor here,
-   inverting the BTN-vs-BB range dynamic).
-3. **Raise action (committed, depth pass).** fold/call/**raise** (FR-011) is
-   important and *will* be solved — as a re-solve of each shipped scenario's boards
-   with the raise action enabled (~3× cost, multi-commit). Sequenced after the
-   first breadth expansion, then layered onto each scenario.
-4. **Turn & river decisions** — extract from the *same* full-street solves via
-   representative-runout sampling (brick / flush-completing / pairing / overcard),
-   prioritized by the same scorer. No additional GPU budget beyond the flop runs.
-5. **Further scope (compute-bounded)** — 3-bet/4-bet pots, stack depths, and
-   multiple bet sizes. Each is a *new solve family* that multiplies compute and
-   pushes GPU memory (near the T4 float32 limit at full range with raise), so these
-   are sequenced deliberately, not bundled.
+1. **MVP** — flop decisions for one scenario (BTN opens, BB calls, single-raised
+   pot, 100 bb, 66% c-bet). Launch gate: ≥1,200 accepted records. **Status: met**
+   — `flop_pack_v1_fullrange.db` is 8,275 signed records after dedup.
+2. **Breadth — additional positions.** **Status: shipped.** SB-vs-BB, BTN-vs-SB,
+   CO/UTG/HJ-vs-BB, and a low-SPR BTN-vs-BB 3-bet pot are in the trainer mix.
+   Isolated turn/river (unconditioned runouts) and 48-board continuation +
+   exploit libraries are also shipped.
+3. **Raise action (FR-011).** Solver + notebooks exist; a 240-record raise-demo
+   pack is in `output/packs/`. **Status: held — needs Kaggle.** Production
+   fullrange / SB-vs-BB / turn-river packs are still Fold/Call on vs-bet nodes
+   until the GPU raise re-solves land and are blended into `build_trainer.py`.
+4. **Turn & river as continuations.** **Status: Phase 0/1 shipped** (villain
+   plays its solved main line). Isolated turn/river drills remain unconditioned.
+   **Phase 2 (branching / sampled villain) is held — needs Kaggle** to regenerate
+   the continuation library with sampled raise / check-raise lines.
+5. **Further scope (compute-bounded, held).** 4-bet pots, extra stack depths,
+   and multiple bet sizes. Each is a new solve family; do not start without GPU
+   budget. 3-bet (one matchup) is already shipped.
 
-Prioritization: **breadth (positions) before depth (raise, turn/river)** for the
-next investment, because it expands the product's real-world coverage most per
-solve; raise and turn/river then deepen each shipped scenario. Items 2–5 move the
-corresponding entries in §8 from "out of POC scope" to "roadmapped after
-validation"; the single-scenario, flop-only §8 boundary describes the **MVP**, not
-the product ceiling.
+Prioritization going forward: **raise pass (GPU) → continuation Phase 2 (GPU) →
+new solve families (GPU).** CPU-side work that does not need Kaggle: foundations in the trainer (done),
+docs (done), and attaching real preflop CFR EVs to BTN-vs-BB chart spots (done;
+other seats stay chart-sentinel so we don't teach HU-tree opens from UTG).
 
 ### 13.4 Foundations content (complementary stream)
 
@@ -427,7 +418,9 @@ Alongside solver-derived decisions, a deterministic **foundations** stream
 (`pokertrainer.foundations`) generates fundamentals questions — board reading, pot
 odds, hand reading, equity — computed from the same primitives (no invented
 strategy). These require no solve and broaden the curriculum below the
-spot-specific lessons.
+spot-specific lessons. **Status: shipped** — `demo/build_trainer.py` embeds a
+stratified sample and the trainer has a Foundations filter (multiple-choice,
+exact-match grading).
 
 ### 13.5 Resourcing summary
 
