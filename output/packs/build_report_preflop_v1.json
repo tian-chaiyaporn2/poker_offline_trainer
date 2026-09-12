@@ -18,7 +18,7 @@
     "note": "Chart-sampled spots; ev/preferred from 2-player raise-ladder CFR (BTN-vs-BB tree, realization model). Not exact 6-max GTO."
   },
   "provenance": {
-    "git_commit": "e5f82c86bb0c196f9965a5acea13a6af010b905b",
+    "git_commit": "42ecb765b8507fe3ff2a55a86daae2d3171139b2",
     "solver_model": "preflop_cfr_hu_subgame_v1"
   },
   "grade_thresholds_pct_pot": {
@@ -27,13 +27,13 @@
     "acceptable": 3.0,
     "costly": 10.0
   },
-  "record_count": "83",
+  "record_count": "89",
   "signing_scheme": "hmac-sha256-dev",
   "default_pot_bb": "2.5",
-  "content_hash": "b7704511e04ee7d72775dca567e9af4573bf0881ac734886180c41be2de6348e",
-  "signature": "7e80fe2cb1c97909e90bca1bb93b81d88d1638d9c6b2c98494a129e5842563f3",
-  "db_bytes": 122880,
-  "gz_bytes": 12038,
-  "records_accepted": 83,
-  "records_after_dedup": 83
+  "content_hash": "5c695a144980e830ab64794cb2cbb6af8ba9026a063e8430e52f71437c753967",
+  "signature": "d2aa3ad6125713c767d865167307439affe3fa0299ad1d5f75706257a5469510",
+  "db_bytes": 126976,
+  "gz_bytes": 12886,
+  "records_accepted": 89,
+  "records_after_dedup": 89
 }
