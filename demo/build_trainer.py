@@ -55,14 +55,14 @@ def _fontface():
 # suit shapes + per-suit (light, light_hi, dark, dark_lo, lightRegion, foldCurve)
 _SPD = 'M50 9 C 61 32, 90 46, 90 64 C 90 78, 79 85, 68 82.5 C 62 81, 57 77, 54.5 72 C 55 79, 58 87, 65 92 L 35 92 C 42 87, 45 79, 45.5 72 C 43 77, 38 81, 32 82.5 C 21 85, 10 78, 10 64 C 10 46, 39 32, 50 9 Z'
 _HRT = 'M50 86 C 22 63, 8 48, 8 32 C 8 18, 19 10, 31 10 C 40 10, 47 15, 50 23 C 53 15, 60 10, 69 10 C 81 10, 92 18, 92 32 C 92 48, 78 63, 50 86 Z'
-_DIA = 'M50 8 C 58 24, 76 42, 92 50 C 76 58, 58 76, 50 92 C 42 76, 24 58, 8 50 C 24 42, 42 24, 50 8 Z'
+_DIA = 'M50 6 C 57 24, 70 40, 86 50 C 70 60, 57 76, 50 94 C 43 76, 30 60, 14 50 C 30 40, 43 24, 50 6 Z'
 _CLB = '<circle cx="50" cy="31" r="19"/><circle cx="30" cy="56" r="19"/><circle cx="70" cy="56" r="19"/><path d="M50 48 C 47 68, 41 83, 30 92 L 70 92 C 59 83, 53 68, 50 48 Z"/>'
 _GEOM = {'heart': f'<path d="{_HRT}"/>', 'spade': f'<path d="{_SPD}"/>',
          'diam': f'<path d="{_DIA}"/>', 'club': _CLB}
 _SUIT = {
     'spade': ('#34373d', '#454951', '#141519', '#0c0d11', 'M50 11 C 39 30 12 46 12 64 C 12 79 27 85 39 79 C 51 73 58 56 57 42 C 56 30 54 19 50 11 Z', 'M50 11 C 54 19 56 30 57 42 C 58 56 51 73 39 79'),
     'heart': ('#e8232f', '#f6454f', '#a8121d', '#880c15', 'M50 22 C 45 14 38 10 30 10 C 18 10 8 18 8 32 C 8 47 24 63 50 82 C 61 62 61 36 50 22 Z', 'M50 22 C 61 36 61 62 50 82'),
-    'diam': ('#f4551b', '#ff7134', '#c31f12', '#9f170c', 'M50 8 C 41 26 22 44 8 50 C 24 57 43 75 50 92 C 61 66 61 34 50 8 Z', 'M50 8 C 61 34 61 66 50 92'),
+    'diam': ('#e2532b', '#ee6d45', '#a92a1b', '#86190f', 'M50 6 C 43 24 30 40 14 50 C 30 60 43 76 50 94 C 60 66 60 34 50 6 Z', 'M50 6 C 60 34 60 66 50 94'),
     'club': ('#334339', '#415448', '#15231c', '#0d1712', 'M48 10 C 40 14 34 22 32 30 C 20 33 10 44 12 56 C 14 70 28 80 42 75 C 52 71 58 58 57 42 C 56 28 54 18 48 10 Z', 'M48 10 C 54 18 56 28 57 42 C 58 58 52 71 42 75'),
 }
 
@@ -90,12 +90,11 @@ def _suitdefs():
     return d
 
 DB = "output/packs/flop_pack_v1_fullrange.db"
-TR_DB = "output/packs/flop_pack_turnriver_fullrange.db"  # turn/river decisions (full range; still unconditioned)
 SB_DB = "output/packs/flop_pack_sb_vs_bb.db"           # 2nd scenario: SB vs BB (full range)
 BTNSB_DB = "output/packs/flop_pack_btn_vs_sb.db"       # BTN vs SB single-raised pot
-CO_DB = "output/packs/flop_pack_co_vs_bb.db"           # CO vs BB single-raised pot (pending)
-UTG_DB = "output/packs/flop_pack_utg_vs_bb.db"         # UTG vs BB single-raised pot (pending)
-HJ_DB = "output/packs/flop_pack_hj_vs_bb.db"           # HJ vs BB single-raised pot (pending)
+CO_DB = "output/packs/flop_pack_co_vs_bb.db"           # CO vs BB single-raised pot
+UTG_DB = "output/packs/flop_pack_utg_vs_bb.db"         # UTG vs BB single-raised pot
+HJ_DB = "output/packs/flop_pack_hj_vs_bb.db"           # HJ vs BB single-raised pot
 BB3BET_DB = "output/packs/flop_pack_btn_bb_3bet.db"    # BB 3-bets, BTN calls — low-SPR 3-bet pot
 PER_REASON = 6          # cap questions per reason for variety
 MAX_Q = 60
@@ -181,6 +180,8 @@ def _to_q(d, oop_pos="BB", ip_pos=None, bet_pct=66):
         "headline": d["headline"], "detail": json.loads(d["detail"]),
         # Near-indifferent spots: let feedback treat them as ties, not a punished pick.
         "mixed": bool(d.get("mixed")),
+        # Conditioned turn/river drills: the completed earlier streets of the solved line.
+        **({"line": d["line"]} if d.get("line") else {}),
     }
 
 
@@ -205,42 +206,121 @@ def load_questions():
     return meta, [_to_q(d, oop, ip, bet_pct) for d in picked]
 
 
-def load_turnriver(n=TR_Q, required=True):
-    """Turn + river decisions from the full-range later-street pack (still unconditioned —
-    ranges are card-removal only, not filtered by a prior check/check line)."""
-    if not os.path.exists(TR_DB):
-        msg = f"optional turn/river pack missing ({TR_DB})"
-        if required:
-            raise SystemExit(msg + " — pass --allow-missing-demo-packs to skip")
-        print(f"  warn: {msg} — skipping")
-        return []
-    _require_verified(TR_DB)
-    c = sqlite3.connect(TR_DB)
-    rows = c.execute(f"SELECT {','.join(COLS)} FROM flop_decision").fetchall()
-    c.close()
-    by_key = defaultdict(list)
-    for r in rows:
-        d = dict(zip(COLS, r))
-        street = STREET.get(len(d["board"]), "flop")
-        by_key[(street, d["node"], d["reason"])].append(d)
-    from itertools import zip_longest
-    # Interleave facing-a-bet (Fold/Call/Raise) groups with first-to-act/checked-to
-    # (Check/Bet) groups, so the turn/river sample shows a MIX — otherwise one node type
-    # fills the whole cap and the raise content (or the check/bet content) never appears.
-    items = sorted(by_key.items(), key=lambda kv: kv[0])
-    vb = [g[:2] for k, g in items if "vs_bet" in k[1]]
-    nb = [g[:2] for k, g in items if "vs_bet" not in k[1]]
-    groups = [g for pair in zip_longest(vb, nb) for g in pair if g is not None]
-    picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
-    oop = _oop_pos(picked); ip = _ip_pos(picked, oop)
+def _line_events(step, pref, villain_action):
+    """Hero/opponent actions one continuation step contributes to the hand's line."""
+    node = step["node"]
+    ev = []
+    if node.endswith("_vs_check"):
+        ev.append(("opp", "check"))
+    elif node.endswith("_vs_bet"):
+        ev.append(("opp", "bet"))
+    ev.append(("you", pref))
+    va = (villain_action or "").lower()
+    if va.startswith("opponent bets") and pref == "check":
+        pass                      # the next step is this street's _vs_bet node, which adds it
+    elif va.startswith("opponent calls"):
+        ev.append(("opp", "call"))
+    elif va.startswith("opponent checks"):
+        ev.append(("opp", "check"))
+    elif va.startswith("opponent folds"):
+        ev.append(("opp", "fold"))
+    return ev
+
+
+def load_conditioned_turnriver():
+    """Turn + river decisions taken from the continuation pack: every spot sits on a solved
+    flop->turn->river line, so both ranges are conditioned on the action that got there (the
+    old turn/river drill pack was card-removal only). Each record is re-explained from its own
+    solve numbers (reason / headline / detail, like the flop packs) and carries `line` — the
+    completed earlier streets — so the drill can say how the hand got here. Responses are
+    Fold/Call (the continuation tree models no raise)."""
+    if not os.path.exists(CONT_DB):
+        raise SystemExit(f"missing core pack {CONT_DB} — turn/river drills would ship empty")
+    _require_verified(CONT_DB)
+    from pokertrainer.cards import parse_cards, parse_hand
+    from pokertrainer.content_yield import board_texture
+    from pokertrainer.explanations import explain
+    from pokertrainer.handinfo import describe_hand
+    from pokertrainer.validate_flop import hand_category
+    cols = ("id board node acting_player hand actions ev freq preferred_action action_grades "
+            "mixed pot_bb detail").split()
+    conn = sqlite3.connect(CONT_DB)
+    try:
+        rows = [dict(zip(cols, r)) for r in
+                conn.execute(f"SELECT {','.join(cols)} FROM flop_decision").fetchall()]
+    finally:
+        conn.close()
+    hands = defaultdict(list)
+    for d in rows:
+        d["det"] = json.loads(d["detail"] or "{}")
+        hands[d["det"]["hand_id"]].append(d)
     out = []
-    bet_pct = _bet_pct_from_pack(TR_DB)
-    for q in (_to_q(d, oop, ip, bet_pct) for d in picked):
+    for steps in hands.values():
+        steps.sort(key=lambda d: int(d["det"].get("step_index", 0)))
+        done = []                 # completed streets: [{"street", "acts": [[who, action], ...]}]
+        cur = None
+        for d in steps:
+            street = STREET.get(len(d["board"]), "flop")
+            if cur is None or cur["street"] != street:
+                if cur is not None:
+                    done.append(cur)
+                cur = {"street": street, "acts": []}
+            if street != "flop":
+                board = parse_cards(d["board"])
+                evs = json.loads(d["ev"])
+                # The continuation pack stores no ev_sep_pct; derive it exactly as content_yield
+                # does (second-smallest regret as % of pot) so the "gives up ~X%" line is real.
+                regrets = sorted(100.0 * (max(evs.values()) - v) / d["pot_bb"] for v in evs.values())
+                rec = {
+                    "node": d["node"], "acting_player": d["acting_player"], "board": d["board"],
+                    "board_texture": board_texture(board),
+                    "hand_category": hand_category(describe_hand(parse_hand(d["hand"]), board)),
+                    "decision_type": ("first_action" if d["node"].endswith(("_first", "_vs_check"))
+                                      else "vs_bet"),
+                    "preferred": d["preferred_action"], "mixed": bool(d["mixed"]),
+                    "ev": evs, "freq": json.loads(d["freq"]),
+                    "ev_sep_pct": round(regrets[1], 3) if len(regrets) > 1 else 0.0,
+                    "pot_bb": d["pot_bb"],
+                }
+                ex = explain(rec)
+                out.append({
+                    "id": d["id"], "board": d["board"], "node": d["node"],
+                    "acting_player": d["acting_player"], "hand": d["hand"],
+                    "actions": d["actions"], "ev": d["ev"], "freq": d["freq"],
+                    "preferred_action": d["preferred_action"],
+                    "action_grades": d["action_grades"], "mixed": d["mixed"],
+                    "reason": ex["reason"], "headline": ex["headline"],
+                    "detail": json.dumps(ex["detail"]),
+                    "line": [dict(s, acts=[list(a) for a in s["acts"]]) for s in done],
+                    "villain_seat": d["det"].get("villain"),
+                })
+            cur["acts"].extend(_line_events(d, d["preferred_action"],
+                                            d["det"].get("villain_action")))
+    return out
+
+
+def load_turnriver(n=TR_Q):
+    """Turn/river drill spots: conditioned continuation decisions, balanced across
+    (street, node, reason) so both streets and every node type appear."""
+    dicts = load_conditioned_turnriver()
+    by_key = defaultdict(list)
+    for d in dicts:
+        by_key[(STREET[len(d["board"])], d["node"], d["reason"])].append(d)
+    from itertools import zip_longest
+    # Alternate turn and river groups so the cap can't fill with one street.
+    items = sorted(by_key.items(), key=lambda kv: kv[0])
+    tg = [g[:2] for k, g in items if k[0] == "turn"]
+    rg = [g[:2] for k, g in items if k[0] == "river"]
+    groups = [g for pair in zip_longest(tg, rg) for g in pair if g is not None]
+    picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
+    oop = _oop_pos(dicts); ip = _ip_pos(dicts, oop)
+    out = []
+    for q in (_to_q(d, oop, ip, 66) for d in picked):
         q["badge"] = q["street"]
         out.append(q)
     streets = {q["street"] for q in out}
-    if required and not ({"turn", "river"} <= streets):
-        raise SystemExit(f"turn/river pack missing street coverage: {streets}")
+    if not ({"turn", "river"} <= streets):
+        raise SystemExit(f"turn/river drills missing street coverage: {streets}")
     return out
 
 
@@ -268,6 +348,36 @@ def load_scenario(db, badge, n):
     for q in (_to_q(d, oop, ip, bet_pct) for d in picked):
         q["badge"] = badge
         out.append(q)
+    return out
+
+
+FOUND_JSON = "output/foundations/questions.json"   # deterministic fundamentals (pokertrainer.foundations)
+FOUND_UNIT = {"board_reading": "Reading the board", "hand_reading": "Reading your hand",
+              "pot_odds": "Pot odds", "equity": "How often you win"}
+
+
+def load_foundations():
+    """Basics: multiple-choice fundamentals (board / hand reading, pot odds, equity). Answers
+    come from the same evaluator + texture + equity code as the solver pipeline. The app draws
+    the cards, so each question carries them split out plus the card-free `ask` text."""
+    if not os.path.exists(FOUND_JSON):
+        raise SystemExit(f"missing {FOUND_JSON} — run: python -m pokertrainer.foundations")
+    with open(FOUND_JSON) as f:
+        raw = json.load(f)
+    out = []
+    for q in raw:
+        if "ask" not in q:
+            raise SystemExit(f"{FOUND_JSON} is stale (no 'ask') — regenerate it")
+        dat = q.get("data", {})
+        out.append({
+            "basics": True, "id": q["id"], "unit": q["unit"],
+            "unit_name": FOUND_UNIT.get(q["unit"], q["unit"]),
+            "ask": q["ask"], "actions": q["options"], "answer": q["answer"],
+            "why": q["explanation"],
+            "board": _cards(dat["board"]) if dat.get("board") else [],
+            "hero": _cards(dat.get("hand") or dat.get("hero") or ""),
+            "opp_cards": _cards(dat.get("villain") or ""),
+        })
     return out
 
 
@@ -466,7 +576,7 @@ def load_contrast_pool(per_bucket=2):
     from pokertrainer.evaluator import evaluate, category_name
     specs = [(DB, None), (SB_DB, "SB vs BB"), (BTNSB_DB, "BTN vs SB"),
              (CO_DB, "CO vs BB"), (UTG_DB, "UTG vs BB"), (HJ_DB, "HJ vs BB"),
-             (BB3BET_DB, "3-bet pot"), (TR_DB, "street")]
+             (BB3BET_DB, "3-bet pot"), (CONT_DB, "street")]
     buckets, seen, out = defaultdict(int), set(), []
     for db, badge in specs:
         if not os.path.exists(db):
@@ -475,11 +585,16 @@ def load_contrast_pool(per_bucket=2):
             _require_verified(db)
         except SystemExit:
             continue
-        c = sqlite3.connect(db)
-        dicts = [dict(zip(COLS, r)) for r in
-                 c.execute(f"SELECT {','.join(COLS)} FROM flop_decision").fetchall()]
-        c.close()
-        oop = _oop_pos(dicts); ip = _ip_pos(dicts, oop); bet_pct = _bet_pct_from_pack(db)
+        if db == CONT_DB:     # turn/river twins come from the conditioned continuation lines
+            dicts = load_conditioned_turnriver()
+            bet_pct = 66
+        else:
+            c = sqlite3.connect(db)
+            dicts = [dict(zip(COLS, r)) for r in
+                     c.execute(f"SELECT {','.join(COLS)} FROM flop_decision").fetchall()]
+            c.close()
+            bet_pct = _bet_pct_from_pack(db)
+        oop = _oop_pos(dicts); ip = _ip_pos(dicts, oop)
         for d in dicts:
             cs = parse_cards(d["board"]) + parse_cards(d["hand"])
             if len(cs) < 5:
@@ -509,9 +624,9 @@ def load_contrast_pool(per_bucket=2):
     return out
 
 
-def build(allow_missing_demo_packs=False):
+def build():
     meta, qs = load_questions()
-    tr_qs = load_turnriver(required=not allow_missing_demo_packs)
+    tr_qs = load_turnriver()
     sb_qs = load_scenario(SB_DB, "SB vs BB", SB_Q)
     btnsb_qs = load_scenario(BTNSB_DB, "BTN vs SB", BTNSB_Q)
     co_qs = load_scenario(CO_DB, "CO vs BB", CO_Q)
@@ -530,6 +645,8 @@ def build(allow_missing_demo_packs=False):
     cont = load_continuation()
     print(f"  ({sum(len(h) for h in cont)} continuation step-records in {len(cont)} hands)")
     exploit = load_exploit()
+    found = load_foundations()
+    print(f"  ({len(found)} basics questions)")
     print(f"  ({sum(len(h) for hs in exploit.values() for h in hs)} exploit step-records in "
           f"{sum(len(hs) for hs in exploit.values())} hands across {len(exploit)} archetypes)")
     # Escape </script> so pack strings cannot break out of the inline script.
@@ -537,7 +654,8 @@ def build(allow_missing_demo_packs=False):
     cdata = json.dumps(cpool, separators=(",", ":")).replace("<", "\\u003c")
     contdata = json.dumps(cont, separators=(",", ":")).replace("<", "\\u003c")
     edata = json.dumps(exploit, separators=(",", ":")).replace("<", "\\u003c")
-    body = TEMPLATE.replace("__DATA__", data).replace("__CPOOL__", cdata).replace("__CONT__", contdata).replace("__EXPLOIT__", edata).replace("__VERSION__", html.escape(meta.get("version", ""))) \
+    fdata = json.dumps(found, separators=(",", ":")).replace("<", "\\u003c")
+    body = TEMPLATE.replace("__DATA__", data).replace("__CPOOL__", cdata).replace("__CONT__", contdata).replace("__EXPLOIT__", edata).replace("__FOUND__", fdata).replace("__VERSION__", html.escape(meta.get("version", ""))) \
                    .replace("__RECORDS__", html.escape(str(meta.get("record_count", "")))).replace("__COMMIT__", html.escape(commit)) \
                    .replace("__FONTFACE__", _fontface()).replace("__SUITDEFS__", _suitdefs()) \
                    .replace("__ROOMPHOTOS__", _roomphotos())
@@ -550,7 +668,7 @@ def build(allow_missing_demo_packs=False):
            "base-uri 'none'; form-action 'none'")
     doc = ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
            '<meta http-equiv="Content-Security-Policy" content="' + csp + '">\n'
-           '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+           '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
            '<title>Full-Street Flop Trainer</title>\n'
            '<meta name="description" content="Interactive GTO flop trainer — pick an action, '
            'get graded, learn why.">\n</head>\n<body>\n' + body + '\n</body>\n</html>\n')
@@ -620,15 +738,17 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 @media (prefers-reduced-motion:reduce){.hall-room{opacity:.8}}
 .sit{padding:8px 15px 4px;display:flex;align-items:center;gap:9px;font-family:var(--sans);font-size:12.5px;line-height:1.3}
 .sit-street{color:var(--muted);font-weight:600}
+.line-ctx{padding:0 15px 4px;font-family:var(--sans);font-size:12px;line-height:1.45;color:var(--muted)}
+.line-ctx b{color:var(--ink);font-weight:600}
 .sit .pos{margin-left:auto}
 .pos{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.05em;padding:2px 8px;border-radius:6px;flex:none}
-.pos.BB,.pos.SB,.pos.UTG,.pos.HJ,.pos.CO{background:color-mix(in srgb,var(--brass) 20%,transparent);color:var(--brass)}
-.pos.BTN{background:color-mix(in srgb,var(--best) 20%,transparent);color:var(--best)}
+.pos.BB,.pos.SB,.pos.UTG,.pos.HJ,.pos.CO{background:color-mix(in srgb,var(--brass) 13%,transparent);color:color-mix(in srgb,var(--brass) 75%,var(--ink))}
+.pos.BTN{background:color-mix(in srgb,var(--best) 13%,transparent);color:color-mix(in srgb,var(--best) 75%,var(--ink))}
 /* postflop: colour by the in/out-of-position advantage, not the seat code, so position
    is obvious at a glance on every spot (green = you act last / the good seat). */
-.pos.ip{background:color-mix(in srgb,var(--best) 20%,transparent);color:var(--best)}
-.pos.oop{background:color-mix(in srgb,var(--accept) 22%,transparent);color:var(--accept)}
-.demo{margin-left:auto;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accept);border:1px solid color-mix(in srgb,var(--accept) 45%,var(--line));border-radius:6px;padding:1px 6px}
+.pos.ip{background:color-mix(in srgb,var(--best) 13%,transparent);color:color-mix(in srgb,var(--best) 75%,var(--ink))}
+.pos.oop{background:color-mix(in srgb,var(--accept) 14%,transparent);color:color-mix(in srgb,var(--accept) 75%,var(--ink))}
+.demo{margin-left:auto;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:color-mix(in srgb,var(--accept) 60%,var(--muted));border:1px solid color-mix(in srgb,var(--accept) 28%,var(--line));border-radius:6px;padding:1px 6px}
 .tablewrap{padding:2px 14px 4px}
 /* unified poker table: opponent on top, the board on the felt, your hand at your seat */
 /* position shown as an abstract constellation of seats; cards sit cleanly below it */
@@ -677,10 +797,11 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 .pc::after{content:"";position:absolute;inset:3px;border:1px solid rgba(20,25,40,.09);border-radius:5px;pointer-events:none}
 .pc .ix{position:absolute;top:3px;left:4px;display:flex;flex-direction:column;align-items:center;line-height:.82;z-index:2}
 .pc .ix b{font-family:var(--mono);font-weight:700;font-size:12px}
+.pc .ix b.ten{letter-spacing:-.04em;display:inline-block;transform:scaleX(.8);transform-origin:center}
 .pc .ix .mini{width:8px;height:8px;margin-top:1px}
 .pc .center{position:absolute;inset:0;display:grid;place-items:center;z-index:1}
 .pc .center .psuit{width:21px;height:21px;filter:drop-shadow(0 2px 3px rgba(20,15,10,.4))}
-.pc.pc-heart .ix{color:#cf1a2c}.pc.pc-diam .ix{color:#d84a17}.pc.pc-club .ix{color:#2f3d35}.pc.pc-spade .ix{color:#26282e}
+.pc.pc-heart .ix{color:#cf1a2c}.pc.pc-diam .ix{color:#c9441f}.pc.pc-club .ix{color:#2f3d35}.pc.pc-spade .ix{color:#26282e}
 .cards .pc:nth-child(2){animation-delay:.08s}.cards .pc:nth-child(3){animation-delay:.16s}.cards .pc:nth-child(4){animation-delay:.24s}.cards .pc:nth-child(5){animation-delay:.32s}
 /* continuation: cards already on the board don't re-deal (they just shift as the row grows);
    only the freshly-revealed card bounces, and it bounces immediately (no stagger delay). */
@@ -927,7 +1048,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .prow .pn{font-family:var(--label);font-size:11px;text-transform:uppercase;width:62px;color:var(--ink);font-weight:700}
 .prow .pbar{flex:1;height:9px;background:var(--panel2);border-radius:5px;overflow:hidden}
 .prow .pbar>i{display:block;height:100%;border-radius:5px;transition:width .5s ease}
-.c-pre{background:linear-gradient(90deg,#8aa0ff,#5b74ff)}.c-flop{background:linear-gradient(90deg,#5ee7a8,#2fd08a)}.c-turn{background:linear-gradient(90deg,#ffd67a,#ffb020)}.c-river{background:linear-gradient(90deg,#ff8a6e,#ff6a4d)}
+.c-pre{background:linear-gradient(90deg,#8aa0ff,#5b74ff)}.c-flop{background:linear-gradient(90deg,#5ee7a8,#2fd08a)}.c-turn{background:linear-gradient(90deg,#ffd67a,#ffb020)}.c-river{background:linear-gradient(90deg,#ff8a6e,#ff6a4d)}.c-basics{background:linear-gradient(90deg,#b9a3ff,#9a7cff)}
 .prow .pv{font-family:var(--mono);font-size:11px;color:var(--muted);width:36px;text-align:right}
 /* settings view */
 .s-sec{font-family:var(--label);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;margin:20px 0 8px}
@@ -1007,6 +1128,17 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 #board .pc .ix b{font-size:13px}
 #board .pc .ix .mini{width:9px;height:9px}
 #board .pc .center .psuit{width:25px;height:25px}
+/* basics quiz card: question text, then labelled card rows; long answers stack one per row */
+.pos.basics{background:color-mix(in srgb,#9a7cff 14%,transparent);color:color-mix(in srgb,#b9a3ff 75%,var(--ink))}
+.basics-stage{flex:1;justify-content:center;gap:12px;padding:10px 16px}
+.b-ask{font-family:var(--sans);font-size:16px;font-weight:600;line-height:1.4;color:var(--ink);text-align:center;margin:0 0 4px;max-width:340px}
+.b-cards .pc{width:46px;height:62px}
+.b-cards .pc .center .psuit{width:26px;height:26px}
+.b-cards.b-hero .pc{width:56px;height:76px}
+.acts.basics{grid-template-columns:1fr}
+.acts.basics.n-2,.acts.basics.n-3{grid-template-columns:repeat(auto-fit,minmax(0,1fr))}
+.acts.basics .act{min-height:46px;padding:8px 12px}
+.acts.basics .al{font-size:13.5px;font-weight:650}
 #hero .pc{width:68px;height:92px;border-radius:9px}
 #hero .pc::after{inset:4px;border-radius:6px}
 #hero .pc .ix{top:4px;left:5px}
@@ -1080,6 +1212,8 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 .prow .pv{width:58px}
 @media(max-width:390px){
   .appbar{gap:9px;padding:4px 12px}
+/* notch / status bar (only non-zero with viewport-fit=cover, i.e. the native app + iOS Safari) */
+.appbar{padding-top:calc(4px + env(safe-area-inset-top));padding-left:calc(12px + env(safe-area-inset-left));padding-right:calc(12px + env(safe-area-inset-right))}
   .appbar .brand{font-size:15px}
   .street-seg{gap:5px}
   .street-seg button{font-size:9.5px;padding:7px 10px}
@@ -1113,6 +1247,7 @@ __SUITDEFS__
 
   <div class="card" id="play-card" tabindex="-1">
     <div class="sit"><span class="sit-street" id="sitcontext"></span><span class="pos" id="pos"></span><span class="demo" id="demotag" hidden></span></div>
+    <div class="line-ctx" id="linectx" hidden></div>
     <div class="tablewrap" id="seats"></div>
     <div class="move-cue" id="movecue">Your move — tap what you'd do</div>
     <div class="acts" id="acts"></div>
@@ -1203,9 +1338,9 @@ __SUITDEFS__
     <div class="phead"><div class="ptitle">Settings</div></div>
     <div class="s-sec">What to train</div>
     <div class="street-seg" id="cats" role="group" aria-label="Which part to train">
-      <button data-c="all" type="button">All</button><button data-c="preflop" type="button">Pre-flop</button><button data-c="flop" type="button">Flop</button><button data-c="turn" type="button">Turn</button><button data-c="river" type="button">River</button>
+      <button data-c="all" type="button">All</button><button data-c="preflop" type="button">Pre-flop</button><button data-c="flop" type="button">Flop</button><button data-c="turn" type="button">Turn</button><button data-c="river" type="button">River</button><button data-c="basics" type="button">Basics</button>
     </div>
-    <p class="lvl-hint">Pick a street to drill, or All for a mix. Changing this starts a fresh session.</p>
+    <p class="lvl-hint">Pick a street to drill, All for full hands, or Basics for the fundamentals (reading the board and your hand, pot odds, how often you win). Changing this starts a fresh session.</p>
     <div class="s-sec">Exploit an opponent</div>
     <div class="street-seg" id="excats" role="group" aria-label="Which opponent to exploit">
       <button data-c="ex:station" type="button">Station</button><button data-c="ex:nit" type="button">Nit</button><button data-c="ex:maniac" type="button">Maniac</button><button data-c="ex:lag" type="button">LAG</button><button data-c="ex:reg" type="button">Reg</button>
@@ -1239,9 +1374,9 @@ __SUITDEFS__
     Real solver output — pack <code>__VERSION__</code>, <b>__RECORDS__</b> integrity-checked records, build <code>__COMMIT__</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
-    <span class="demo">Turn / river</span> spots are now full-range solver output too, but
-    <b>unconditioned</b> (ranges are card-removal only, not filtered by a prior check/check line),
-    with Fold/Call/Raise available on facing-a-bet nodes.
+    <span class="demo">Turn / river</span> spots come from full solved hands, so both players'
+    ranges reflect the earlier streets' action (shown above the cards as "So far");
+    facing a bet there is Fold/Call (no raise is modeled on those lines).
     Pre-flop spots are calibrated ranges (solver-approximate, tuned to standard frequencies).<br>
     Prefer to review the answers at a glance? See the <a href="preview.html">content gallery</a>.
     </div>
@@ -1315,6 +1450,7 @@ const ALLSPOTS = Q.concat(CPOOL);
 // Continuation hands (C): each is an ordered [flop,turn,river] list of linked step-questions
 // (same hero, growing board). Drives the "play a hand through" session (the default when present).
 const CONT = __CONT__;
+const FOUND = __FOUND__;       // basics: multiple-choice fundamentals (board/hand reading, pot odds, equity)
 const EXPLOIT = __EXPLOIT__;   // {archetype: [[step,...],...]} — play-a-hand vs an archetype (B)
 const EX_LABEL = {station:"Calling Station",nit:"Nit",maniac:"Maniac",lag:"LAG",reg:"Reg"};
 
@@ -1540,7 +1676,7 @@ function recordGrade(bucket,tier,hit){
 function saveLifetime(){try{localStorage.setItem("trainer-progress",JSON.stringify(lifetime));}catch(e){}}
 let mode=(function(){try{const m=localStorage.getItem("lang");return (m==="poker"||m==="learning"||m==="plain"||m==="progressive")?m:"progressive";}catch(e){return "progressive";}})();
 // Which part to train (pre-flop / flop / turn / river / all).
-let cat=(function(){try{const c=localStorage.getItem("cat");return (["all","preflop","flop","turn","river"].includes(c)||(typeof c==="string"&&c.startsWith("ex:")&&(EXPLOIT[c.slice(3)]||[]).length))?c:"all";}catch(e){return "all";}})();
+let cat=(function(){try{const c=localStorage.getItem("cat");return (["all","preflop","flop","turn","river","basics"].includes(c)||(typeof c==="string"&&c.startsWith("ex:")&&(EXPLOIT[c.slice(3)]||[]).length))?c:"all";}catch(e){return "all";}})();
 // Adaptive mode: each concept shows in plain words until you've EARNED it (played a
 // spot that uses it well); then it graduates to the poker term + its meaning.
 const VALID_TERMS=new Set(["positions","streets"].concat(Object.keys(TERMS.poker.reason).map(r=>"reason:"+r)));
@@ -1743,7 +1879,7 @@ function card(t,noDeal,dealNew){const r=t[0],s=(t[1]||"").toLowerCase(),sy=SYM[s
   const e=document.createElement("div");e.className="pc pc-"+sy+(noDeal?" nodeal":dealNew?" dealnew":"");
   e.setAttribute("role","img");e.setAttribute("aria-label",(RANK_NAME[r]||r)+" of "+(SUIT_NAME[s]||"spades"));
   const ix=document.createElement("span");ix.className="ix";
-  const b=document.createElement("b");b.textContent=(r==="T"?"10":r);ix.appendChild(b);
+  const b=document.createElement("b");b.textContent=(r==="T"?"10":r);if(r==="T")b.className="ten";ix.appendChild(b);
   ix.appendChild(svgUse("mini","so-"+sy));
   const ct=document.createElement("span");ct.className="center";ct.appendChild(svgUse("psuit","sym-"+sy));
   e.appendChild(ix);e.appendChild(ct);return e;}
@@ -1775,18 +1911,58 @@ function pfHeadline(q){
 function addActionButton(box,a,i){
   const b=document.createElement("button");b.type="button";b.className="act";b.dataset.a=a;
   // Preflop buttons share the same labels as feedback (Open 2.5bb / 3-bet / …).
-  const preflop=!!(cur&&cur.preflop);
-  const l=document.createElement("span");l.className="al";l.textContent=preflop?pfActLabel(a):actionPrimary(a);
-  const sub=document.createElement("span");sub.className="asub";sub.textContent=preflop?"":actionSecondary(a);
+  const preflop=!!(cur&&cur.preflop),basics=!!(cur&&cur.basics);
+  const l=document.createElement("span");l.className="al";l.textContent=basics?a:preflop?pfActLabel(a):actionPrimary(a);
+  const sub=document.createElement("span");sub.className="asub";sub.textContent=(preflop||basics)?"":actionSecondary(a);
   const k=document.createElement("span");k.className="k";k.textContent=String(i+1);
   b.appendChild(l);if(sub.textContent)b.appendChild(sub);b.appendChild(k);
   b.onclick=()=>answer(a);box.appendChild(b);
 }
 function shownStep(){const e=hist[hidx];return e&&Number.isInteger(e.step)?e.step:pos;}
+// --- basics: a plain multiple-choice card (no table, no solver grades) ---
+function basicsCards(label,cs,cls){
+  const w=document.createElement("div");w.className="b-cards"+(cls?" "+cls:"");
+  const c=document.createElement("div");c.className="cap";c.textContent=label;w.appendChild(c);
+  const row=document.createElement("div");row.className="cards";render(cs,row);w.appendChild(row);return w;}
+function renderBasics(q){
+  const posEl=document.getElementById("pos");posEl.textContent="Basics";posEl.className="pos basics";
+  document.getElementById("sitcontext").textContent=q.unit_name;
+  document.getElementById("demotag").hidden=true;document.getElementById("linectx").hidden=true;
+  const el=document.getElementById("seats");el.innerHTML="";el.hidden=false;
+  const st=document.createElement("div");st.className="stage basics-stage";
+  const ask=document.createElement("p");ask.className="b-ask";ask.textContent=q.ask;st.appendChild(ask);
+  if(q.board&&q.board.length)st.appendChild(basicsCards("Board",q.board));
+  if(q.hero&&q.hero.length)st.appendChild(basicsCards("Your hand",q.hero,"b-hero"));
+  if(q.opp_cards&&q.opp_cards.length)st.appendChild(basicsCards("Opponent shows",q.opp_cards,"b-opp"));
+  el.appendChild(st);
+  const box=document.getElementById("acts");box.innerHTML="";box.className="acts basics n-"+q.actions.length;
+  q.actions.forEach((a,i)=>addActionButton(box,a,i));
+  setHint(q.actions.length);
+  document.getElementById("prog").style.width=(100*(shownStep()+1)/Math.max(1,order.length))+"%";
+}
+function renderBasicsFeedback(q,a){
+  const correct=a===q.answer;
+  document.querySelectorAll("#acts .act").forEach(b=>{b.disabled=true;b.className="act";
+    if(b.dataset.a===q.answer)b.classList.add("g-best","chosen");
+    else if(b.dataset.a===a)b.classList.add("g-major_error","chosen");});
+  const v=document.getElementById("verdict");
+  const ans=/^[A-Z][a-z]/.test(q.answer)?q.answer.charAt(0).toLowerCase()+q.answer.slice(1):q.answer;
+  if(correct){v.className="verdict v-best";v.textContent="✓ Correct — "+ans+".";}
+  else{v.className="verdict v-major_error";v.textContent="✗ Not quite — it's "+ans+".";}
+  document.getElementById("read").hidden=true;
+  document.getElementById("reason").style.display="none";
+  document.getElementById("head").textContent=q.why;
+  document.getElementById("cost").hidden=true;document.getElementById("det").innerHTML="";
+  document.getElementById("unlock").hidden=true;document.getElementById("rule").hidden=true;
+  document.querySelector(".mix").style.display="none";
+  const nb=document.getElementById("next");if(nb)nb.innerHTML="Next &nbsp;&#8629;";
+  document.getElementById("fb").className="fb on";sheetOpen(true);
+}
 function renderPreflop(q){
   const posEl=document.getElementById("pos");posEl.textContent=posChip(q.pos);posEl.className="pos "+q.pos;
   document.getElementById("sitcontext").textContent="Preflop";
   const bd=document.getElementById("demotag");bd.hidden=true;
+  document.getElementById("linectx").hidden=true;
   renderSeats(q);   // build the 6-max ring first (creates the centred #hero slot)
   document.getElementById("herocap").textContent="Your hand";
   render(q.hand,document.getElementById("hero"));
@@ -1794,6 +1970,21 @@ function renderPreflop(q){
   q.actions.forEach((a,i)=>addActionButton(box,a,i));
   setHint(q.actions.length);
   document.getElementById("prog").style.width=(100*(shownStep()+1)/Math.max(1,order.length))+"%";
+}
+// Conditioned turn/river drills carry q.line — the earlier streets of the solved hand — so
+// the learner knows how the pot got here (the answer depends on it). Level-aware wording.
+const LINE_PAST={check:"checked",bet:"bet",call:"called",fold:"folded",raise:"raised"};
+function lineText(q){
+  if(!q||!q.line||!q.line.length)return "";
+  const sm=eff("positions"),opp=sm==="poker"?(q.villain||"Opponent"):"your opponent";
+  return q.line.map(st=>{
+    const he={check:"checks",bet:"bets "+(q.bet_pct||66)+"%",call:"calls",fold:"folds",raise:"raises"};
+    const parts=st.acts.map(([who,a])=>sm==="plain"
+      ?(who==="you"?"you ":opp+" ")+(LINE_PAST[a]||a)
+      :(who==="you"?"you "+a:opp+" "+(he[a]||a)));
+    const list=parts.length>1?parts.slice(0,-1).join(", ")+(sm==="plain"?", and ":", ")+parts[parts.length-1]:parts[0];
+    return (sm==="plain"?"On the "+st.street+", ":cap1(st.street)+": ")+list+".";
+  }).join(" ");
 }
 function decisionHeadline(q){
   // Plain levels say "Opponent"; poker level names the seat (UTG / SB / ...).
@@ -1803,13 +1994,15 @@ function decisionHeadline(q){
   return "Your action";
 }
 function renderQuestion(q){
-  var mc=document.getElementById("movecue");if(mc)mc.hidden=false;   // show the decision cue on a fresh hand
+  var mc=document.getElementById("movecue");if(mc){mc.hidden=false;mc.textContent=q.basics?"Tap your answer":"Your move — tap what you'd do";}   // show the decision cue on a fresh hand
   updateHall(q);   // refresh the suit-tinted ambient hall for this hand
   if(q.preflop)return renderPreflop(q);
+  if(q.basics)return renderBasics(q);
   const posEl=document.getElementById("pos");posEl.textContent=q.is_oop?"Out of position":"In position";posEl.className="pos "+(q.is_oop?"oop":"ip");
   // Position is already the coloured lead label; keep the supporting line compact on phones.
   document.getElementById("sitcontext").textContent=cap1(q.street);
   const bd=document.getElementById("demotag");bd.hidden=!q.badge;bd.textContent=q.badge||"";
+  const lt=lineText(q),lc=document.getElementById("linectx");lc.hidden=!lt;lc.textContent=lt?"So far — "+lt:"";
   renderSeats(q);   // build the unified felt table first (creates the #board/#hero slots)
   document.getElementById("boardcap").textContent="Board";
   document.getElementById("herocap").textContent="Your hand";
@@ -1949,7 +2142,7 @@ function updateHall(q){
   const room=document.getElementById("hall-room"),photo=document.getElementById("hall-photo");
   if(!room)return;
   const h=q.preflop?q.hand:q.hero;
-  const street=q.preflop?"preflop":(q.street||"flop");
+  const street=q.preflop?"preflop":q.basics?"flop":(q.street||"flop");
   const oop=q.preflop?!(q.pos==="BTN"||q.pos==="CO"||q.pos==="HJ"):!!q.is_oop;
   const s1=(h&&h[0])?h[0][1]:"s",s2=(h&&h[1])?h[1][1]:"s";
   room.style.backgroundImage="none";room.innerHTML=geoRoom(street,s1,s2,oop);   // geometry bakes suit tint + position temperature
@@ -2134,7 +2327,7 @@ function strengthTag(lv,drawing){if(lv==null)return"";
 function renderFactors(q){
   const el=document.getElementById("factors"),wrap=document.getElementById("analytics"),sum=document.getElementById("analytics-sum");
   if(!el||!wrap)return;
-  if(q.preflop||eff("reason:"+q.reason)==="poker"){wrap.hidden=true;el.innerHTML="";return;}
+  if(q.preflop||q.basics||eff("reason:"+q.reason)==="poker"){wrap.hidden=true;el.innerHTML="";return;}
   wrap.hidden=false;el.innerHTML="";
   const rd=handRead(q.hero,q.board),items=decisionFactors(q,rd),hand=items[0];
   const drawing=rd.cat==="high"&&!!rd.draw;   // no made hand, but a draw
@@ -2221,7 +2414,7 @@ function renderHandDetail(q){
   const st=sec("Where you stand");const p=document.createElement("p");p.className="hd-now";p.textContent=d.standing;st.appendChild(p);
 }
 let handDetailReturn=null;
-function openHandDetail(){if(!cur||cur.preflop||!(cur.board&&cur.board.length>=3))return;
+function openHandDetail(){if(!cur||cur.preflop||cur.basics||!(cur.board&&cur.board.length>=3))return;
   handDetailReturn=document.activeElement;
   renderHandDetail(cur);document.getElementById("handdetail").className="hd on";
   var s=document.getElementById("hd-scrim");if(s)s.hidden=false;
@@ -2276,7 +2469,7 @@ const RIVER_AXIS_WHY={
 };
 function cap1(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
 function findContrast(q){
-  if(q.preflop||!CONTRAST[q.reason])return null;
+  if(q.preflop||q.basics||!CONTRAST[q.reason])return null;
   const rd=handRead(q.hero,q.board),vs=CONTRAST[q.reason].vs;
   // A twin is only instructive if the HAND is genuinely similar — otherwise the strength gap
   // IS the reason it plays differently (two pair calls / one pair folds is trivial, not a
@@ -2370,7 +2563,9 @@ function renderContrast(q){
 }
 function renderFeedback(q,a,gained){
   var mc=document.getElementById("movecue");if(mc)mc.hidden=true;   // decision made — hide the cue
+  document.getElementById("learn").hidden=!!q.basics;   // basics: the one-line why IS the lesson
   renderContrast(q);renderFactors(q);
+  if(q.basics)return renderBasicsFeedback(q,a);
   if(q.preflop)return renderPreflopFeedback(q,a,gained);
   document.querySelector(".mix").style.display="";
   document.querySelectorAll("#acts .act").forEach(b=>{
@@ -2550,6 +2745,14 @@ function answer(a){
   if(answered)return;answered=true;chosen=a;if(hist[hidx])hist[hidx].pick=a;updateNav();
   document.getElementById("coach").hidden=false;
   const inSession=!(hist[hidx]&&hist[hidx].bonus);
+  if(cur.basics){
+    const hit=a===cur.answer,tier=hit?"solid":"leak";
+    if(inSession){recordGrade(stats,tier,hit);recordGrade(lifetime,tier,hit);saveLifetime();}
+    if(inSession&&!hit)sessionMisses.push(cur);
+    syncStatsUI();renderFeedback(cur,a,[]);
+    document.getElementById("next").focus({preventScroll:true});
+    return;
+  }
   if(cur.preflop){
     const correct=a===cur.answer, closeOk=!correct&&cur.mixed&&a===cur.alt;
     const hit=correct||closeOk,tier=hit?"solid":"leak";
@@ -2697,8 +2900,8 @@ function setMode(m){mode=m;try{localStorage.setItem("lang",m);}catch(e){}applyMo
     if(!document.getElementById("v-train").classList.contains("on"))closeSheet(false);}}}
 document.querySelectorAll("#lang button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
 // --- train-category selector: filter the deck to one street (or all) ---
-function qcat(q){return q.preflop?"preflop":(q.street||"flop");}
-function catCounts(){const c={all:Q.length,preflop:0,flop:0,turn:0,river:0};Q.forEach(q=>{const k=qcat(q);c[k]=(c[k]||0)+1;});return c;}
+function qcat(q){return q.basics?"basics":q.preflop?"preflop":(q.street||"flop");}
+function catCounts(){const c={all:Q.length,preflop:0,flop:0,turn:0,river:0,basics:FOUND.length};Q.forEach(q=>{const k=qcat(q);c[k]=(c[k]||0)+1;});return c;}
 const CONT_HANDS_PER_SESSION=5;
 // order entries are either a Q index (drills) or a continuation step-object (play-a-hand).
 function spotAt(i){const o=order[i];return (o&&typeof o==="object")?o:Q[o];}
@@ -2717,6 +2920,10 @@ function buildOrder(){
     const hands=shuffle(CONT.slice()).slice(0,Math.min(CONT_HANDS_PER_SESSION,CONT.length));
     order=[];hands.forEach(h=>h.forEach(st=>order.push(st)));
     contMode=true;contHands=hands.length;pos=0;hist=[];hidx=-1;return;
+  }
+  if(cat==="basics"){                           // fundamentals quiz: question objects, not Q indices
+    order=shuffle(FOUND.slice()).slice(0,Math.min(SESSION_SIZE,FOUND.length));
+    pos=0;hist=[];hidx=-1;return;
   }
   if(cat!=="all"){                              // secondary: single-street / preflop drills
     const pool=shuffle([...Q.keys()].filter(i=>qcat(Q[i])===cat));
@@ -2815,22 +3022,54 @@ const PROVIDERS={
     parse(j){return ((j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||"").trim();},
     emsg(j){return j&&j.error&&j.error.message;}},
 };
+// Key storage seam. Web: localStorage (the browser has nothing better). Native app: the OS
+// secure store (Keychain / Keystore via the SecureStoragePlugin bridge); localStorage then
+// keeps only provider + model, and the key is cached in memory after an async load.
+const COACH_KEY_ID="coach-key";
+function coachSecure(){const cap=window.Capacitor;
+  return (cap&&cap.isNativePlatform&&cap.isNativePlatform()&&cap.Plugins&&cap.Plugins.SecureStoragePlugin)||null;}
+let coachKeyMem="";
 function coachCfg(){try{
   const c=JSON.parse(localStorage.getItem("coach")||"{}");
-  if(!c||typeof c!=="object"||Array.isArray(c))return {};
+  if(!c||typeof c!=="object"||Array.isArray(c))return coachSecure()&&coachKeyMem?{provider:"claude",model:"",key:coachKeyMem}:{};
   return {
     provider:Object.prototype.hasOwnProperty.call(PROVIDERS,c.provider)?c.provider:"claude",
     model:typeof c.model==="string"?c.model:"",
-    key:typeof c.key==="string"?c.key:""
+    key:coachSecure()?coachKeyMem:(typeof c.key==="string"?c.key:"")
   };
 }catch(e){return {};}}
-function coachSaveCfg(c){try{localStorage.setItem("coach",JSON.stringify(c));}catch(e){}}
+function coachSaveCfg(c){
+  const ss=coachSecure();
+  if(ss){coachKeyMem=c.key||"";
+    (coachKeyMem?ss.set({key:COACH_KEY_ID,value:coachKeyMem}):ss.remove({key:COACH_KEY_ID})).catch(()=>{});
+    c={provider:c.provider,model:c.model};}
+  try{localStorage.setItem("coach",JSON.stringify(c));}catch(e){}}
+// Native start-up: pull the key out of the secure store (moving any key an older build left in
+// localStorage), then refresh the settings panel. Missing key => get() rejects => stay empty.
+async function coachLoadSecureKey(){
+  const ss=coachSecure();if(!ss)return;
+  let legacy=null;try{legacy=JSON.parse(localStorage.getItem("coach")||"{}");}catch(e){}
+  if(legacy&&typeof legacy.key==="string"&&legacy.key){coachSaveCfg(legacy);}
+  else{try{const r=await ss.get({key:COACH_KEY_ID});coachKeyMem=(r&&typeof r.value==="string")?r.value:"";}catch(e){coachKeyMem="";}}
+  const k=document.getElementById("coach-key");if(k&&coachKeyMem)k.value=coachKeyMem;
+  coachSettings(false);
+}
 let coachMsgs=[],coachBusy=false,coachErr=null,coachGen=0;
 
 // Serialize the current spot's real solver data so the model explains THIS hand, not
 // generic theory. Everything here already drives the on-screen feedback.
 function coachSpot(q){
   const L=[];
+  if(q.basics){
+    L.push("This is a BASICS quiz question ("+q.unit_name+"), not a strategy spot.");
+    L.push("Question: "+q.ask);
+    if(q.board&&q.board.length)L.push("Board: "+cardsText(q.board)+".");
+    if(q.hero&&q.hero.length)L.push("Your hand: "+cardsText(q.hero)+".");
+    if(q.opp_cards&&q.opp_cards.length)L.push("Opponent's hand: "+cardsText(q.opp_cards)+".");
+    L.push("Options: "+q.actions.join(" / ")+".");
+    L.push("Correct answer: "+q.answer+". Explanation shown: "+q.why);
+    return L.join("\n");
+  }
   if(q.preflop){
     L.push("Street: PRE-FLOP.");
     L.push("Your position: "+(q.pos||"?")+".");
@@ -2846,7 +3085,8 @@ function coachSpot(q){
   L.push("Board (shared cards): "+cardsText(q.board)+".");
   L.push("Your hand: "+cardsText(q.hero)+".");
   L.push("You "+(q.is_oop?"act first":"act last")+" ("+(q.is_oop?"out of position":"in position")+").");
-  try{L.push("Situation: "+situation(q)+".");}catch(e){}
+  try{L.push("Situation: "+situation(q).replace(/\.$/,"")+".");}catch(e){}
+  if(q.line&&q.line.length){try{L.push("Earlier streets of this hand: "+lineText(q));}catch(e){}}
   if(q.reason==="exploit"){
     // Exploit steps: the EVs/preferred are the best response vs a PINNED archetype, while
     // freq is the balanced GTO mix — without this context the coach would explain an
@@ -2965,13 +3205,14 @@ function coachInit(){
   send.onclick=fire;
   inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();fire();}});
   coachSettings(false);
+  coachLoadSecureKey();
 }
 function coachReset(){coachGen++;coachMsgs=[];coachErr=null;coachBusy=false;coachRender();coachToggleSend();}
 
 // ===== mobile-app shell: view switching, progress, settings =====
 function renderProgress(){
   const el=document.getElementById("mastery");if(!el)return;el.innerHTML="";
-  [["preflop","Preflop","c-pre"],["flop","Flop","c-flop"],["turn","Turn","c-turn"],["river","River","c-river"]].forEach(function(r){
+  [["preflop","Preflop","c-pre"],["flop","Flop","c-flop"],["turn","Turn","c-turn"],["river","River","c-river"],["basics","Basics","c-basics"]].forEach(function(r){
     const s=lifetime.street[r[0]]||{n:0,hit:0};const pct=s.n?Math.round(100*s.hit/s.n):0;
     const row=document.createElement("div");row.className="prow";
     const nm=document.createElement("span");nm.className="pn";nm.textContent=r[1];
@@ -3015,9 +3256,4 @@ coachInit();applyModeUI();updateVocab();updateLevelHint();syncStatsUI();applyCat
 </script>'''
 
 if __name__ == "__main__":
-    import argparse
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--allow-missing-demo-packs", action="store_true",
-                    help="skip turn/river pack if absent (default: require it)")
-    a = ap.parse_args()
-    build(allow_missing_demo_packs=a.allow_missing_demo_packs)
+    build()

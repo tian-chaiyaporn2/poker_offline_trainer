@@ -8,8 +8,11 @@ from the same primitives the solver pipeline uses (evaluator, board texture,
 pot-odds arithmetic, Monte-Carlo equity).
 
 Each question is a dict:
-    {id, unit, kind, prompt, options:[...], answer, explanation, data:{...}}
-`answer` is always one of `options`, so the trainer grades by exact match.
+    {id, unit, kind, prompt, ask, options:[...], answer, explanation, data:{...}}
+`prompt` names the cards in text (CLI / server); `ask` is the same question without them,
+for the app, which draws the cards. Explanations are beginner-facing plain English ("chips",
+not "bb"; "how often you win", not "equity"). `answer` is always one of `options`, so the
+trainer grades by exact match.
 
 CLI:  PYTHONPATH=src python -m pokertrainer.foundations --out output/foundations
 """
@@ -50,6 +53,14 @@ def _opts(answer: str, distractors: List[str], seed: int, k: int = 3) -> List[st
 
 _SUIT_Q = {"monotone": "Monotone (one suit)", "two_tone": "Two-tone (two suits)",
            "rainbow": "Rainbow (three suits)"}
+_SUIT_WHY = {
+    "monotone": "All three cards are the same suit, so anyone holding two of that suit "
+                "already has a flush.",
+    "two_tone": "Two cards share a suit, so anyone holding two more of that suit has a flush "
+                "draw — one more card of it makes a flush.",
+    "rainbow": "Every card is a different suit, so nobody can have a flush or even a "
+               "one-card flush draw yet.",
+}
 
 
 def board_reading_questions() -> List[Dict]:
@@ -62,29 +73,34 @@ def board_reading_questions() -> List[Dict]:
         out.append({
             "id": f"found_board_suit_{bi:02d}", "unit": "board_reading", "kind": "suit_texture",
             "prompt": f"How many suits are on the flop {lbl}?",
+            "ask": "How many suits are on this flop?",
             "options": list(_SUIT_Q.values()),
             "answer": _SUIT_Q[suit],
-            "explanation": f"{lbl} is {_SUIT_Q[suit].lower()} — flush possibilities scale with shared suits.",
+            "explanation": _SUIT_WHY[suit],
             "data": {"board": bstr, "tags": tags},
         })
         paired = "paired" in tags
         out.append({
             "id": f"found_board_pair_{bi:02d}", "unit": "board_reading", "kind": "pairing",
             "prompt": f"Is the flop {lbl} paired?",
+            "ask": "Is this flop paired?",
             "options": ["Paired", "Unpaired"],
             "answer": "Paired" if paired else "Unpaired",
-            "explanation": ("Two of the three cards share a rank." if paired
-                            else "All three ranks are distinct."),
+            "explanation": ("Two of the cards share a rank, so anyone holding the third one "
+                            "already has three of a kind." if paired
+                            else "All three cards are different ranks — no pair on the board."),
             "data": {"board": bstr, "tags": tags},
         })
         connected = "connected" in tags
         out.append({
             "id": f"found_board_conn_{bi:02d}", "unit": "board_reading", "kind": "connectedness",
             "prompt": f"Is the flop {lbl} connected (coordinated for straights)?",
+            "ask": "Are these cards close enough together to make straights likely?",
             "options": ["Connected", "Disconnected"],
             "answer": "Connected" if connected else "Disconnected",
-            "explanation": ("The ranks are close enough to make straights likely." if connected
-                            else "The ranks are spread out, so straights are unlikely."),
+            "explanation": ("The cards are close in rank, so many two-card hands make a "
+                            "straight or a straight draw." if connected
+                            else "The cards are far apart in rank, so straights are unlikely."),
             "data": {"board": bstr, "tags": tags},
         })
     return out
@@ -116,10 +132,14 @@ def pot_odds_questions() -> List[Dict]:
             "id": f"found_pot_odds_{i:02d}", "unit": "pot_odds", "kind": "arithmetic",
             "prompt": (f"The pot is {pot:g} bb and your opponent bets {bet:g} bb. "
                        "What equity do you need to profitably call?"),
+            "ask": (f"The pot is {pot:g} chips and your opponent bets {bet:g}. How often do "
+                    "you need to win for calling to pay off?"),
             "options": _opts(answer, distractors, seed=1000 + i),
             "answer": answer,
-            "explanation": (f"You risk {bet:g} to win {pot + bet:g}; break-even = "
-                            f"bet / (pot + 2·bet) = {bet:g}/{pot + 2 * bet:g} = {answer}."),
+            "explanation": (f"Calling costs {bet:g}. If you call, the final pot is "
+                            f"{pot:g} + {bet:g} + {bet:g} = {pot + 2 * bet:g} chips. You break "
+                            f"even when you win your share of it: {bet:g} ÷ {pot + 2 * bet:g} = "
+                            f"{answer}. Win more often than that and calling makes money."),
             "data": {"pot": pot, "bet": bet, "break_even": round(correct, 4)},
         })
     return out
@@ -141,6 +161,39 @@ _HAND_POOL = ["high card", "top pair", "middle/bottom pair", "overpair", "pocket
               "high card + flush draw", "high card + straight draw"]
 
 
+# Each label piece -> (how to say it in a sentence, what it means), so the answer teaches the words.
+_HAND_GLOSS = {
+    "high card": ("no pair", "just your highest card"),
+    "top pair": ("top pair", "one of your cards pairs the highest card on the board"),
+    "middle/bottom pair": ("a middle or bottom pair", "one of your cards pairs a lower board card"),
+    "overpair": ("an overpair", "a pocket pair higher than every board card"),
+    "pocket pair": ("a pocket pair", "your pair is below the top board card"),
+    "two pair": ("two pair", "two different pairs"),
+    "three of a kind": ("three of a kind", "three cards of the same rank"),
+    "straight": ("a straight", "five cards in a row"),
+    "flush": ("a flush", "five cards of the same suit"),
+    "full house": ("a full house", "three of a kind plus a pair"),
+    "four of a kind": ("four of a kind", "all four cards of one rank"),
+    "straight flush": ("a straight flush", "five in a row, all one suit"),
+    "flush draw": ("a flush draw", "four cards of one suit, so one more makes a flush"),
+    "straight draw": ("a straight draw", "four cards in a row, so the right next card makes "
+                                         "a straight"),
+}
+
+
+def _says(piece: str) -> str:
+    said, means = _HAND_GLOSS.get(piece, (piece, ""))
+    return f"{said} ({means})" if means else said
+
+
+def _hand_why(label: str) -> str:
+    made, *draws = label.split(" + ")
+    if not draws:
+        return "You have " + _says(made) + "."
+    lead = "No pair yet, but you have " if made == "high card" else "You have " + _says(made) + ", plus "
+    return lead + " and ".join(_says(d) for d in draws) + "."
+
+
 def hand_reading_questions() -> List[Dict]:
     out = []
     for i, (hand, board) in enumerate(_HAND_SPOTS):
@@ -150,9 +203,10 @@ def hand_reading_questions() -> List[Dict]:
         out.append({
             "id": f"found_hand_read_{i:02d}", "unit": "hand_reading", "kind": "evaluator",
             "prompt": f"You hold {_board_label(hand)} on {_board_label(board)}. What is your hand?",
+            "ask": "What hand do you have?",
             "options": _opts(ans, _HAND_POOL, seed=2000 + i),
             "answer": ans,
-            "explanation": f"{_board_label(hand)} on {_board_label(board)} makes: {ans}.",
+            "explanation": _hand_why(ans),
             "data": {"hand": hand, "board": board},
         })
     return out
@@ -189,9 +243,12 @@ def equity_questions() -> List[Dict]:
             "id": f"found_equity_{i:02d}", "unit": "equity", "kind": "montecarlo",
             "prompt": (f"You hold {_board_label(hero)} on {_board_label(board)} against "
                        f"{_board_label(vill)}. Roughly what is your equity to the river?"),
+            "ask": ("Your opponent shows their hand. If the turn and river are dealt, roughly "
+                    "how often do you win?"),
             "options": [lbl for _, _, lbl in _BANDS],
             "answer": ans,
-            "explanation": f"Enumerated/Monte-Carlo equity is about {round(100 * eq)}% — {ans}.",
+            "explanation": (f"Dealing out the turn and river many thousands of times, you win about "
+                            f"{round(100 * eq)}% of the time (a split pot counts as half)."),
             "data": {"hero": hero, "villain": vill, "board": board, "equity": round(eq, 4)},
         })
     return out
