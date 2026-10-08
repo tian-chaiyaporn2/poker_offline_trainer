@@ -128,7 +128,7 @@ def classify_reason(rec: Dict) -> str:
     if rec.get("mixed"):
         return "mixed"
     if first_action:
-        if act == "bet":
+        if _is_bet(act):
             if hc == "strong_made":
                 return "value"
             if hc == "draw":
@@ -224,7 +224,7 @@ def explain(rec: Dict, board_favored: Optional[str] = None) -> Dict:
         fp = freq_pct_ints(freq, order=ranked)
         detail.append("Solver frequency: " + ", ".join(f"{_action_word(a)} {fp[a]}%" for a in ranked))
     # board-level range-advantage note where relevant
-    if board_favored and _is_first_action(rec) and pref == "bet":
+    if board_favored and _is_first_action(rec) and _is_bet(pref):
         if board_favored == rec["acting_player"]:
             detail.append(f"{rec['acting_player']}'s range is stronger on this board, "
                           f"which supports betting.")
@@ -249,6 +249,13 @@ def explain(rec: Dict, board_favored: Optional[str] = None) -> Dict:
     return {"reason": reason, "headline": headline, "detail": detail}
 
 
+def _is_bet(a: str) -> bool:
+    """'bet' (single-size tree) or a sized bet label 'bet_33' (multi-size tree)."""
+    return a == "bet" or a.startswith("bet_")
+
+
 def _action_word(a: str) -> str:
+    if a.startswith("bet_") and a[4:].isdigit():
+        return f"bet {a[4:]}%"                       # "bet_33" -> "bet 33%"
     return {"bet": "bet", "check": "check", "call": "call", "fold": "fold",
             "raise": "raise"}.get(a, a)

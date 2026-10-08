@@ -47,6 +47,30 @@ NODE_ROLE = {
 }
 
 
+def node_role(node: str):
+    """(role, suffix) for a solver role node. Multi-size response nodes are keyed per
+    faced size ("bb_vs_bet_33" -> ("oop", "vs_bet_33")), so facing a 33% bet and facing
+    a 75% bet stay distinct spots through relabeling, dedup and the convergence gate."""
+    if node in NODE_ROLE:
+        return NODE_ROLE[node]
+    for base in ("bb_vs_bet", "btn_vs_bet"):
+        if node.startswith(base + "_"):
+            role, suffix = NODE_ROLE[base]
+            return role, suffix + node[len(base):]
+    raise KeyError(node)
+
+
+def parse_bet_sizes(spec):
+    """CLI '--bet-sizes 0.33,0.75' -> [0.33, 0.75]; None/'' -> None (single-size default).
+    Validation (positive, distinct labels, all-in collisions) happens in the solver."""
+    if not spec:
+        return None
+    try:
+        return [float(x) for x in spec.split(",") if x.strip()]
+    except ValueError:
+        raise SystemExit(f"--bet-sizes must be comma-separated pot fractions, got {spec!r}")
+
+
 def board_texture(board: List[int]) -> List[str]:
     """Texture tags for a flop/turn/river board.
 
@@ -97,7 +121,7 @@ def extract_records(flop_str, oop, ip, iters, make, pot, bet_frac,
     recs = s.flop_decisions_report()
     btags = board_texture(flop)
     for r in recs:
-        role, suffix = NODE_ROLE[r["node"]]       # r["node"] is still the solver role node
+        role, suffix = node_role(r["node"])       # r["node"] is still the solver role node
         r["board"] = flop_str
         r["board_texture"] = btags
         r["board_favored"] = board_favored
@@ -411,7 +435,8 @@ def _aggregate(out: str, boards_dir: str, board_idx: List[int], hands_per_side: 
 
 def run(n=40, iters=300, roots=None, solver="cpu", dtype="float64",
         out="output/content_yield", full_range_size=250, pot=None, bet_frac=None,
-        raise_x=None, fresh=False, aggregate_only=False, scenario="btn_vs_bb_srp"):
+        raise_x=None, fresh=False, aggregate_only=False, scenario="btn_vs_bb_srp",
+        bet_fracs=None):
     os.makedirs(out, exist_ok=True)
     boards_dir = os.path.join(out, "boards")
     os.makedirs(boards_dir, exist_ok=True)
@@ -432,12 +457,16 @@ def run(n=40, iters=300, roots=None, solver="cpu", dtype="float64",
     cfg = _solve_config(n, iters, solver, dtype, pot, bet_frac, raise_x, board_idx)
     cfg["scenario"] = scenario
     cfg["eff_stack"] = eff_stack
+    if bet_fracs is not None:
+        # Only fingerprinted when set, so existing single-size checkpoint dirs still resume.
+        cfg["bet_fracs"] = sorted(float(f) for f in bet_fracs)
     # Always fingerprint-check, including --aggregate-only: rebuilding reports
     # from checkpoints under mismatched CLI settings would silently mix runs.
     _ensure_checkpoint_config(out, cfg, fresh=False if aggregate_only else fresh)
 
     if not aggregate_only:
-        make = _make_solver(solver, dtype, raise_x=raise_x, eff_stack=eff_stack)
+        make = _make_solver(solver, dtype, raise_x=raise_x, eff_stack=eff_stack,
+                            bet_fracs=bet_fracs)
         t0 = time.time()
         for k, i in enumerate(board_idx, 1):
             bstr = BOARDS[i]["board"]
@@ -521,8 +550,14 @@ if __name__ == "__main__":
                          "from existing board checkpoints")
     ap.add_argument("--scenario", default="btn_vs_bb_srp", choices=list(SCENARIOS),
                     help="position matchup / ranges to solve (see presets.SCENARIOS)")
+    ap.add_argument("--bet-sizes", default=None,
+                    help="comma-separated pot fractions for a multi-size tree, e.g. 0.33,0.75 "
+                         "(actions bet_33/bet_75, one response node per size). "
+                         "Default: the scenario's single bet_frac (plain 'bet').")
     a = ap.parse_args()
     roots = [int(x) for x in a.roots.split(",")] if a.roots else None
+    bet_fracs = parse_bet_sizes(a.bet_sizes)
     run(n=a.n, iters=a.iters, roots=roots, solver=a.solver, dtype=a.dtype,
         out=a.out, full_range_size=a.full_range_size, raise_x=a.raise_x,
-        fresh=a.fresh, aggregate_only=a.aggregate_only, scenario=a.scenario)
+        fresh=a.fresh, aggregate_only=a.aggregate_only, scenario=a.scenario,
+        bet_fracs=bet_fracs)

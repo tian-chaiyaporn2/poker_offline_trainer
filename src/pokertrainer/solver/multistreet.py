@@ -36,13 +36,23 @@ FOLD, CALL, RAISE = 0, 1, 2
 class MultiStreetSpike:
     def __init__(self, flop: List[int], oop: List[Combo], ip: List[Combo],
                  w_oop: np.ndarray, w_ip: np.ndarray, pot_bb: float,
-                 bet_frac: float = 0.66, streets: int = 3, raise_x=None):
+                 bet_frac: float = 0.66, streets: int = 3, raise_x=None,
+                 eff_stack=None, bet_fracs=None):
+        from .betsizes import normalize_bet_fracs
         self.flop = list(flop)
         self.oc = np.array(oop, dtype=np.int64)
         self.ic = np.array(ip, dtype=np.int64)
         self.no, self.ni = len(oop), len(ip)
         self.P0 = float(pot_bb)
-        self.bet_frac = bet_frac
+        # Effective stack behind the pot (bb): a bet/raise can't exceed what's left
+        # (all-in cap, mirrors BatchedCFR._capbet). None = no cap (unchanged).
+        self.eff = float(eff_stack) if eff_stack else None
+        # Bet-size menu (solver/betsizes.py). One size = the legacy tree (bit-for-bit);
+        # two or more = the multi-size tree (_solve_street_multi).
+        self.bet_fracs, self.bet_labels = normalize_bet_fracs(bet_frac, bet_fracs,
+                                                              pot_bb, eff_stack)
+        self._multi = len(self.bet_fracs) > 1
+        self.bet_frac = self.bet_fracs[0] if not self._multi else None
         self.raise_x = raise_x       # raise-to multiple of the bet; None = no raise
         self.n_streets = streets  # 1=flop only(showdown after flop), 2=+turn, 3=+river
         self.w_o = (w_oop / w_oop.sum()).astype(np.float64)   # match batched dtype
@@ -70,6 +80,12 @@ class MultiStreetSpike:
         # exploit best-response: when set to "OOP"/"IP", that seat maximizes at its own nodes
         # (true multi-street best response vs the pinned villain) instead of playing GTO.
         self._hero_seat = None
+
+    def _capbet(self, x, eo, ei):
+        """Cap a bet/raise-to at the min remaining stack (all-in). No-op without eff."""
+        if self.eff is None:
+            return x
+        return min(x, max(min(self.eff - eo, self.eff - ei), 0.0))
 
     @staticmethod
     def _compat(oc, ic):
@@ -112,8 +128,10 @@ class MultiStreetSpike:
     def _reg(self, key, n_actions):
         r = self.R.get(key)
         if r is None:
-            # OOP-owned nodes: root, ovb (OOP vs IP bet), iroop (OOP vs IP raise)
-            player_n = self.no if key[-1] in ("root", "ovb", "iroop") else self.ni
+            # OOP-owned nodes: root, ovb (OOP vs IP bet), iroop (OOP vs IP raise);
+            # multi-size response nodes carry the size index ("ovb1", "iroop0", ...).
+            player_n = (self.no if key[-1].rstrip("0123456789") in ("root", "ovb", "iroop")
+                        else self.ni)
             r = np.zeros((player_n, n_actions))
             self.R[key] = r
             self.S[key] = np.zeros_like(r)
@@ -148,6 +166,8 @@ class MultiStreetSpike:
 
     # --- one street's betting; returns (uo, ui) counterfactual values ---
     def _solve_street(self, street, board, eo, ei, ro, ri, path=""):
+        if self._multi:
+            return self._solve_street_multi(street, board, eo, ei, ro, ri, path)
         if self.raise_x is not None:
             return self._solve_street_raise(street, board, eo, ei, ro, ri, path)
         # Infoset key includes the betting-line path so different histories that
@@ -157,7 +177,7 @@ class MultiStreetSpike:
         # wrongly merge them. (Streets<=2 have no river node, so this is a no-op there.)
         bkey = (path, tuple(board))
         pot = self.P0 + eo + ei
-        b = self.bet_frac * pot
+        b = self._capbet(self.bet_frac * pot, eo, ei)
 
         k_root = (bkey, "root")
         k_ipc = (bkey, "ipc")
@@ -244,8 +264,8 @@ class MultiStreetSpike:
     def _solve_street_raise(self, street, board, eo, ei, ro, ri, path=""):
         bkey = (path, tuple(board))            # dealt order (see _solve_street)
         pot = self.P0 + eo + ei
-        b = self.bet_frac * pot
-        R = self.raise_x * b                     # raise-to (raiser's street investment)
+        b = self._capbet(self.bet_frac * pot, eo, ei)
+        R = self._capbet(self.raise_x * b, eo, ei)   # raise-to (raiser's street investment)
 
         s_root = self._get_strat((bkey, "root"), 2)
         s_ipc = self._get_strat((bkey, "ipc"), 2)
@@ -306,6 +326,118 @@ class MultiStreetSpike:
         ui = (s_ipc * u_ipc).sum(axis=1) + (s_ivb * u_ivb).sum(axis=1)
         return uo, ui
 
+    # --- multi-size betting: check | bet_1..bet_K, one response node per size ---
+    def _solve_street_multi(self, street, board, eo, ei, ro, ri, path=""):
+        """Generic K-size street (K = len(bet_fracs)), with or without the raise action.
+
+        Path tokens carry the size index as one digit ("2{k}", "3{k}"; with raises
+        "2{k}c"/"2{k}r"/"3{k}c"/"3{k}r"), so every line is a distinct infoset history.
+        Nodes: root / ipc (check + K bets), ovb{k} / ivb{k} (fold/call[/raise] facing size
+        k) and, with raises, orip{k} / iroop{k} (fold/call facing the raise over size k).
+        Supports the best-response seat (_hero_seat) at EVERY node, so exploitability()
+        works on this tree (raises included)."""
+        bkey = (path, tuple(board))            # dealt order (see _solve_street)
+        pot = self.P0 + eo + ei
+        K = len(self.bet_fracs)
+        rz = self.raise_x is not None
+        na_resp = 3 if rz else 2
+        hero = self._hero_seat
+
+        def val_o(s, u):                         # OOP's value at an OOP node
+            return u.max(axis=1) if hero == "OOP" else (s * u).sum(axis=1)
+
+        def val_i(s, u):                         # IP's value at an IP node
+            return u.max(axis=1) if hero == "IP" else (s * u).sum(axis=1)
+
+        s_root = self._get_strat((bkey, "root"), K + 1)
+        s_ipc = self._get_strat((bkey, "ipc"), K + 1)
+        ro_ck = ro * s_root[:, CHECK]
+        ri_ck = ri * s_ipc[:, CHECK]
+        uo_cc, ui_cc = self._advance(street, board, eo, ei, ro_ck, ri_ck, path + "1")
+
+        u_check = uo_cc
+        ui_ivb = np.zeros(self.ni)
+        root_bets, ipc_bets, updates = [], [], []
+        for k, frac in enumerate(self.bet_fracs):
+            b = self._capbet(frac * pot, eo, ei)
+            ro_bt = ro * s_root[:, 1 + k]
+            ri_bt = ri * s_ipc[:, 1 + k]
+            s_ovb = self._get_strat((bkey, f"ovb{k}"), na_resp)
+            s_ivb = self._get_strat((bkey, f"ivb{k}"), na_resp)
+            oppmass_ovb = self.B @ ri_bt
+            oppmass_ivb = self.B.T @ ro_bt
+            if not rz:
+                uo_L2, ui_L2 = self._advance(street, board, eo + b, ei + b,
+                                             ro_ck * s_ovb[:, CALL], ri_bt, path + f"2{k}")
+                uo_L3, ui_L3 = self._advance(street, board, eo + b, ei + b,
+                                             ro_bt, ri * s_ivb[:, CALL], path + f"3{k}")
+                u_ovb = np.stack([-eo * oppmass_ovb, uo_L2], axis=1)
+                u_ivb = np.stack([-ei * oppmass_ivb, ui_L3], axis=1)
+                ipc_bet = (self.P0 + eo) * (self.B.T @ (ro_ck * s_ovb[:, FOLD])) + ui_L2
+                root_bet = (self.P0 + ei) * (self.B @ (ri * s_ivb[:, FOLD])) + uo_L3
+            else:
+                Rz = self._capbet(self.raise_x * b, eo, ei)
+                s_orip = self._get_strat((bkey, f"orip{k}"), 2)
+                s_iroop = self._get_strat((bkey, f"iroop{k}"), 2)
+                uo_L2c, ui_L2c = self._advance(street, board, eo + b, ei + b,
+                                               ro_ck * s_ovb[:, CALL], ri_bt, path + f"2{k}c")
+                uo_L2r, ui_L2r = self._advance(street, board, eo + Rz, ei + Rz,
+                                               ro_ck * s_ovb[:, RAISE], ri_bt * s_orip[:, CALL],
+                                               path + f"2{k}r")
+                uo_L3c, ui_L3c = self._advance(street, board, eo + b, ei + b,
+                                               ro_bt, ri * s_ivb[:, CALL], path + f"3{k}c")
+                uo_L3r, ui_L3r = self._advance(street, board, eo + Rz, ei + Rz,
+                                               ro_bt * s_iroop[:, CALL], ri * s_ivb[:, RAISE],
+                                               path + f"3{k}r")
+                oppmass_orip = self.B.T @ (ro_ck * s_ovb[:, RAISE])
+                u_orip = np.stack([-(ei + b) * oppmass_orip, ui_L2r], axis=1)
+                oppmass_iroop = self.B @ (ri * s_ivb[:, RAISE])
+                u_iroop = np.stack([-(eo + b) * oppmass_iroop, uo_L3r], axis=1)
+                ovb_raise = (self.P0 + ei + b) * (self.B @ (ri_bt * s_orip[:, FOLD])) + uo_L2r
+                u_ovb = np.stack([-eo * oppmass_ovb, uo_L2c, ovb_raise], axis=1)
+                ivb_raise = (self.P0 + eo + b) * (self.B.T @ (ro_bt * s_iroop[:, FOLD])) + ui_L3r
+                u_ivb = np.stack([-ei * oppmass_ivb, ui_L3c, ivb_raise], axis=1)
+                ipc_bet = ((self.P0 + eo) * (self.B.T @ (ro_ck * s_ovb[:, FOLD]))
+                           + ui_L2c + val_i(s_orip, u_orip))
+                root_bet = ((self.P0 + ei) * (self.B @ (ri * s_ivb[:, FOLD]))
+                            + uo_L3c + val_o(s_iroop, u_iroop))
+                updates.append(((bkey, f"orip{k}"), s_orip, u_orip, ri_bt))
+                updates.append(((bkey, f"iroop{k}"), s_iroop, u_iroop, ro_bt))
+            u_check = u_check + val_o(s_ovb, u_ovb)
+            ui_ivb = ui_ivb + val_i(s_ivb, u_ivb)
+            root_bets.append(root_bet)
+            ipc_bets.append(ipc_bet)
+            updates.append(((bkey, f"ovb{k}"), s_ovb, u_ovb, ro_ck))
+            updates.append(((bkey, f"ivb{k}"), s_ivb, u_ivb, ri))
+
+        u_root = np.stack([u_check] + root_bets, axis=1)
+        u_ipc = np.stack([ui_cc] + ipc_bets, axis=1)
+        self._t_update((bkey, "root"), s_root, u_root, ro)
+        self._t_update((bkey, "ipc"), s_ipc, u_ipc, ri)
+        for key, s_, u_, reach in updates:
+            self._t_update(key, s_, u_, reach)
+        return val_o(s_root, u_root), val_i(s_ipc, u_ipc) + ui_ivb
+
+    def exploitability(self) -> float:
+        """Exploitability of the averaged profile in bb per compatible matchup:
+        (BR_OOP + BR_IP) / joint - P0. The game is constant-sum (every matchup splits P0),
+        so this is >= 0 and -> 0 as CFR converges. Implemented on the multi-size tree,
+        whose value aggregation supports a best-response seat at every node."""
+        if not self._multi:
+            raise ValueError("exploitability() is implemented for the multi-size tree "
+                             "(bet_fracs with >= 2 sizes)")
+        self._eval = True
+        try:
+            self._hero_seat = "OOP"
+            uo, _ = self._solve_street(1, self.flop, 0.0, 0.0, self.w_o.copy(), self.w_i.copy())
+            self._hero_seat = "IP"
+            _, ui = self._solve_street(1, self.flop, 0.0, 0.0, self.w_o.copy(), self.w_i.copy())
+        finally:
+            self._eval = False
+            self._hero_seat = None
+        joint = float(self.w_o @ (self.B @ self.w_i))
+        return (float(self.w_o @ uo) + float(self.w_i @ ui)) / joint - self.P0
+
     def _t_update(self, key, strat, u, reach):
         if self._eval:
             return
@@ -334,6 +466,9 @@ class MultiStreetSpike:
         # rather than silently return an empty _ucache.
         if self.raise_x is not None:
             raise ValueError("eval_capture_targets is only implemented for the no-raise tree")
+        if self._multi:
+            raise ValueError("eval_capture_targets is only implemented for the single-size tree "
+                             "(continuation/exploit content does not support bet_fracs yet)")
         self._targets = set(targets)
         self._ucache = {}
         self._strat_override = override or {}

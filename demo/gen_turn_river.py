@@ -15,7 +15,7 @@ import numpy as np
 
 from pokertrainer.cards import parse_cards
 from pokertrainer.content_pack import build_pack, verify_pack
-from pokertrainer.content_yield import extract_records
+from pokertrainer.content_yield import extract_records, parse_bet_sizes
 from pokertrainer.presets import BB_SRP, BTN_SRP
 from pokertrainer.ranges import expand_range
 from pokertrainer.validate_flop import _make_solver, subsample
@@ -35,11 +35,14 @@ POT, BET = 5.5, 0.66
 
 
 def run(solver="cpu", dtype="float64", n=90, iters=200, version="turnriver_demo",
-        note="turn/river demo (reduced range; NOT check-check filtered)", raise_x=None):
+        note="turn/river demo (reduced range; NOT check-check filtered)", raise_x=None,
+        bet_fracs=None):
     """Solve the curated turn/river runouts. Demo defaults (cpu, n=90) run locally;
     pass --solver gpu --n 400 --iters 300 (Kaggle) for the full-range pack. Pass
-    --raise-x 3 to add Fold/Call/Raise on the facing-a-bet nodes (the raise pass)."""
-    make = _make_solver(solver, dtype, raise_x=raise_x)
+    --raise-x 3 to add Fold/Call/Raise on the facing-a-bet nodes (the raise pass).
+    Pass --bet-sizes 0.33,0.75 for a multi-size tree (bet_33/bet_75 + per-size
+    vs-bet nodes)."""
+    make = _make_solver(solver, dtype, raise_x=raise_x, bet_fracs=bet_fracs)
     recs = []
     for i, (board, streets) in enumerate(RUNOUTS, 1):
         flop = parse_cards(board)
@@ -53,6 +56,11 @@ def run(solver="cpu", dtype="float64", n=90, iters=200, version="turnriver_demo"
     config = {"positions": {"ip": "BTN", "oop": "BB"}, "stack_bb": 100, "pot_bb": POT,
               "bet_pct_pot": 66, "line": "unconditioned_later_street",
               "note": note, "solver_model": "full_street_cfr_plus"}
+    if bet_fracs is not None:
+        # multi-size: record the menu (single-size config stays byte-identical). There is
+        # no single bet_pct_pot; each vs-bet node names its faced size (bb_vs_bet_33).
+        del config["bet_pct_pot"]
+        config["bet_sizes_pct"] = [int(round(100 * f)) for f in sorted(bet_fracs)]
     build_pack(recs, config, "output/packs", version)
     verdict = verify_pack(f"output/packs/flop_pack_{version}.db")
     print("VERIFY:", verdict)
@@ -71,5 +79,9 @@ if __name__ == "__main__":
     ap.add_argument("--note", default="turn/river demo (reduced range; NOT check-check filtered)")
     ap.add_argument("--raise-x", dest="raise_x", type=float, default=None,
                     help="raise-to multiple of the bet (e.g. 3) — adds Fold/Call/Raise on vs-bet nodes")
+    ap.add_argument("--bet-sizes", dest="bet_sizes", default=None,
+                    help="comma-separated pot fractions, e.g. 0.33,0.75 (multi-size tree); "
+                         "default: single 66%% size")
     a = ap.parse_args()
-    run(a.solver, a.dtype, a.n, a.iters, a.version, a.note, raise_x=a.raise_x)
+    run(a.solver, a.dtype, a.n, a.iters, a.version, a.note, raise_x=a.raise_x,
+        bet_fracs=parse_bet_sizes(a.bet_sizes))

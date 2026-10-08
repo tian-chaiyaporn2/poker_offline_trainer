@@ -20,6 +20,7 @@ import numpy as np
 
 from ..cards import hand_str
 from ..evaluator import evaluate
+from .betsizes import normalize_bet_fracs
 
 CHECK, BET = 0, 1
 FOLD, CALL, RAISE = 0, 1, 2
@@ -35,13 +36,19 @@ def _strat(reg: np.ndarray) -> np.ndarray:
 class BatchedCFR:
     def __init__(self, flop: List[int], oop, ip, w_oop, w_ip, pot_bb,
                  bet_frac: float = 0.66, streets: int = 3, bet_streets=None,
-                 raise_x=None, eff_stack=None):
+                 raise_x=None, eff_stack=None, bet_fracs=None):
         self.flop = list(flop)
         self.oc = np.array(oop, dtype=np.int64)
         self.ic = np.array(ip, dtype=np.int64)
         self.no, self.ni = len(oop), len(ip)
         self.P0 = float(pot_bb)
-        self.bet_frac = bet_frac
+        # Bet-size menu (solver/betsizes.py). None / one size = the legacy single-size
+        # tree (bit-for-bit, plain "bet" label); >= 2 sizes = the multi-size tree
+        # (_solve_multi), labels "bet_33", "bet_75", ...
+        self.bet_fracs, self.bet_labels = normalize_bet_fracs(bet_frac, bet_fracs,
+                                                              pot_bb, eff_stack)
+        self._multi = len(self.bet_fracs) > 1
+        self.bet_frac = self.bet_fracs[0] if not self._multi else None
         # Effective stack behind the pot (bb). A bet/raise can't put in more than
         # what's left, so on a low-SPR (3-bet) pot bets hit all-in and later-street
         # betting is capped — the SPR dynamic. None = no cap (deep SRP, unchanged).
@@ -100,9 +107,10 @@ class BatchedCFR:
         key = path + node
         r = self.R.get(key)
         if r is None:
-            r = np.zeros((C, self.no if node in ("R", "V", "W") else self.ni, na))
+            r = np.zeros((C, self.no if node[0] in ("R", "V", "W") else self.ni, na))
             # node letter: R=root(OOP), P=ipc(IP), V=ovb(OOP), I=ivb(IP),
-            #              O=orip(IP vs OOP raise), W=iroop(OOP vs IP raise)
+            #              O=orip(IP vs OOP raise), W=iroop(OOP vs IP raise);
+            # multi-size response nodes append the size index ("V0", "I1", ...)
             self.R[key] = r
             self.S[key] = np.zeros_like(r)
         return r
@@ -228,6 +236,97 @@ class BatchedCFR:
         ui = (s_ipc * u_ipc).sum(axis=2) + (s_ivb * u_ivb).sum(axis=2)
         return uo, ui
 
+    def _solve_multi(self, street, boards, eo, ei, ro, ri, path):
+        """Multi-size betting street (K = len(bet_fracs) >= 2), with or without raises.
+        Batched mirror of MultiStreetSpike._solve_street_multi: check | bet_1..bet_K at
+        root/ipc, one fold/call[/raise] response node per size (V{k}/I{k}) and, with
+        raises, one fold/call node per raise-over-size-k (O{k}/W{k}). Path tokens carry
+        the size index ("2{k}", "3{k}", "2{k}c", "2{k}r", ...) so every line is distinct."""
+        C = len(boards)
+        K = len(self.bet_fracs)
+        rz = self.raise_x is not None
+        na_resp = 3 if rz else 2
+        pot = self.P0 + eo + ei
+        s_root = self._get_strat(path, "R", C, K + 1)
+        s_ipc = self._get_strat(path, "P", C, K + 1)
+        ro_ck = ro * s_root[:, :, CHECK]
+        ri_ck = ri * s_ipc[:, :, CHECK]
+        if street >= self.n_streets:
+            adv = lambda bd, e1, e2, r1, r2, p: self._showdown(bd, e1, e2, r1, r2)
+        else:
+            adv = lambda bd, e1, e2, r1, r2, p: self._chance(street, bd, e1, e2, r1, r2, p)
+        uo_cc, ui_cc = adv(boards, eo, ei, ro_ck, ri_ck, path + "1")
+
+        u_check = uo_cc
+        ui_ivb = np.zeros((C, self.ni))
+        root_bets, ipc_bets, updates, cap = [], [], [], {}
+        for k, frac in enumerate(self.bet_fracs):
+            b = self._capbet(frac * pot, eo, ei)                      # [C]
+            ro_bt = ro * s_root[:, :, 1 + k]
+            ri_bt = ri * s_ipc[:, :, 1 + k]
+            s_ovb = self._get_strat(path, f"V{k}", C, na_resp)
+            s_ivb = self._get_strat(path, f"I{k}", C, na_resp)
+            oppmass_ovb = ri_bt @ self.B.T                            # [C,no]
+            oppmass_ivb = ro_bt @ self.B                              # [C,ni]
+            if not rz:
+                uo_L2, ui_L2 = adv(boards, eo + b, ei + b, ro_ck * s_ovb[:, :, CALL], ri_bt,
+                                   path + f"2{k}")
+                uo_L3, ui_L3 = adv(boards, eo + b, ei + b, ro_bt, ri * s_ivb[:, :, CALL],
+                                   path + f"3{k}")
+                u_ovb = np.stack([-eo[:, None] * oppmass_ovb, uo_L2], axis=2)
+                u_ivb = np.stack([-ei[:, None] * oppmass_ivb, ui_L3], axis=2)
+                ipc_bet = (self.P0 + eo)[:, None] * ((ro_ck * s_ovb[:, :, FOLD]) @ self.B) + ui_L2
+                root_bet = (self.P0 + ei)[:, None] * ((ri * s_ivb[:, :, FOLD]) @ self.B.T) + uo_L3
+            else:
+                Rz = self._capbet(self.raise_x * b, eo, ei)
+                s_orip = self._get_strat(path, f"O{k}", C, 2)
+                s_iroop = self._get_strat(path, f"W{k}", C, 2)
+                uo_L2c, ui_L2c = adv(boards, eo + b, ei + b, ro_ck * s_ovb[:, :, CALL], ri_bt,
+                                     path + f"2{k}c")
+                uo_L2r, ui_L2r = adv(boards, eo + Rz, ei + Rz, ro_ck * s_ovb[:, :, RAISE],
+                                     ri_bt * s_orip[:, :, CALL], path + f"2{k}r")
+                uo_L3c, ui_L3c = adv(boards, eo + b, ei + b, ro_bt, ri * s_ivb[:, :, CALL],
+                                     path + f"3{k}c")
+                uo_L3r, ui_L3r = adv(boards, eo + Rz, ei + Rz, ro_bt * s_iroop[:, :, CALL],
+                                     ri * s_ivb[:, :, RAISE], path + f"3{k}r")
+                oppmass_orip = (ro_ck * s_ovb[:, :, RAISE]) @ self.B
+                u_orip = np.stack([-(ei + b)[:, None] * oppmass_orip, ui_L2r], axis=2)
+                oppmass_iroop = (ri * s_ivb[:, :, RAISE]) @ self.B.T
+                u_iroop = np.stack([-(eo + b)[:, None] * oppmass_iroop, uo_L3r], axis=2)
+                ovb_raise = ((self.P0 + ei + b)[:, None]
+                             * ((ri_bt * s_orip[:, :, FOLD]) @ self.B.T) + uo_L2r)
+                u_ovb = np.stack([-eo[:, None] * oppmass_ovb, uo_L2c, ovb_raise], axis=2)
+                ivb_raise = ((self.P0 + eo + b)[:, None]
+                             * ((ro_bt * s_iroop[:, :, FOLD]) @ self.B) + ui_L3r)
+                u_ivb = np.stack([-ei[:, None] * oppmass_ivb, ui_L3c, ivb_raise], axis=2)
+                ipc_bet = ((self.P0 + eo)[:, None] * ((ro_ck * s_ovb[:, :, FOLD]) @ self.B)
+                           + ui_L2c + (s_orip * u_orip).sum(axis=2))
+                root_bet = ((self.P0 + ei)[:, None] * ((ri * s_ivb[:, :, FOLD]) @ self.B.T)
+                            + uo_L3c + (s_iroop * u_iroop).sum(axis=2))
+                updates.append((path + f"O{k}", s_orip, u_orip, ri_bt))
+                updates.append((path + f"W{k}", s_iroop, u_iroop, ro_bt))
+            u_check = u_check + (s_ovb * u_ovb).sum(axis=2)
+            ui_ivb = ui_ivb + (s_ivb * u_ivb).sum(axis=2)
+            root_bets.append(root_bet)
+            ipc_bets.append(ipc_bet)
+            updates.append((path + f"V{k}", s_ovb, u_ovb, ro_ck))
+            updates.append((path + f"I{k}", s_ivb, u_ivb, ri))
+            cap.update({f"s_ovb_{k}": s_ovb, f"u_ovb_{k}": u_ovb,
+                        f"s_ivb_{k}": s_ivb, f"u_ivb_{k}": u_ivb})
+
+        u_root = np.stack([u_check] + root_bets, axis=2)
+        u_ipc = np.stack([ui_cc] + ipc_bets, axis=2)
+        if self._eval and street == 1 and path == "":
+            cap.update({"s_root": s_root, "u_root": u_root, "s_ipc": s_ipc, "u_ipc": u_ipc})
+            self._cap = {k: v.copy() for k, v in cap.items()}
+        self._update(path + "R", s_root, u_root, ro)
+        self._update(path + "P", s_ipc, u_ipc, ri)
+        for key, s_, u_, reach in updates:
+            self._update(key, s_, u_, reach)
+        uo = (s_root * u_root).sum(axis=2)
+        ui = (s_ipc * u_ipc).sum(axis=2) + ui_ivb
+        return uo, ui
+
     def _solve(self, street, boards, eo, ei, ro, ri, path):
         C = len(boards)
         if street > self.bet_streets:
@@ -235,6 +334,8 @@ class BatchedCFR:
             if street >= self.n_streets:
                 return self._showdown(boards, eo, ei, ro, ri)
             return self._chance(street, boards, eo, ei, ro, ri, path + "c")
+        if self._multi:
+            return self._solve_multi(street, boards, eo, ei, ro, ri, path)
         if self.raise_x is not None:
             return self._solve_raise(street, boards, eo, ei, ro, ri, path)
         b = self._capbet(self.bet_frac * (self.P0 + eo + ei), eo, ei)   # [C]
@@ -314,12 +415,11 @@ class BatchedCFR:
         s_root, u_root = cap["s_root"], cap["u_root"]
         opp = self.B @ self.w_i
         opp = np.where(opp > 1e-12, opp, 1.0)
+        acts = ["check"] + list(self.bet_labels)     # ["check", "bet"] single-size
         out = {}
         for i in range(self.no):
-            ev = {"check": float(u_root[0, i, CHECK] / opp[i]),
-                  "bet": float(u_root[0, i, BET] / opp[i])}
-            freq = {"check": float(s_root[0, i, CHECK]),
-                    "bet": float(s_root[0, i, BET])}
+            ev = {a: float(u_root[0, i, k] / opp[i]) for k, a in enumerate(acts)}
+            freq = {a: float(s_root[0, i, k]) for k, a in enumerate(acts)}
             out[hand_str((int(self.oc[i, 0]), int(self.oc[i, 1])))] = {
                 "ev": ev, "freq": freq, "preferred": preferred_action(ev, freq),
             }
@@ -393,17 +493,36 @@ def _flop_decisions_from_cap(solver) -> List[Dict]:
     B = to_host(solver.B); w_o = to_host(solver.w_o); w_i = to_host(solver.w_i)
     s_root = cap["s_root"]; s_ipc = cap["s_ipc"]
     ro_ck = w_o * s_root[0, :, CHECK]
-    ro_bt = w_o * s_root[0, :, BET]
-    ri_bt = w_i * s_ipc[0, :, BET]
     resp = ["fold", "call", "raise"] if solver.raise_x is not None else ["fold", "call"]
+    labels = list(getattr(solver, "bet_labels", ["bet"]))
+    first = ["check"] + labels
+    # (node, player, combos, actions, u, s, opp_mass, extra record fields)
     nodes = [
-        ("bb_first",     "BB",  solver.oc, ["check", "bet"], cap["u_root"], cap["s_root"], B @ w_i),
-        ("btn_vs_check", "BTN", solver.ic, ["check", "bet"], cap["u_ipc"], cap["s_ipc"], B.T @ ro_ck),
-        ("bb_vs_bet",    "BB",  solver.oc, resp, cap["u_ovb"], cap["s_ovb"], B @ ri_bt),
-        ("btn_vs_bet",   "BTN", solver.ic, resp, cap["u_ivb"], cap["s_ivb"], B.T @ ro_bt),
+        ("bb_first",     "BB",  solver.oc, first, cap["u_root"], cap["s_root"], B @ w_i, {}),
+        ("btn_vs_check", "BTN", solver.ic, first, cap["u_ipc"], cap["s_ipc"], B.T @ ro_ck, {}),
     ]
+    if not getattr(solver, "_multi", False):
+        ro_bt = w_o * s_root[0, :, BET]
+        ri_bt = w_i * s_ipc[0, :, BET]
+        nodes += [
+            ("bb_vs_bet",  "BB",  solver.oc, resp, cap["u_ovb"], cap["s_ovb"], B @ ri_bt, {}),
+            ("btn_vs_bet", "BTN", solver.ic, resp, cap["u_ivb"], cap["s_ivb"], B.T @ ro_bt, {}),
+        ]
+    else:
+        # One response node per faced size, named after the size's label
+        # ("bb_vs_bet_33"), carrying the faced size so the spot is self-describing.
+        for k, (frac, lab) in enumerate(zip(solver.bet_fracs, labels)):
+            ro_bt = w_o * s_root[0, :, 1 + k]
+            ri_bt = w_i * s_ipc[0, :, 1 + k]
+            extra = {"facing_bet": lab, "facing_bet_frac": float(frac)}
+            nodes += [
+                (f"bb_vs_{lab}",  "BB",  solver.oc, resp, cap[f"u_ovb_{k}"], cap[f"s_ovb_{k}"],
+                 B @ ri_bt, extra),
+                (f"btn_vs_{lab}", "BTN", solver.ic, resp, cap[f"u_ivb_{k}"], cap[f"s_ivb_{k}"],
+                 B.T @ ro_bt, extra),
+            ]
     recs: List[Dict] = []
-    for key, player, combos, actions, u, s, opp_mass in nodes:
+    for key, player, combos, actions, u, s, opp_mass, extra in nodes:
         safe = np.where(opp_mass > 1e-12, opp_mass, 1.0)
         for i in range(len(combos)):
             ev = {a: float(u[0, i, k] / safe[i]) for k, a in enumerate(actions)}
@@ -414,6 +533,7 @@ def _flop_decisions_from_cap(solver) -> List[Dict]:
                 "actions": list(actions), "ev": ev, "freq": freq,
                 "preferred": preferred_action(ev, freq),
                 "reach_mass": float(opp_mass[i]),
+                **extra,
             })
     return recs
 

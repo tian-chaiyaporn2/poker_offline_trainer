@@ -107,6 +107,27 @@ python demo/gen_turn_river.py            # cpu, N=90 -> turnriver_demo
 python demo/gen_turn_river.py --raise-x 3 --n 6 --iters 15 --version tr_raise_smoke  # local raise smoke
 ```
 
+**Multiple bet sizes (Check / Bet 33% / Bet 75%).** All three solvers take `bet_fracs`
+(CLI `--bet-sizes 0.33,0.75` on `content_yield` and `demo/gen_turn_river.py`). With 2+ sizes
+the tree offers one bet action per size, labelled `bet_<pct>` (`bet_33`, `bet_75`), and every
+size gets its **own** response node(s): `bb_vs_bet_33` / `btn_vs_bet_75` (relabelled per
+scenario, e.g. `co_vs_bet_33`), each record carrying `facing_bet` + `facing_bet_frac`.
+`--raise-x` composes (per-size Fold/Call/Raise + per-size raise-response nodes) and every size
+respects the `eff_stack` all-in cap. Omitting the flag (or a single size) is the legacy tree,
+bit-for-bit: plain `bet`, `bb_vs_bet`, existing packs/checkpoints unchanged. Rejected loudly:
+duplicate sizes / sizes sharing a 1% label, >9 sizes, two sizes that cap to the same all-in at
+the root, and continuation/exploit extraction (`eval_capture_targets`) on a multi-size tree.
+Cost: 2 sizes ≈ the single-size raise tree (5 lines/street); 2 sizes + raise ≈ 6× that — not
+Kaggle-friendly. Full-range BTN-vs-BB pass: `colab/kaggle_content_betsizes.ipynb` (2 parts,
+same flow as the raise notebook; download `records_betsizes_<PART>.json`, merge board-wise,
+build/sign as in §4). **The trainer UI does not render per-size buttons yet** —
+`demo/build_trainer.py` keys bet labels / "Opponent bets N%" copy on the literal `bet` action
+and `_vs_bet` node suffix, so the pack is content-first until the app is wired. Local smoke:
+```bash
+python -m pokertrainer.content_yield --solver cpu --n 8 --iters 25 --roots 0 \
+    --bet-sizes 0.33,0.75 --out /tmp/betsizes_smoke   # bb_first: check/bet_33/bet_75
+```
+
 ## 4. Build + sign + verify the pack
 
 ```bash
