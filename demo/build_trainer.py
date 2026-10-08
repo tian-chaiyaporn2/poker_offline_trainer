@@ -10,6 +10,7 @@ import base64
 import html
 import json
 import os
+import re
 import sqlite3
 import subprocess
 import sys
@@ -126,6 +127,8 @@ def _bet_pct_from_pack(path: str) -> int:
         conn = sqlite3.connect(path)
         meta = dict(conn.execute("SELECT key, value FROM pack_meta"))
         cfg = json.loads(meta.get("config") or "{}")
+        if "bet_pct_pot" not in cfg and cfg.get("bet_sizes_pct"):
+            return int(min(cfg["bet_sizes_pct"]))   # multi-size pack: real sizes ride on bet_NN / node
         return int(cfg.get("bet_pct_pot", 66))
     except (OSError, sqlite3.Error, TypeError, ValueError, json.JSONDecodeError):
         return 66
@@ -154,12 +157,21 @@ def _ip_pos(rows, oop):
     return "BTN" if oop != "BTN" else "BB"
 
 
+_SIZED_NODE = re.compile(r"^(.*_vs_bet)_(\d+)$")   # multi-size packs: bb_vs_bet_33 -> faced 33%
+_SIZED_BET = re.compile(r"^bet_(\d+)$")              # multi-size packs: bet_33 / bet_75
+
+
 def _to_q(d, oop_pos="BB", ip_pos=None, bet_pct=66):
     from pokertrainer.explanations import freq_pct_ints
     acts = json.loads(d["actions"])
     board = [d["board"][i:i+2] for i in range(0, len(d["board"]), 2)]
     street = STREET.get(len(d["board"]), "flop")
     node = d["node"]
+    # A sized facing node folds back to the plain "_vs_bet" role the UI keys on; the faced size
+    # becomes this spot's bet_pct, which every "they bet X%" string already reads.
+    m = _SIZED_NODE.match(node)
+    if m:
+        node, bet_pct = m.group(1), int(m.group(2))
     freq_raw = {k: float(v) for k, v in json.loads(d["freq"]).items()}
     return {
         "board": board, "hero": [d["hand"][0:2], d["hand"][2:4]], "street": street,
@@ -170,7 +182,9 @@ def _to_q(d, oop_pos="BB", ip_pos=None, bet_pct=66):
         "villain": (ip_pos or ("BTN" if oop_pos != "BTN" else "BB"))
         if d["acting_player"] == oop_pos else oop_pos,
         "actions": acts, "labels": {
-            a: (f"Bet {bet_pct}%" if a == "bet" else ALAB.get(a, a)) for a in acts
+            a: (f"Bet {bet_pct}%" if a == "bet" else
+                f"Bet {_SIZED_BET.match(a).group(1)}%" if _SIZED_BET.match(a) else ALAB.get(a, a))
+            for a in acts
         }, "bet_pct": bet_pct,
         "ev": {k: round(v, 2) for k, v in json.loads(d["ev"]).items()},
         # Largest-remainder ints so the Pro frequency mix always sums to 100.
@@ -1694,12 +1708,19 @@ function posLabel(q){const m=eff("positions");
   return (TERMS[m].pos[q.acting_player]||q.acting_player);}
 function actLabel(a){const m=eff("positions");
   if(m!=="plain"&&cur&&cur.labels&&cur.labels[a])return cur.labels[a];  // per-pack bet/raise sizing
-  return (TERMS[m].act[a]||a);}
+  const t=TERMS[m].act[baseAct(a)]||a;
+  return betSize(a)?t+" · "+betSize(a):t;}
 // Short, jargon-free action names for the verdict/cost sentences (the verbose plain
 // labels like "Check (pass, no bet)" are for the buttons, not for prose).
+// Multi-size packs name each bet by its size ("bet_33", "bet_75"); everything that asks "is this
+// a bet?" goes through isBet/baseAct, and the size is part of the name so two bets never look alike.
+function isBet(a){return a==="bet"||/^bet_\d+$/.test(a||"");}
+function baseAct(a){return isBet(a)?"bet":a;}
+function betSize(a){const m=/^bet_(\d+)$/.exec(a||"");return m?m[1]+"%":"";}
 const ACT_SHORT={check:"Check",bet:"Bet",fold:"Fold",call:"Call",raise:"Raise"};
-function shortAct(a){return ACT_SHORT[a]||a;}
+function shortAct(a){return betSize(a)?"Bet "+betSize(a):(ACT_SHORT[a]||a);}
 function actionPrimary(a){
+  if(betSize(a))return "Bet "+betSize(a);
   return {fold:"Fold",check:"Check",call:"Call",bet:"Bet",raise:"Raise",
     open:"Raise","3bet":"3-bet","4bet":"4-bet"}[a]||a;
 }
@@ -1710,6 +1731,7 @@ function actionSecondary(a){
   if(a==="open")return "Open the pot";
   if(a==="3bet"||a==="4bet")return "Re-raise";
   const sized=cur&&cur.labels&&cur.labels[a]?cur.labels[a].replace(/^(Bet|Raise)\s*/,""):"";
+  if(betSize(a))return "Put chips in";   // the size is already in the primary label
   if(a==="bet")return sized?"Put chips in · "+sized:"Put chips in";
   if(a==="raise")return sized?"Bet more · "+sized:"Bet more";
   return "";
@@ -1769,7 +1791,7 @@ const RIVER_LEARNING={
 function inferReason(q,rd){
   const p=q.preferred,made=rd.cat!=="high",strong=handTier(rd)>=4;
   if(p==="raise")return !made?(rd.draw?"raise_semibluff":"raise_bluff"):(strong?"raise_value":"raise_semibluff");
-  if(p==="bet")return !made?(rd.draw?"semi_bluff":"bluff"):(strong?"value":"protection");
+  if(isBet(p))return !made?(rd.draw?"semi_bluff":"bluff"):(strong?"value":"protection");
   if(p==="check")return strong?"trap":(made?"pot_control":"realization");
   // No-pair calls are bluff-catches, not "odds to chase" — only draws chase.
   if(p==="call")return made?"value_call":(rd.draw?"call_odds":"bluff_catch");
@@ -1792,7 +1814,7 @@ function bcReframe(q,rd){
   return (q.reason==="trap"||q.reason==="value")
     &&(rd.boardStraighty>=2||rd.boardFlushy>=2)
     &&(rd.cat==="pair"||rd.cat==="twopair"||rd.cat==="trips")
-    &&q.actions.indexOf("check")>=0&&q.actions.indexOf("bet")>=0;
+    &&q.actions.indexOf("check")>=0&&q.actions.some(isBet);
 }
 function plainHead(q){
   // A "trap"/"value" framing overclaims on a very coordinated board — the made hand is
@@ -1800,7 +1822,7 @@ function plainHead(q){
   // if the solver bets, warn about vulnerability without contradicting the recommendation.
   const rd=handRead(q.hero,q.board);
   if(bcReframe(q,rd)){
-    if(q.preferred==="bet"){
+    if(isBet(q.preferred)){
       return "The board is coordinated — a straight or flush is very possible — so your made hand is vulnerable. Betting here is thin: you often get called by the hands that beat you and fold out the ones you beat.";
     }
     let s="The board is coordinated — a straight or flush is very possible — so your hand is more of a bluff-catcher than a monster. Check to keep the pot small and take a cheap showdown rather than bet into the hands that beat you.";
@@ -2475,7 +2497,7 @@ function findContrast(q){
   // IS the reason it plays differently (two pair calls / one pair folds is trivial, not a
   // "same hand, opposite play"). Require the SAME made-hand category; if there's no twin of
   // the same category with the opposite play, hide the block rather than show a mismatch.
-  const fam=function(x){var a=x.actions||[];return (a.indexOf("bet")>=0&&a.indexOf("check")>=0)?"line":(a.indexOf("fold")>=0&&a.indexOf("call")>=0)?"facing":"?";};
+  const fam=function(x){var a=x.actions||[];return (a.some(isBet)&&a.indexOf("check")>=0)?"line":(a.indexOf("fold")>=0&&a.indexOf("call")>=0)?"facing":"?";};
   const myFam=fam(q);
   let best=null,bs=-1;
   for(let i=0;i<ALLSPOTS.length;i++){const o=ALLSPOTS[i];   // deck + contrast-only pool
@@ -2535,7 +2557,7 @@ function renderContrast(q){
   const rd=handRead(q.hero,q.board);
   const mine=SHORT_RULE[q.reason]||shortAct(q.preferred), theirs=SHORT_RULE[c.q.reason]||shortAct(c.q.preferred);
   const l1=document.createElement("div");l1.className="cmp-line";
-  l1.innerHTML='<span class="cw">This hand</span><b>'+cap1(rd.made)+'</b> &rarr; the play is <span class="cmp-play a-'+q.preferred+'">'+mine+'</span>.';
+  l1.innerHTML='<span class="cw">This hand</span><b>'+cap1(rd.made)+'</b> &rarr; the play is <span class="cmp-play a-'+baseAct(q.preferred)+'">'+mine+'</span>.';
   const l2=document.createElement("div");l2.className="cmp-line";
   l2.innerHTML='<span class="cw">A look-alike hand</span>';
   const hand=document.createElement("div");hand.className="cmp-hand";
@@ -2544,7 +2566,7 @@ function renderContrast(q){
   const hc=document.createElement("div");hc.className="cmp-cards";c.q.hero.forEach(function(x){hc.appendChild(card(x));});
   hand.appendChild(bc);hand.appendChild(plus);hand.appendChild(hc);
   const play=document.createElement("div");play.className="cmp-line";play.style.marginTop="8px";
-  play.innerHTML='<b>'+cap1(c.rd.made)+'</b> &rarr; the play is <span class="cmp-play a-'+c.q.preferred+'">'+theirs+'</span>.';
+  play.innerHTML='<b>'+cap1(c.rd.made)+'</b> &rarr; the play is <span class="cmp-play a-'+baseAct(c.q.preferred)+'">'+theirs+'</span>.';
   l2.appendChild(hand);l2.appendChild(play);
   const why=document.createElement("div");why.className="cmp-why";
   why.innerHTML="<b>What flips it:</b> "+contrastWhy(q,rd,c.q,c.rd);
@@ -2631,7 +2653,7 @@ function renderFeedback(q,a,gained){
   // rule-of-thumb so beginner/adaptive modes (which hide the Pro #det bullets) still get the
   // actionable "why", not just the headline. Pro still shows it in #det below.
   const ruleText=bcRule
-    ? (q.preferred==="bet"
+    ? (isBet(q.preferred)
       ? "On a coordinated board, a one-pair-type hand is vulnerable — bets are thin and often get called by better."
       : "On a coordinated board, a one-pair-type hand is a bluff-catcher, not a monster — keep the pot small and don't bet into the likely straights and flushes.")
     : ((q.reason==="exploit"&&q.detail&&q.detail.length)?q.detail[0]:ruleFor(q));

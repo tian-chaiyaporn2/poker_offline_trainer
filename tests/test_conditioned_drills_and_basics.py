@@ -106,3 +106,19 @@ def test_basics_copy_is_beginner_language():
         assert not re.search(r"\bbb\b", text), q["id"]          # chips, not bb
         assert "equity" not in text.lower(), q["id"]
         assert "Monte-Carlo" not in text and "makes:" not in text, q["id"]
+
+
+def test_multi_size_records_render_as_sized_actions(bt):
+    base = {"board": "As7h2d", "hand": "KdKc", "acting_player": "BB", "mixed": 0,
+            "reason": "value", "headline": "h", "detail": "[]"}
+    first = bt._to_q(dict(base, node="bb_first", actions='["check","bet_33","bet_75"]',
+                          ev='{"check":1,"bet_33":2,"bet_75":1.5}',
+                          freq='{"check":0.1,"bet_33":0.8,"bet_75":0.1}',
+                          preferred_action="bet_33",
+                          action_grades='{"check":"costly","bet_33":"best","bet_75":"good"}'))
+    assert first["labels"] == {"check": "Check", "bet_33": "Bet 33%", "bet_75": "Bet 75%"}
+    facing = bt._to_q(dict(base, node="bb_vs_bet_75", actions='["fold","call"]',
+                           ev='{"fold":0,"call":1}', freq='{"fold":0.2,"call":0.8}',
+                           preferred_action="call",
+                           action_grades='{"fold":"costly","call":"best"}'), bet_pct=33)
+    assert facing["node"] == "bb_vs_bet" and facing["bet_pct"] == 75

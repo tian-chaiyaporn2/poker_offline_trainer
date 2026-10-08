@@ -37,6 +37,13 @@ entirely from the Python standard library plus our own MIT code. In particular:
 The Python standard library is distributed under the PSF License Agreement,
 which permits commercial use and redistribution.
 
+## Mobile app shell (`mobile/`, shipped inside the iOS/Android app)
+
+| Component            | Package | Version | Licence      | Commercial use | Role                              |
+|----------------------|---------|---------|--------------|----------------|-----------------------------------|
+| Native shell         | @capacitor/core, /ios, /android, /cli | 7.6.9 | MIT | ✅ Yes | Wraps `index.html`; native HTTP for the coach |
+| Secure key storage   | capacitor-secure-storage-plugin | 0.12.0 | MIT | ✅ Yes | BYOK key in Keychain / Keystore |
+
 ## Development-only dependencies (not shipped)
 
 | Package | Licence | Role                         |
