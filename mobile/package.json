@@ -1,0 +1,25 @@
+{
+  "name": "holdem-trainer-mobile",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Capacitor shell for the self-contained trainer page (index.html at the repo root).",
+  "license": "MIT",
+  "scripts": {
+    "www": "node scripts/copy-www.mjs",
+    "sync": "npm run www && cap sync",
+    "ios": "npm run sync && cap open ios",
+    "android": "npm run sync && cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "7.6.9",
+    "@capacitor/core": "7.6.9",
+    "@capacitor/ios": "7.6.9",
+    "capacitor-secure-storage-plugin": "0.12.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "7.6.9"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

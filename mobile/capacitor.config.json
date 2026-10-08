@@ -1,0 +1,18 @@
+{
+  "appId": "io.github.tianlog21.holdemtrainer",
+  "appName": "Hold'em Trainer",
+  "webDir": "www",
+  "backgroundColor": "#0b0c10",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#0b0c10"
+  },
+  "android": {
+    "backgroundColor": "#0b0c10"
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": false
+    }
+  }
+}

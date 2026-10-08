@@ -1,0 +1,3 @@
+node_modules/
+# staged copy of ../index.html (npm run www)
+www/
