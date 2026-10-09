@@ -82,6 +82,9 @@ def test_line_events_follow_the_node_and_villain_reply(bt):
     assert ev == [("opp", "check"), ("you", "bet"), ("opp", "call")]
     ev = bt._line_events({"node": "bb_first"}, "bet", "Opponent folds — you win the pot.")
     assert ev == [("you", "bet"), ("opp", "fold")]
+    # A sized facing node is still "they bet, then you answer" — the size lives on the node.
+    ev = bt._line_events({"node": "bb_vs_bet_33"}, "fold", "You fold — you lose the pot.")
+    assert ev == [("opp", "bet"), ("you", "fold")]
 
 
 def test_basics_questions_are_embedded_and_gradeable():
@@ -97,6 +100,25 @@ def test_basics_questions_are_embedded_and_gradeable():
         if q["unit"] != "pot_odds":
             assert q["board"], q["id"]                  # the app draws the cards
     assert 'data-c="basics"' in html
+
+
+def test_basics_session_persists_and_pot_odds_are_possible():
+    """Basics answers must survive a reload, and a 'how often' choice can't exceed 100%."""
+    for path in (ROOT / "index.html", ROOT / "demo" / "trainer_demo.html"):
+        html = path.read_text()
+        assert '["preflop","flop","turn","river","basics"]' in html, path
+        assert 'basics:"Basics"' in html, path
+        assert 'id="session-unit"' in html, path
+        m = re.search(r"const FOUND = (\[[^\n]+\]);", html)
+        assert m, path
+        for q in json.loads(m.group(1)):
+            if q["unit"] != "pot_odds":
+                continue
+            seen = set()
+            for opt in q["actions"]:
+                assert opt not in seen, (path, q["id"])
+                seen.add(opt)
+                assert 1 <= int(opt.rstrip("%")) <= 100, (path, q["id"], opt)
 
 
 def test_basics_copy_is_beginner_language():

@@ -220,13 +220,18 @@ def load_questions():
     return meta, [_to_q(d, oop, ip, bet_pct) for d in picked]
 
 
+def _is_vs_bet(node):
+    """Plain facing node (bb_vs_bet) or a sized one (bb_vs_bet_33)."""
+    return node.endswith("_vs_bet") or bool(_SIZED_NODE.match(node))
+
+
 def _line_events(step, pref, villain_action):
     """Hero/opponent actions one continuation step contributes to the hand's line."""
     node = step["node"]
     ev = []
     if node.endswith("_vs_check"):
         ev.append(("opp", "check"))
-    elif node.endswith("_vs_bet"):
+    elif _is_vs_bet(node):
         ev.append(("opp", "bet"))
     ev.append(("you", pref))
     va = (villain_action or "").lower()
@@ -1223,7 +1228,7 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 .pager[hidden]{display:none!important}
 .revbtn{width:28px;height:28px;font-size:14px}
 .street-seg button{min-height:44px}
-.prow .pv{width:58px}
+.prow .pv{width:84px;white-space:nowrap}
 @media(max-width:390px){
   .appbar{gap:9px;padding:4px 12px}
 /* notch / status bar (only non-zero with viewport-fit=cover, i.e. the native app + iOS Safari) */
@@ -1256,7 +1261,7 @@ __SUITDEFS__
   </div>
   <div class="views">
   <section class="view on" id="v-train">
-    <div class="session-hud" id="session-hud"><span id="session-kind">Quick session</span><span id="session-counter">Hand <b id="session-step">1</b> of <b id="session-total">10</b></span><span id="session-bonus" hidden>Bonus hand</span><button type="button" class="skip-bonus" id="skip-bonus" hidden>Skip</button></div>
+    <div class="session-hud" id="session-hud"><span id="session-kind">Quick session</span><span id="session-counter"><span id="session-unit">Hand</span> <b id="session-step">1</b> of <b id="session-total">10</b></span><span id="session-bonus" hidden>Bonus hand</span><button type="button" class="skip-bonus" id="skip-bonus" hidden>Skip</button></div>
     <div class="bar-top" id="session-progress" role="progressbar" aria-label="Session progress" aria-valuemin="1" aria-valuemax="10" aria-valuenow="1"><i id="prog" style="width:0"></i></div>
 
   <div class="card" id="play-card" tabindex="-1">
@@ -1391,6 +1396,7 @@ __SUITDEFS__
     <span class="demo">Turn / river</span> spots come from full solved hands, so both players'
     ranges reflect the earlier streets' action (shown above the cards as "So far");
     facing a bet there is Fold/Call (no raise is modeled on those lines).
+    Basics questions are graded from the cards themselves (board, hand, pot odds, how often you win), not from the solver.
     Pre-flop spots are calibrated ranges (solver-approximate, tuned to standard frequencies).<br>
     Prefer to review the answers at a glance? See the <a href="preview.html">content gallery</a>.
     </div>
@@ -1666,7 +1672,7 @@ function normalizeStats(x){
   const classified=out.solid+out.ok+out.leak;out.n=classified;
   const streets=x.street&&typeof x.street==="object"?x.street:{};
   let remaining=out.n;
-  ["preflop","flop","turn","river"].forEach(k=>{
+  ["preflop","flop","turn","river","basics"].forEach(k=>{
     const s=streets[k];if(!s||typeof s!=="object")return;
     const n=Math.min(remaining,safeCount(s.n)),hit=Math.min(n,safeCount(s.hit));
     out.street[k]={n:n,hit:hit};remaining-=n;
@@ -1999,11 +2005,16 @@ const LINE_PAST={check:"checked",bet:"bet",call:"called",fold:"folded",raise:"ra
 function lineText(q){
   if(!q||!q.line||!q.line.length)return "";
   const sm=eff("positions"),opp=sm==="poker"?(q.villain||"Opponent"):"your opponent";
+  const pct=q.bet_pct||66;
   return q.line.map(st=>{
-    const he={check:"checks",bet:"bets "+(q.bet_pct||66)+"%",call:"calls",fold:"folds",raise:"raises"};
+    // Hero and opponent both name the size. Plain mode says "bet 66% of the pot"
+    // (same wording as the situation line); other levels stay telegraphic.
+    const he={check:"checks",bet:"bets "+pct+"%",call:"calls",fold:"folds",raise:"raises"};
+    const mine={check:"check",bet:"bet "+pct+"%",call:"call",fold:"fold",raise:"raise"};
+    const past={check:"checked",bet:"bet "+pct+"% of the pot",call:"called",fold:"folded",raise:"raised"};
     const parts=st.acts.map(([who,a])=>sm==="plain"
-      ?(who==="you"?"you ":opp+" ")+(LINE_PAST[a]||a)
-      :(who==="you"?"you "+a:opp+" "+(he[a]||a)));
+      ?(who==="you"?"you ":opp+" ")+(past[a]||LINE_PAST[a]||a)
+      :(who==="you"?"you "+(mine[a]||a):opp+" "+(he[a]||a)));
     const list=parts.length>1?parts.slice(0,-1).join(", ")+(sm==="plain"?", and ":", ")+parts[parts.length-1]:parts[0];
     return (sm==="plain"?"On the "+st.street+", ":cap1(st.street)+": ")+list+".";
   }).join(" ");
@@ -2209,7 +2220,8 @@ function renderHand(){                                  // draw the current hist
   // continuation counts by HAND ("Hand 2 of 5"); drills count by spot ("Hand 3 of 10").
   const step=contMode?contHandNum(shownStep()):Math.min(shownStep()+1,order.length);
   const total=contMode?contHands:order.length;
-  document.getElementById("session-kind").textContent=bonus?"Compare practice":contMode?(cat.startsWith("ex:")?("Exploit: "+(EX_LABEL[cat.slice(3)]||cat.slice(3))):"Play a hand"):({all:"All streets",preflop:"Preflop",flop:"Flop",turn:"Turn",river:"River"}[cat]||(cat.startsWith("ex:")?"Exploit review":"Quick session"));
+  const unitEl=document.getElementById("session-unit");if(unitEl)unitEl.textContent=cat==="basics"?"Question":"Hand";
+  document.getElementById("session-kind").textContent=bonus?"Compare practice":contMode?(cat.startsWith("ex:")?("Exploit: "+(EX_LABEL[cat.slice(3)]||cat.slice(3))):"Play a hand"):({all:"All streets",preflop:"Preflop",flop:"Flop",turn:"Turn",river:"River",basics:"Basics"}[cat]||(cat.startsWith("ex:")?"Exploit review":"Quick session"));
   document.getElementById("session-counter").hidden=bonus;
   document.getElementById("session-bonus").hidden=!bonus;
   document.getElementById("skip-bonus").hidden=!(bonus&&e.pick==null);
@@ -3060,18 +3072,34 @@ function coachCfg(){try{
     key:coachSecure()?coachKeyMem:(typeof c.key==="string"?c.key:"")
   };
 }catch(e){return {};}}
-function coachSaveCfg(c){
+// Returns true once the key is stored. On a native device the key goes to the secure
+// store first; localStorage drops it only after that write resolves. A failed write keeps
+// the key in localStorage so a migration cannot delete the only copy.
+async function coachSaveCfg(c){
   const ss=coachSecure();
-  if(ss){coachKeyMem=c.key||"";
-    (coachKeyMem?ss.set({key:COACH_KEY_ID,value:coachKeyMem}):ss.remove({key:COACH_KEY_ID})).catch(()=>{});
-    c={provider:c.provider,model:c.model};}
-  try{localStorage.setItem("coach",JSON.stringify(c));}catch(e){}}
+  const key=c.key||"";
+  const pub={provider:c.provider,model:c.model};
+  if(ss){
+    coachKeyMem=key;
+    try{
+      if(key) await ss.set({key:COACH_KEY_ID,value:key});
+      else await ss.remove({key:COACH_KEY_ID});
+    }catch(e){
+      try{localStorage.setItem("coach",JSON.stringify(Object.assign({key:key},pub)));}catch(err){}
+      return false;
+    }
+    try{localStorage.setItem("coach",JSON.stringify(pub));}catch(e){}
+    return true;
+  }
+  try{localStorage.setItem("coach",JSON.stringify(Object.assign({key:key},pub)));}catch(e){}
+  return true;
+}
 // Native start-up: pull the key out of the secure store (moving any key an older build left in
 // localStorage), then refresh the settings panel. Missing key => get() rejects => stay empty.
 async function coachLoadSecureKey(){
   const ss=coachSecure();if(!ss)return;
   let legacy=null;try{legacy=JSON.parse(localStorage.getItem("coach")||"{}");}catch(e){}
-  if(legacy&&typeof legacy.key==="string"&&legacy.key){coachSaveCfg(legacy);}
+  if(legacy&&typeof legacy.key==="string"&&legacy.key){await coachSaveCfg(legacy);}
   else{try{const r=await ss.get({key:COACH_KEY_ID});coachKeyMem=(r&&typeof r.value==="string")?r.value:"";}catch(e){coachKeyMem="";}}
   const k=document.getElementById("coach-key");if(k&&coachKeyMem)k.value=coachKeyMem;
   coachSettings(false);
@@ -3210,10 +3238,11 @@ function coachInit(){
   document.getElementById("coach-model").value=cfg.model||(PROVIDERS[prov.value]||PROVIDERS.claude).dflt;
   if(cfg.key)document.getElementById("coach-key").value=cfg.key;
   prov.onchange=()=>applyProv(true);
-  document.getElementById("coach-save").onclick=()=>{
+  document.getElementById("coach-save").onclick=async()=>{
     const key=document.getElementById("coach-key").value.trim();
     if(!key){coachErr="Please paste an API key first.";coachRender();return;}
-    coachSaveCfg({provider:prov.value,model:document.getElementById("coach-model").value.trim(),key:key});
+    const ok=await coachSaveCfg({provider:prov.value,model:document.getElementById("coach-model").value.trim(),key:key});
+    if(!ok){coachErr="Couldn't save the key in secure storage. It's still on this device; we'll try again next time you open the app.";coachRender();return;}
     coachErr=null;coachSettings(false);coachRender();
   };
   // Best-effort hint that an embedded preview will block the network call.
@@ -3240,7 +3269,8 @@ function renderProgress(){
     const nm=document.createElement("span");nm.className="pn";nm.textContent=r[1];
     const bar=document.createElement("span");bar.className="pbar";
     const i=document.createElement("i");i.className=r[2];i.style.width=(s.n<5?0:pct)+"%";bar.appendChild(i);
-    const v=document.createElement("span");v.className="pv";v.textContent=!s.n?"—":s.n<5?s.n+" hand"+(s.n===1?"":"s"):pct+"%";
+    const noun=r[0]==="basics"?"question":"hand";
+    const v=document.createElement("span");v.className="pv";v.textContent=!s.n?"—":s.n<5?s.n+" "+noun+(s.n===1?"":"s"):pct+"%";
     row.appendChild(nm);row.appendChild(bar);row.appendChild(v);el.appendChild(row);
   });
   syncStatsUI();

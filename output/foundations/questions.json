@@ -1285,7 +1285,7 @@
   "prompt": "The pot is 8 bb and your opponent bets 12 bb. What equity do you need to profitably call?",
   "ask": "The pot is 8 chips and your opponent bets 12. How often do you need to win for calling to pay off?",
   "options": [
-   "150%",
+   "62%",
    "38%",
    "60%",
    "27%"

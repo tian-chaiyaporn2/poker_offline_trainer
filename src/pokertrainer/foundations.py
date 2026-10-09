@@ -122,12 +122,19 @@ def pot_odds_questions() -> List[Dict]:
     out = []
     for i, (pot, bet) in enumerate(_POT_ODDS_SPOTS):
         correct = bet / (pot + 2 * bet)
-        # common wrong calcs: bet/(pot+bet) (ignores your call in the pot) and bet/pot
-        wrong1 = bet / (pot + bet)
-        wrong2 = bet / pot
-        wrong3 = bet / (pot + 3 * bet)
+        # Common wrong calcs: bet/(pot+bet) (ignores your own call), bet/pot, and
+        # bet/(pot+3*bet). "How often" is a share of the time, so a result over 100%
+        # (bet bigger than the pot) is replaced with the complement — how often you lose.
         answer = _pct(correct)
-        distractors = [_pct(w) for w in (wrong1, wrong2, wrong3)]
+        distractors = []
+        for w in (bet / (pot + bet), bet / pot, bet / (pot + 3 * bet)):
+            if round(100 * w) > 100 or round(100 * w) < 1:
+                w = 1.0 - correct
+            label = _pct(w)
+            if label != answer and label not in distractors and 1 <= round(100 * w) <= 100:
+                distractors.append(label)
+        if len(distractors) < 3:
+            raise RuntimeError(f"pot-odds spot {(pot, bet)} produced {distractors}")
         out.append({
             "id": f"found_pot_odds_{i:02d}", "unit": "pot_odds", "kind": "arithmetic",
             "prompt": (f"The pot is {pot:g} bb and your opponent bets {bet:g} bb. "
