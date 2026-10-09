@@ -30,6 +30,7 @@ from .handinfo import describe_hand
 from .presets import BOARDS
 from .ranges import expand_range
 from .presets import BB_SRP, BTN_SRP, SCENARIOS
+from .solver.betsizes import normalize_bet_fracs
 from .validate_flop import _make_solver, hand_category, subsample
 
 # Acceptance thresholds (§9.3; engineering starting points).
@@ -62,13 +63,35 @@ def node_role(node: str):
 
 def parse_bet_sizes(spec):
     """CLI '--bet-sizes 0.33,0.75' -> [0.33, 0.75]; None/'' -> None (single-size default).
-    Validation (positive, distinct labels, all-in collisions) happens in the solver."""
+    Menu validation (positive, distinct labels, all-in collisions) needs the scenario's
+    pot/stack, so it happens in resolve_bet_sizes() before anything is solved/written."""
     if not spec:
         return None
     try:
         return [float(x) for x in spec.split(",") if x.strip()]
     except ValueError:
         raise SystemExit(f"--bet-sizes must be comma-separated pot fractions, got {spec!r}")
+
+
+def resolve_bet_sizes(bet_frac, bet_fracs, pot, eff_stack):
+    """Validate a --bet-sizes menu up front -> (effective bet_frac, bet_fracs).
+
+    Raises SystemExit on a bad menu (non-positive, duplicate 1% labels, >MAX_SIZES,
+    two sizes capping to the same root all-in) BEFORE any checkpoint config is written,
+    so a typo never burns a run of error checkpoints / poisons the --out fingerprint.
+    A single size is exactly `bet_frac=<size>` (legacy tree, plain "bet"): it is
+    returned as the effective bet_frac with bet_fracs=None, so the solve, the records,
+    the solve_config fingerprint and the pack's bet_pct_pot all carry the solved size.
+    `bet_fracs=None` passes through untouched."""
+    if bet_fracs is None:
+        return bet_frac, None
+    try:
+        fracs, _ = normalize_bet_fracs(bet_frac, bet_fracs, pot, eff_stack)
+    except ValueError as e:
+        raise SystemExit(f"invalid --bet-sizes {list(bet_fracs)}: {e}")
+    if len(fracs) == 1:
+        return fracs[0], None
+    return bet_frac, fracs
 
 
 def board_texture(board: List[int]) -> List[str]:
@@ -446,6 +469,9 @@ def run(n=40, iters=300, roots=None, solver="cpu", dtype="float64",
     pot = sc["pot"] if pot is None else pot
     bet_frac = sc["bet_frac"] if bet_frac is None else bet_frac
     eff_stack = sc.get("eff_stack")     # None for deep SRP; set (~90bb) for 3-bet pots
+    # Fail fast on a bad menu (before _ensure_checkpoint_config writes anything); a single
+    # size collapses to bet_frac so cfg / records / pack config report the solved size.
+    bet_frac, bet_fracs = resolve_bet_sizes(bet_frac, bet_fracs, pot, eff_stack)
     board_idx = list(roots) if roots is not None else list(range(len(BOARDS)))
     # True full range for the projection: when --n >= the range, we solve every
     # combo, so hands_per_side == full range and the scale factor is 1.0 (avoids

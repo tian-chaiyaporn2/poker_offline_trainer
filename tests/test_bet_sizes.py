@@ -261,3 +261,125 @@ def test_parse_bet_sizes_cli():
     assert parse_bet_sizes("0.33,0.75") == [0.33, 0.75]
     with pytest.raises(SystemExit):
         parse_bet_sizes("0.33,big")
+
+
+# --- content_yield --bet-sizes plumbing (fail fast; single size == bet_frac) ----------
+
+def _spy_content_yield(monkeypatch):
+    """Make content_yield.run() cheap (tiny ranges, river-only tree) and record what
+    every board was solved with: the bet_frac handed to extract_records, the bet_fracs
+    the solver factory got, and the solver instances it built."""
+    import pokertrainer.content_yield as cy
+    seen = {"bet_frac": [], "solvers": [], "factory_bet_fracs": []}
+    real_extract, real_make = cy.extract_records, cy._make_solver
+
+    def make_spy(*a, **kw):
+        seen["factory_bet_fracs"].append(kw.get("bet_fracs"))
+        inner = real_make(*a, **kw)
+
+        def build(*args):
+            s = inner(*args)
+            seen["solvers"].append(s)
+            return s
+        return build
+
+    def extract_spy(bstr, oop, ip, iters, make, pot, bet_frac, **kw):
+        seen["bet_frac"].append(bet_frac)
+        kw["streets"] = 1
+        return real_extract("As7h2d", OOP, IP, 2, make, pot, bet_frac, **kw)
+
+    monkeypatch.setattr(cy, "_make_solver", make_spy)
+    monkeypatch.setattr(cy, "extract_records", extract_spy)
+    return cy, seen
+
+
+@pytest.mark.parametrize("bad, scenario", [
+    ([0.331, 0.334], "btn_vs_bb_srp"),                    # same 1% label
+    ([0.0, 0.5], "btn_vs_bb_srp"),                        # non-positive
+    ([0.1 * k for k in range(1, 11)], "btn_vs_bb_srp"),   # > MAX_SIZES
+    ([5.0, 6.0], "btn_bb_3bet"),     # both cap to the same root all-in (pot 20, eff 88)
+])
+def test_content_yield_bad_bet_sizes_fail_before_checkpoint(tmp_path, monkeypatch, bad,
+                                                            scenario):
+    cy, seen = _spy_content_yield(monkeypatch)
+    out = tmp_path / "cy"
+    with pytest.raises(SystemExit, match="bet-sizes"):
+        cy.run(n=4, iters=2, roots=[0], out=str(out), scenario=scenario, bet_fracs=bad)
+    assert not (out / "solve_config.json").exists()          # no poisoned fingerprint
+    assert not list(out.rglob("board_*"))                     # no error checkpoints
+    assert seen["bet_frac"] == []                             # nothing was solved
+    # ...so a corrected rerun into the same --out works without --fresh
+    cy.run(n=4, iters=2, roots=[0], out=str(out), scenario=scenario, bet_fracs=[0.5])
+    assert (out / "boards" / "board_00.json").exists()
+
+
+def test_content_yield_single_bet_size_is_bet_frac(tmp_path, monkeypatch):
+    import json
+    import sqlite3
+    from pokertrainer.content_pack import pack_config_for_records
+    cy, seen = _spy_content_yield(monkeypatch)
+    out = tmp_path / "cy"
+    cy.run(n=4, iters=2, roots=[0], out=str(out), bet_fracs=[0.5])
+    # solved at 50%, as the legacy single-size tree (plain "bet")
+    assert seen["bet_frac"] == [0.5]
+    assert seen["factory_bet_fracs"] == [None]
+    assert [s.bet_frac for s in seen["solvers"]] == [0.5]
+    recs = json.load(open(out / "records.json"))
+    assert recs and not any(a.startswith("bet_") for r in recs for a in r["actions"])
+    # fingerprint == a plain bet_frac=0.5 run (no bet_fracs key)
+    cfg = json.load(open(out / "solve_config.json"))
+    assert cfg["bet_frac"] == 0.5 and "bet_fracs" not in cfg
+    # the pack built from these records (content_pack CLI path) reports the solved
+    # size — what the trainer reads as bet_pct_pot — not the default 66
+    pcfg = pack_config_for_records(str(out / "records.json"))
+    assert pcfg["bet_pct_pot"] == 50 and "bet_sizes_pct" not in pcfg
+    for r in recs:
+        r["accepted"] = True
+    build_pack(recs, pcfg, str(tmp_path / "packs"), "single50")
+    db = sqlite3.connect(str(tmp_path / "packs" / "flop_pack_single50.db"))
+    meta = dict(db.execute("SELECT key, value FROM pack_meta").fetchall())
+    db.close()
+    assert json.loads(meta["config"])["bet_pct_pot"] == 50
+
+
+def test_pack_config_for_records_default_and_multi(tmp_path):
+    import json
+    from pokertrainer.content_pack import DEFAULT_CONFIG, pack_config_for_records
+    rp = tmp_path / "records.json"
+    rp.write_text("[]")
+    assert pack_config_for_records(str(rp)) == DEFAULT_CONFIG          # no solve_config
+    (tmp_path / "solve_config.json").write_text(json.dumps({"bet_frac": 0.66}))
+    # default 66% run: byte-identical config (same keys, same order -> same pack hash)
+    assert json.dumps(pack_config_for_records(str(rp))) == json.dumps(DEFAULT_CONFIG)
+    (tmp_path / "solve_config.json").write_text(
+        json.dumps({"bet_frac": 0.66, "bet_fracs": [0.33, 0.75]}))
+    cfg = pack_config_for_records(str(rp))
+    assert "bet_pct_pot" not in cfg and cfg["bet_sizes_pct"] == [33, 75]
+
+
+def test_gen_turn_river_bet_sizes(tmp_path, monkeypatch):
+    """demo/gen_turn_river.py: a bad menu aborts before any solve; a single size is the
+    solved bet size and lands in the pack config as bet_pct_pot."""
+    import json
+    import os
+    import sqlite3
+    import sys
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "demo"))
+    import gen_turn_river as gtr
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(gtr, "RUNOUTS", [("As7h2dKs9c", 1)])
+    monkeypatch.setattr(gtr, "_make_solver",
+                        lambda *a, **k: pytest.fail("solver built for a bad menu"))
+    with pytest.raises(SystemExit, match="bet-sizes"):
+        gtr.run(n=6, iters=2, version="bad", bet_fracs=[0.331, 0.334])
+    assert not os.path.exists("output/packs/flop_pack_bad.db")
+
+    monkeypatch.undo()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(gtr, "RUNOUTS", [("As7h2dKs9c", 1)])
+    gtr.run(n=6, iters=2, version="single50", bet_fracs=[0.5])
+    db = sqlite3.connect("output/packs/flop_pack_single50.db")
+    cfg = json.loads(dict(db.execute("SELECT key, value FROM pack_meta").fetchall())["config"])
+    db.close()
+    assert cfg["bet_pct_pot"] == 50 and "bet_sizes_pct" not in cfg

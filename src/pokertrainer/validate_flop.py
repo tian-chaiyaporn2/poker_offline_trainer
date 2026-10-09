@@ -93,8 +93,11 @@ def _make_solver(solver, dtype, raise_x=None, eff_stack=None, bet_fracs=None):
 
     bet_streets controls which streets have betting; raise_x enables fold/call/raise.
     eff_stack caps bets at the remaining stack (SPR / 3-bet-pot dynamics; None = deep).
-    bet_fracs (>= 2 pot fractions) switches to the multi-size tree; the factory's `bf`
-    argument is then ignored. None = the single `bf` size (unchanged).
+    bet_fracs=None = the single `bf` size (unchanged). When bet_fracs is set the
+    factory's `bf` argument is IGNORED: >= 2 sizes build the multi-size tree, and a
+    single size builds the legacy tree at THAT size (not `bf`). Callers should collapse
+    a single size into `bf` first (content_yield.resolve_bet_sizes) so records and
+    pack config report the size that was actually solved.
     n_streets is derived from the starting board length so turn/river demos deal
     the correct number of runout cards (not a hard-coded flop tree).
     """

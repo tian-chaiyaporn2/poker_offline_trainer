@@ -459,6 +459,41 @@ DEFAULT_CONFIG = {
     "bet_pct_pot": 66, "rake": 0, "solver_model": "full_street_cfr_plus",
 }
 
+
+def bet_size_config(bet_frac: float, bet_fracs=None) -> Dict:
+    """Pack-config bet-size keys for a solve: {"bet_pct_pot": N} for the single-size tree
+    (plain "bet" action), {"bet_sizes_pct": [..]} for a multi-size menu (each action /
+    vs-bet node names its own size, so there is no single bet_pct_pot). One rule shared
+    by content_yield packs and demo/gen_turn_river.py."""
+    if bet_fracs is not None and len(bet_fracs) > 1:
+        return {"bet_sizes_pct": [int(round(100 * float(f))) for f in sorted(bet_fracs)]}
+    frac = float(bet_fracs[0]) if bet_fracs else float(bet_frac)
+    return {"bet_pct_pot": int(round(100 * frac))}
+
+
+def pack_config_for_records(records_path: str, base: Optional[Dict] = None) -> Dict:
+    """Pack config for a content_yield records.json: `base` (DEFAULT_CONFIG) with its
+    bet-size keys taken from the run's solve_config.json fingerprint beside it, so a
+    pack solved at e.g. --bet-sizes 0.5 reports 50 (not the default 66). Without a
+    solve_config.json (hand-assembled records) `base` is returned unchanged."""
+    cfg = dict(DEFAULT_CONFIG if base is None else base)
+    sc_path = os.path.join(os.path.dirname(os.path.abspath(records_path)), "solve_config.json")
+    if not os.path.exists(sc_path):
+        return cfg
+    with open(sc_path) as f:
+        solve = json.load(f)
+    if solve.get("bet_frac") is None:
+        return cfg
+    sizes = bet_size_config(solve["bet_frac"], solve.get("bet_fracs"))
+    # Assign in place (keeps DEFAULT_CONFIG's key order, so a default 66% run's pack
+    # config JSON — and therefore its content hash — is unchanged).
+    for k in ("bet_pct_pot", "bet_sizes_pct"):
+        if k not in sizes:
+            cfg.pop(k, None)
+    cfg.update(sizes)
+    return cfg
+
+
 if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser()
@@ -478,7 +513,8 @@ if __name__ == "__main__":
         if not a.records:
             ap.error("--records is required unless --resign/--refresh-lessons is set")
         recs = json.load(open(a.records))
-        rep = build_pack(recs, DEFAULT_CONFIG, out_dir=a.out, version=a.version, pot=a.pot)
+        rep = build_pack(recs, pack_config_for_records(a.records), out_dir=a.out,
+                         version=a.version, pot=a.pot)
         print(json.dumps(rep, indent=2))
         db = os.path.join(a.out, f"flop_pack_{a.version}.db")
         print("verify:", verify_pack(db))

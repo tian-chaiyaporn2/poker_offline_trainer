@@ -117,10 +117,16 @@ the tree offers one bet action per size, labelled `bet_<pct>` (`bet_33`, `bet_75
 size gets its **own** response node(s): `bb_vs_bet_33` / `btn_vs_bet_75` (relabelled per
 scenario, e.g. `co_vs_bet_33`), each record carrying `facing_bet` + `facing_bet_frac`.
 `--raise-x` composes (per-size Fold/Call/Raise + per-size raise-response nodes) and every size
-respects the `eff_stack` all-in cap. Omitting the flag (or a single size) is the legacy tree,
-bit-for-bit: plain `bet`, `bb_vs_bet`, existing packs/checkpoints unchanged. Rejected loudly:
-duplicate sizes / sizes sharing a 1% label, >9 sizes, two sizes that cap to the same all-in at
-the root, and continuation/exploit extraction (`eval_capture_targets`) on a multi-size tree.
+respects the `eff_stack` all-in cap. Omitting the flag is the legacy tree, bit-for-bit: plain
+`bet`, `bb_vs_bet`, existing packs/checkpoints unchanged. A single size (`--bet-sizes 0.5`) is
+exactly "bet_frac = that size": legacy tree, plain `bet`, and the size flows into
+`solve_config.json` (`bet_frac`) and the pack config's `bet_pct_pot`. Rejected loudly, before
+any checkpoint or `solve_config.json` is written: duplicate sizes / sizes sharing a 1% label,
+>9 sizes, two sizes that cap to the same all-in at the root; also continuation/exploit
+extraction (`eval_capture_targets`) on a multi-size tree. `content_pack --records` reads the
+`solve_config.json` beside `records.json` for the pack's bet-size keys (`bet_pct_pot`, or
+`bet_sizes_pct` for a menu); for hand-merged records with no `solve_config.json` beside them it
+falls back to the default 66%, so copy one part's `solve_config.json` next to the merge.
 Cost: 2 sizes ≈ the single-size raise tree (5 lines/street); 2 sizes + raise ≈ 6× that — not
 Kaggle-friendly. Full-range BTN-vs-BB pass: `colab/kaggle_content_betsizes.ipynb` (2 parts,
 same flow as the raise notebook; download `records_betsizes_<PART>.json`, merge board-wise,

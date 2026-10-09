@@ -335,7 +335,12 @@ class MultiStreetSpike:
         Nodes: root / ipc (check + K bets), ovb{k} / ivb{k} (fold/call[/raise] facing size
         k) and, with raises, orip{k} / iroop{k} (fold/call facing the raise over size k).
         Supports the best-response seat (_hero_seat) at EVERY node, so exploitability()
-        works on this tree (raises included)."""
+        works on this tree (raises included).
+
+        Intentionally NOT shared with the batched solvers' multi-size street
+        (solver/batched_multi.py), even though the tree is the same: this per-board
+        version is the independent oracle tests/test_bet_sizes.py checks them against.
+        Sharing one implementation would let a tree bug pass the cross-check silently."""
         bkey = (path, tuple(board))            # dealt order (see _solve_street)
         pot = self.P0 + eo + ei
         K = len(self.bet_fracs)
