@@ -276,20 +276,10 @@ def _line_events(step, pref, nxt):
 
 
 def _ev_close(evs, pot):
-    """True when every action is within CLEAR_SEP_PCT of the best, as % of pot.
-
-    Same indifference rule the flop packs store in `mixed`. The continuation and
-    exploit packs instead flag a frequency split (second action >= 35%), which
-    disagrees with the EV grades and would call a real gap a close call."""
-    from pokertrainer.content_yield import CLEAR_SEP_PCT
-    try:
-        pot = float(pot)
-    except (TypeError, ValueError):
-        return False
-    if pot <= 0 or not evs:
-        return False
-    best = max(float(v) for v in evs.values())
-    return all(100.0 * (best - float(v)) / pot < CLEAR_SEP_PCT for v in evs.values())
+    """Close call by the shared EV rule (content_yield.ev_close). Packs built before the
+    generators used it stored a frequency-split flag, so the build recomputes it."""
+    from pokertrainer.content_yield import ev_close
+    return ev_close(evs, pot)
 
 
 @functools.lru_cache(maxsize=None)     # shared by the drills and the contrast pool (read-only)
@@ -309,7 +299,7 @@ def load_conditioned_turnriver():
     from pokertrainer.handinfo import describe_hand
     from pokertrainer.validate_flop import hand_category
     cols = ("id board node acting_player hand actions ev freq preferred_action action_grades "
-            "mixed pot_bb detail").split()
+            "mixed pot_bb detail scenario").split()
     conn = sqlite3.connect(CONT_DB)
     try:
         rows = [dict(zip(cols, r)) for r in
@@ -319,7 +309,7 @@ def load_conditioned_turnriver():
     hands = defaultdict(list)
     for d in rows:
         d["det"] = json.loads(d["detail"] or "{}")
-        hands[d["det"]["hand_id"]].append(d)
+        hands[d["det"].get("hand_id") or d["scenario"].split("|")[1]].append(d)
     out = []
     for steps in hands.values():
         steps.sort(key=lambda d: int(d["det"].get("step_index", 0)))
@@ -359,7 +349,6 @@ def load_conditioned_turnriver():
                     "reason": ex["reason"], "headline": ex["headline"],
                     "detail": json.dumps(ex["detail"]),
                     "line": [dict(s, acts=[list(a) for a in s["acts"]]) for s in done],
-                    "villain_seat": d["det"].get("villain"),
                 })
             cur["acts"].extend(_line_events(d, d["preferred_action"],
                                             steps[i + 1] if i + 1 < len(steps) else None))
@@ -1366,7 +1355,7 @@ __SUITDEFS__
     facing a bet there is Fold/Call (no raise is modeled on those lines).
     Basics questions are graded from the cards themselves (board, hand, pot odds, how often you win), not from the solver.
     Pre-flop spots are calibrated ranges (solver-approximate, tuned to standard frequencies).<br>
-    Prefer to review the answers at a glance? See the <a href="preview.html">content gallery</a>.
+    <span id="gallery-note">Prefer to review the answers at a glance? See the <a href="preview.html">content gallery</a>.</span>
     </div>
     </details>
   <div class="s-sec">Poker terms</div>
@@ -3252,6 +3241,8 @@ document.getElementById("coach-open").onclick=function(){
   const reduced=motionOff||(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   requestAnimationFrame(()=>c.scrollIntoView({behavior:reduced?"auto":"smooth",block:"start"}));
 };
+// The content gallery is a separate Pages file; the app bundles only this page.
+try{const c=window.Capacitor;if(c&&c.isNativePlatform&&c.isNativePlatform())document.getElementById("gallery-note").hidden=true;}catch(e){}
 coachInit();applyModeUI();updateVocab();updateLevelHint();syncStatsUI();applyCatUI();buildOrder();newHand();
 </script>'''
 

@@ -61,6 +61,19 @@ def node_role(node: str):
     raise KeyError(node)
 
 
+def ev_close(evs, pot) -> bool:
+    """The indifference ("mixed") rule: every action within CLEAR_SEP_PCT of the best, as % of
+    pot. One definition for every pack and the trainer build, so close calls agree with grades."""
+    try:
+        pot = float(pot)
+    except (TypeError, ValueError):
+        return False
+    if pot <= 0 or not evs:
+        return False
+    best = max(float(v) for v in evs.values())
+    return all(100.0 * (best - float(v)) / pot < CLEAR_SEP_PCT for v in evs.values())
+
+
 def parse_bet_sizes(spec):
     """CLI '--bet-sizes 0.33,0.75' -> [0.33, 0.75]; None/'' -> None (single-size default).
     Menu validation (positive, distinct labels, all-in collisions) needs the scenario's

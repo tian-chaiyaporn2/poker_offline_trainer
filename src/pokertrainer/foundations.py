@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import random
 from typing import Dict, List
@@ -243,7 +244,10 @@ def _band(eq: float) -> str:
 def _equity_why(eq: float) -> str:
     """Name the exact figure AND the band it lands in, so an edge case like 20.2% can't read
     as "about 20%" while the graded answer is 20–40%."""
-    pct = f"{100 * eq:.1f}".rstrip("0").rstrip(".")
+    # Round DOWN to 0.1 so the figure never crosses into the next band (19.96 -> "19.9", not
+    # "20" next to "0–20%"); drop a trailing ".0" ("0", "100", "20" — never an empty string).
+    pct = f"{math.floor(1000 * eq + 1e-9) / 10:.1f}"
+    pct = pct[:-2] if pct.endswith(".0") else pct
     lo, hi = next((lo, min(hi, 1.0)) for lo, hi, lbl in _BANDS if lbl == _band(eq))
     # Flag a near-boundary figure (not the 0% / 100% ends of the scale, which aren't edges).
     near = (lo > 0 and eq - lo < 0.01) or (hi < 1.0 and hi - eq < 0.01)
@@ -261,7 +265,7 @@ def equity_questions() -> List[Dict]:
         eq = float(equity_matrix(b, [h], [v])[0][0, 0])
         ans = _band(eq)
         out.append({
-            "id": f"found_equity_{i:02d}", "unit": "equity", "kind": "montecarlo",
+            "id": f"found_equity_{i:02d}", "unit": "equity", "kind": "exact",
             "prompt": (f"You hold {_board_label(hero)} on {_board_label(board)} against "
                        f"{_board_label(vill)}. Roughly what is your equity to the river?"),
             "ask": ("Your opponent shows their hand. If the turn and river are dealt, roughly "

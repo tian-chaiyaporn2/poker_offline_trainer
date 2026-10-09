@@ -305,3 +305,17 @@ def test_equity_explanation_names_the_graded_band():
             continue
         lo_hi = q["answer"].split("%")[0]                      # e.g. "20–40"
         assert f"in the {lo_hi}% range" in q["explanation"], q["id"]
+
+
+def test_equity_text_never_crosses_a_band_or_goes_blank():
+    from pokertrainer.foundations import _equity_why
+    assert "you win 0% " in _equity_why(0.0)
+    assert "you win 19.9% " in _equity_why(0.1996) and "0–20% range" in _equity_why(0.1996)
+    assert "you win 29% " in _equity_why(0.29)            # no float floor artefact (28.9)
+
+
+def test_generators_flag_close_calls_by_ev():
+    from pokertrainer.content_yield import ev_close
+    src = "".join((ROOT / "demo" / f).read_text() for f in ("gen_continuation.py", "gen_exploit.py"))
+    assert "second >= 0.35" not in src and src.count('"mixed": ev_close(d["ev"]') == 2
+    assert ev_close({"check": 1.0, "bet": 1.004}, 5.5) and not ev_close({"check": 1.0, "bet": 1.2}, 5.5)

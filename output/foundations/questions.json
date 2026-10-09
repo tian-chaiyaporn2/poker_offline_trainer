@@ -1529,7 +1529,7 @@
  {
   "id": "found_equity_00",
   "unit": "equity",
-  "kind": "montecarlo",
+  "kind": "exact",
   "prompt": "You hold Ah Kh on Qh 8h 3h against Jc Tc. Roughly what is your equity to the river?",
   "ask": "Your opponent shows their hand. If the turn and river are dealt, roughly how often do you win?",
   "options": [
@@ -1551,7 +1551,7 @@
  {
   "id": "found_equity_01",
   "unit": "equity",
-  "kind": "montecarlo",
+  "kind": "exact",
   "prompt": "You hold 7c 7d on As 7h 2d against Ah Kd. Roughly what is your equity to the river?",
   "ask": "Your opponent shows their hand. If the turn and river are dealt, roughly how often do you win?",
   "options": [
@@ -1562,7 +1562,7 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "80\u2013100% (big favorite)",
-  "explanation": "Counting every possible turn and river, you win 98.4% of the time (a split pot counts as half). That's in the 80\u2013100% range.",
+  "explanation": "Counting every possible turn and river, you win 98.3% of the time (a split pot counts as half). That's in the 80\u2013100% range.",
   "data": {
    "hero": "7c7d",
    "villain": "AhKd",
@@ -1573,7 +1573,7 @@
  {
   "id": "found_equity_02",
   "unit": "equity",
-  "kind": "montecarlo",
+  "kind": "exact",
   "prompt": "You hold Qs Qd on Kd 9c 4h against Ah 5h. Roughly what is your equity to the river?",
   "ask": "Your opponent shows their hand. If the turn and river are dealt, roughly how often do you win?",
   "options": [
@@ -1595,7 +1595,7 @@
  {
   "id": "found_equity_03",
   "unit": "equity",
-  "kind": "montecarlo",
+  "kind": "exact",
   "prompt": "You hold Ah Kd on Th 9h 8d against 7c 7d. Roughly what is your equity to the river?",
   "ask": "Your opponent shows their hand. If the turn and river are dealt, roughly how often do you win?",
   "options": [
@@ -1606,7 +1606,7 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "20\u201340% (behind)",
-  "explanation": "Counting every possible turn and river, you win 27.9% of the time (a split pot counts as half). That's in the 20\u201340% range.",
+  "explanation": "Counting every possible turn and river, you win 27.8% of the time (a split pot counts as half). That's in the 20\u201340% range.",
   "data": {
    "hero": "AhKd",
    "villain": "7c7d",
@@ -1617,7 +1617,7 @@
  {
   "id": "found_equity_04",
   "unit": "equity",
-  "kind": "montecarlo",
+  "kind": "exact",
   "prompt": "You hold Kd Qd on Ks 8c 2h against As 5s. Roughly what is your equity to the river?",
   "ask": "Your opponent shows their hand. If the turn and river are dealt, roughly how often do you win?",
   "options": [
@@ -1639,7 +1639,7 @@
  {
   "id": "found_equity_05",
   "unit": "equity",
-  "kind": "montecarlo",
+  "kind": "exact",
   "prompt": "You hold 9h 8h on 7h 6c 2c against Ac Ad. Roughly what is your equity to the river?",
   "ask": "Your opponent shows their hand. If the turn and river are dealt, roughly how often do you win?",
   "options": [
@@ -1650,7 +1650,7 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "20\u201340% (behind)",
-  "explanation": "Counting every possible turn and river, you win 35.1% of the time (a split pot counts as half). That's in the 20\u201340% range.",
+  "explanation": "Counting every possible turn and river, you win 35% of the time (a split pot counts as half). That's in the 20\u201340% range.",
   "data": {
    "hero": "9h8h",
    "villain": "AcAd",
@@ -1661,7 +1661,7 @@
  {
   "id": "found_equity_06",
   "unit": "equity",
-  "kind": "montecarlo",
+  "kind": "exact",
   "prompt": "You hold As Qs on Qd 9d 4c against Kh Kc. Roughly what is your equity to the river?",
   "ask": "Your opponent shows their hand. If the turn and river are dealt, roughly how often do you win?",
   "options": [
@@ -1683,7 +1683,7 @@
  {
   "id": "found_equity_07",
   "unit": "equity",
-  "kind": "montecarlo",
+  "kind": "exact",
   "prompt": "You hold Jh Th on 9h 8h 2c against Ac Ad. Roughly what is your equity to the river?",
   "ask": "Your opponent shows their hand. If the turn and river are dealt, roughly how often do you win?",
   "options": [
@@ -1694,7 +1694,7 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "40\u201360% (coin flip)",
-  "explanation": "Counting every possible turn and river, you win 56.3% of the time (a split pot counts as half). That's in the 40\u201360% range.",
+  "explanation": "Counting every possible turn and river, you win 56.2% of the time (a split pot counts as half). That's in the 40\u201360% range.",
   "data": {
    "hero": "JhTh",
    "villain": "AcAd",
