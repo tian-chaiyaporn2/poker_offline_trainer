@@ -1540,7 +1540,7 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "80\u2013100% (big favorite)",
-  "explanation": "Dealing out the turn and river many thousands of times, you win about 100% of the time (a split pot counts as half).",
+  "explanation": "Counting every possible turn and river, you win about 100% of the time (a split pot counts as half).",
   "data": {
    "hero": "AhKh",
    "villain": "JcTc",
@@ -1562,12 +1562,12 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "80\u2013100% (big favorite)",
-  "explanation": "Dealing out the turn and river many thousands of times, you win about 98% of the time (a split pot counts as half).",
+  "explanation": "Counting every possible turn and river, you win about 98% of the time (a split pot counts as half).",
   "data": {
    "hero": "7c7d",
    "villain": "AhKd",
    "board": "As7h2d",
-   "equity": 0.9833
+   "equity": 0.9838
   }
  },
  {
@@ -1584,12 +1584,12 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "80\u2013100% (big favorite)",
-  "explanation": "Dealing out the turn and river many thousands of times, you win about 81% of the time (a split pot counts as half).",
+  "explanation": "Counting every possible turn and river, you win about 81% of the time (a split pot counts as half).",
   "data": {
    "hero": "QsQd",
    "villain": "Ah5h",
    "board": "Kd9c4h",
-   "equity": 0.8143
+   "equity": 0.8141
   }
  },
  {
@@ -1606,12 +1606,12 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "20\u201340% (behind)",
-  "explanation": "Dealing out the turn and river many thousands of times, you win about 28% of the time (a split pot counts as half).",
+  "explanation": "Counting every possible turn and river, you win about 28% of the time (a split pot counts as half).",
   "data": {
    "hero": "AhKd",
    "villain": "7c7d",
    "board": "Th9h8d",
-   "equity": 0.2791
+   "equity": 0.2788
   }
  },
  {
@@ -1628,12 +1628,12 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "80\u2013100% (big favorite)",
-  "explanation": "Dealing out the turn and river many thousands of times, you win about 82% of the time (a split pot counts as half).",
+  "explanation": "Counting every possible turn and river, you win about 82% of the time (a split pot counts as half).",
   "data": {
    "hero": "KdQd",
    "villain": "As5s",
    "board": "Ks8c2h",
-   "equity": 0.8209
+   "equity": 0.8212
   }
  },
  {
@@ -1650,12 +1650,12 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "20\u201340% (behind)",
-  "explanation": "Dealing out the turn and river many thousands of times, you win about 35% of the time (a split pot counts as half).",
+  "explanation": "Counting every possible turn and river, you win about 35% of the time (a split pot counts as half).",
   "data": {
    "hero": "9h8h",
    "villain": "AcAd",
    "board": "7h6c2c",
-   "equity": 0.3504
+   "equity": 0.3505
   }
  },
  {
@@ -1672,12 +1672,12 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "20\u201340% (behind)",
-  "explanation": "Dealing out the turn and river many thousands of times, you win about 20% of the time (a split pot counts as half).",
+  "explanation": "Counting every possible turn and river, you win about 20% of the time (a split pot counts as half).",
   "data": {
    "hero": "AsQs",
    "villain": "KhKc",
    "board": "Qd9d4c",
-   "equity": 0.2023
+   "equity": 0.202
   }
  },
  {
@@ -1694,12 +1694,12 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "40\u201360% (coin flip)",
-  "explanation": "Dealing out the turn and river many thousands of times, you win about 56% of the time (a split pot counts as half).",
+  "explanation": "Counting every possible turn and river, you win about 56% of the time (a split pot counts as half).",
   "data": {
    "hero": "JhTh",
    "villain": "AcAd",
    "board": "9h8h2c",
-   "equity": 0.5616
+   "equity": 0.5626
   }
  }
 ]

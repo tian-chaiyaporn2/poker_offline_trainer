@@ -725,7 +725,6 @@ __FONTFACE__
   --bg:#0b0c10; --panel:#16171d; --panel2:#1d1f27; --ink:#f2f1ea; --muted:#888e9b; --line:#2a2c35;
   --brass:#e0b24e; --brass-soft:#c8933a;   /* brass accent on the cool modern base */
   --best:#2fd08a; --good:#5ee7a8; --accept:#ffc24d; --costly:#ff8a6e; --major:#e0341a;
-  --felt:#173a30; --felt-lo:#0e2119;   /* deep cool table green */
   --disp:"Rye","Iowan Old Style",Georgia,serif;
   --sans:"Avenir Next","Avenir",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,sans-serif;
   --mono:"Space Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
@@ -785,7 +784,6 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 .pos.oop{background:color-mix(in srgb,var(--accept) 14%,transparent);color:color-mix(in srgb,var(--accept) 75%,var(--ink))}
 .demo{margin-left:auto;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:color-mix(in srgb,var(--accept) 60%,var(--muted));border:1px solid color-mix(in srgb,var(--accept) 28%,var(--line));border-radius:6px;padding:1px 6px}
 .tablewrap{padding:2px 14px 4px}
-/* unified poker table: opponent on top, the board on the felt, your hand at your seat */
 /* position shown as an abstract constellation of seats; cards sit cleanly below it */
 .stage{display:flex;flex-direction:column;align-items:center;gap:7px;padding:4px 12px 4px}
 .posdial{display:flex;flex-direction:column;align-items:center;gap:3px}
@@ -798,33 +796,10 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 .cn-you{fill:var(--best)}
 .cn-btn{fill:none;stroke:#efe7d6;stroke-width:1.4}
 .cnst-wrap{position:relative;width:188px;height:90px}
-.cn-flow{fill:none;stroke-width:2;stroke-linecap:round}
-.fl-bet{stroke:var(--costly)}
-.fl-check{stroke:color-mix(in srgb,var(--accept) 78%,transparent);stroke-dasharray:3.5 3.5}
-.ah-bet{fill:var(--costly)}.ah-check{fill:var(--accept)}
-.flowchip{display:inline-block;font-family:var(--label);font-size:11px;font-weight:650;white-space:nowrap;padding:2px 9px;border-radius:999px}
-.flowchip.a-bet{background:color-mix(in srgb,var(--costly) 20%,var(--bg));color:var(--costly);border:1px solid color-mix(in srgb,var(--costly) 45%,transparent)}
-.flowchip.a-check{background:color-mix(in srgb,var(--accept) 18%,var(--bg));color:var(--accept);border:1px solid color-mix(in srgb,var(--accept) 40%,transparent)}
-.pos-cap{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:center}
-.pos-cap b{font-weight:700}.pos-cap .you{color:var(--best)}.pos-cap .opp{color:var(--brass)}
-/* under the constellation: a quiet position legend, then the prominent action line */
-.pos-legend{margin-top:7px;text-align:center;font-size:11.5px;color:var(--muted)}
 .action-line{margin-top:3px;text-align:center;font-size:16px;font-weight:650;color:var(--ink);line-height:1.3}
-.hl-you{color:var(--best);font-weight:700}.hl-opp{color:var(--brass);font-weight:700}
-.fl-arrow,.fl-dot{color:color-mix(in srgb,var(--muted) 60%,transparent);font-weight:700}
+.hl-opp{color:var(--brass);font-weight:700}
 .t-mid{display:flex;flex-direction:column;align-items:center;gap:3px}
-.t-opp,.t-you{display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.12;text-align:center}
-.t-seatline{display:flex;align-items:center;gap:6px;justify-content:center}
-.t-seatline .nm{font-size:11.5px;font-weight:700;color:var(--ink)}
-.t-you .t-seatline .nm{color:var(--best)}.t-opp .t-seatline .nm{color:var(--brass)}
-.t-ps{font-size:9.5px;color:color-mix(in srgb,#eaf5ef 52%,transparent)}
-.dchip{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;background:#f5f0e7;color:#15171e;
-  font-family:var(--mono);font-weight:700;font-size:9px;box-shadow:0 1px 2px rgba(0,0,0,.55)}
-.t-move{font-family:var(--label);font-size:10px;font-weight:600;letter-spacing:.005em;color:var(--best)}
-.t-board,.t-you{width:100%}
-.t-board .cards,.t-you .cards{display:flex;justify-content:center}
 .cap{font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:.01em;color:var(--muted);margin-bottom:2px;text-align:center}
-.ftable .cap{color:color-mix(in srgb,#eaf5ef 62%,transparent)}
 .cards{display:flex;gap:8px;justify-content:center}
 /* folded-suit playing cards: corner rank (Space Mono) + centered paper-craft suit */
 .pc{position:relative;background:linear-gradient(160deg,#f5f0e7,#e7e1d3);border-radius:7px;width:40px;height:54px;
@@ -844,8 +819,6 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 .pc.dealnew{animation-delay:0s}
 @keyframes dealIn{from{opacity:0;transform:translateY(16px) rotate(-8deg) scale(.9)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.pc{animation:none}}
-.hero{margin-top:5px}
-.hero .cap{color:var(--brass);font-weight:600}
 .move-cue{text-align:center;font-size:12.5px;font-weight:600;color:color-mix(in srgb,var(--ink) 80%,transparent);margin:2px 4px 5px}
 .move-cue::after{content:" ↓";color:var(--brass)}
 .acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;padding:10px 16px}
@@ -965,7 +938,7 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 .mix h4{margin:8px 0 8px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
 .row{margin:9px 0}
 .rlab{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;margin-bottom:4px;gap:8px}
-.rlab .nm{font-weight:600}
+.rlab .nm{font-weight:600;color:var(--ink)}
 .rlab .you{font-size:10px;color:var(--brass);font-weight:700;letter-spacing:.04em}
 .rlab .star{color:var(--rc)}
 .rlab .num{font-family:var(--mono);font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
@@ -1098,51 +1071,6 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .s-reset{appearance:none;width:100%;background:none;border:1px solid var(--line);color:var(--costly);font-family:var(--label);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:13px;border-radius:12px;cursor:pointer;margin-top:16px}
 .view .foot{text-align:left;margin-top:6px}
 .view .intro,.view .glossary{margin-top:8px}
-/* ===== position / situation graphic ===== */
-.seats{padding:6px 14px 2px}
-/* 6-max ring seen from above: all seats, folded ones dimmed, button on its seat */
-.tv{position:relative;height:146px;max-width:320px;margin:0 auto;
-  background:radial-gradient(120% 130% at 50% 40%, color-mix(in srgb,var(--felt) 84%,#000) 0%, color-mix(in srgb,var(--felt) 62%,#000) 60%, var(--felt-lo) 100%);
-  border:1px solid rgba(255,255,255,.05);border-radius:118px/56px;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.03),inset 0 10px 30px rgba(0,0,0,.5)}
-.tv.ring6{height:212px;max-width:340px;border-radius:134px/82px}
-.tv.ring6 .tvmid{top:58%;gap:2px}   /* sit the hand low-centre so a top-seat opponent can't overlap it */
-.pf-hand{display:flex;flex-direction:column;align-items:center}
-.pf-hand .cap{color:color-mix(in srgb,#eaf5ef 60%,transparent);margin-bottom:3px}
-.pf-hand .t-seatline{margin-top:3px}.pf-hand .nm.you{color:var(--best)}
-.tv.ring6 #hero{gap:7px}
-.tv.ring6 #hero .pc{width:46px;height:62px;border-radius:7px}
-.tv.ring6 #hero .pc::after{inset:3px;border-radius:5px}
-.tv.ring6 #hero .pc .ix b{font-size:12px}
-.tv.ring6 #hero .pc .center .psuit{width:24px;height:24px}
-.tvs{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:1px;width:72px;text-align:center;line-height:1.12}
-.tvs.ab{flex-direction:column-reverse}
-.av{width:21px;height:21px;border-radius:50%;position:relative;
-  background:radial-gradient(70% 70% at 50% 35%, var(--panel2), var(--panel));border:1.5px solid var(--line)}
-.av::after{content:"";position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);width:9px;height:9px;border-radius:50%;
-  background:color-mix(in srgb,var(--muted) 50%,transparent)}
-.tvs.fold{opacity:.4}
-.tvs.fold .av{width:17px;height:17px}
-.tvs.opp .av{border-color:var(--brass);box-shadow:0 0 0 3px color-mix(in srgb,var(--brass) 20%,transparent)}
-.tvs.opp .av::after{background:color-mix(in srgb,var(--brass) 75%,transparent)}
-.tvs.you .av{width:26px;height:26px;border-color:var(--best);box-shadow:0 0 0 3px color-mix(in srgb,var(--best) 20%,transparent)}
-.tvs.you .av::after{width:11px;height:11px;background:color-mix(in srgb,var(--best) 78%,transparent)}
-.dbtn{position:absolute;right:-5px;bottom:-3px;width:14px;height:14px;border-radius:50%;
-  background:#f5f0e7;color:#15171e;font-family:var(--mono);font-weight:700;font-size:9px;
-  display:grid;place-items:center;border:1px solid rgba(0,0,0,.4);box-shadow:0 1px 3px rgba(0,0,0,.4);z-index:3}
-.nm{font-size:9.5px;font-weight:700;color:var(--ink)}
-.tvs.fold .nm{font-size:8.5px;color:var(--muted);font-family:var(--label);letter-spacing:.04em}
-.tvs.you .nm{color:var(--best)}
-.tvs.opp .nm{color:var(--brass)}
-.ps{font-size:8.5px;color:var(--muted)}
-.turn{font-family:var(--label);font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--best)}
-.tvmid{position:absolute;top:46%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:6px}
-.potlab{font-family:var(--label);font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
-  border:1px dashed color-mix(in srgb,var(--muted) 40%,transparent);border-radius:999px;padding:3px 13px}
-.oppchip{font-family:var(--label);font-size:11px;font-weight:650;letter-spacing:0;
-  padding:4px 12px;border-radius:999px;border:1px solid transparent}
-.oppchip.a-check{background:color-mix(in srgb,var(--accept) 16%,transparent);color:var(--accept);border-color:color-mix(in srgb,var(--accept) 40%,var(--line))}
-.oppchip.a-bet{background:color-mix(in srgb,var(--costly) 16%,transparent);color:var(--costly);border-color:color-mix(in srgb,var(--costly) 40%,var(--line))}
 /* ===== mobile-first player loop ===== */
 .session-hud{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 2px 7px;
   font-family:var(--label);font-size:11.5px;letter-spacing:0;color:var(--muted)}
@@ -1152,11 +1080,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
   padding:5px 10px;cursor:pointer}
 html.sheet-open,html.sheet-open body{overflow:hidden}
 .sit{padding:9px 14px 11px}
-.sit-copy{min-width:0;display:flex;flex-direction:column;gap:2px;line-height:1.25}
-.sit-main{font-size:14px;font-weight:700;color:var(--ink)}
-.sit-context{font-size:11.5px;color:var(--muted)}
 .sit .demo{align-self:center}
-.felt{padding:7px 12px 10px}
 #board{gap:6px}
 #hero{gap:8px}
 #board .pc{width:42px;height:57px}
@@ -1180,23 +1104,12 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 #hero .pc .ix b{font-size:16px}
 #hero .pc .ix .mini{width:10px;height:10px}
 #hero .pc .center .psuit{width:32px;height:32px}
-.hero{margin-top:7px}
 .acts{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:11px 13px 13px}
 .acts.n-3{grid-template-columns:repeat(3,minmax(0,1fr))}
 .act{min-width:0;min-height:52px;padding:8px 5px;justify-content:center;gap:1px}
 .act .al{font-size:14px;font-weight:700;line-height:1.15}
 .act .asub{font-size:10px;color:var(--muted);font-weight:500;line-height:1.2;text-align:center}
 .act .k{margin-top:2px;font-size:9px}
-/* Postflop is heads-up: only the two players, their roles, and the action matter. */
-.tv.duel{height:152px;border-radius:100px/58px}
-.tv.duel .tvs{width:105px}
-.tv.duel .tvs.opp{left:50%;top:16%}
-.tv.duel .tvs.you{left:50%;top:84%}
-.tv.duel .tvs.opp .av,.tv.duel .tvs.you .av{width:25px;height:25px}
-.tv.duel .tvs.opp .ps,.tv.duel .tvs.you .ps{font-size:8px}
-.tv.duel .tvmid{top:50%;gap:4px}
-.tv.duel .oppchip{padding:3px 10px}
-.tv.duel .potlab{padding:2px 12px}
 .fb-brief{padding:0 18px 2px}
 .fb-brief .head{font-size:14px;line-height:1.45;margin:0}
 .learn{margin:8px 18px 2px;border:1px solid var(--line);border-radius:12px;
@@ -1229,12 +1142,6 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 .progress-note{font-size:12px;color:var(--muted);margin:-7px 0 16px}
 .terms-progress{margin-top:20px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
 .terms-progress b{font-family:var(--mono);color:var(--brass)}
-.train-primer{margin-top:12px;border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:0 14px}
-.train-primer>summary{list-style:none;cursor:pointer;padding:11px 0;font-size:12px;font-weight:700;color:var(--brass)}
-.train-primer>summary::-webkit-details-marker{display:none}
-.train-primer>summary::after{content:"＋";float:right}
-.train-primer[open]>summary::after{content:"－"}
-.train-primer p{font-size:12.5px;line-height:1.55;color:var(--muted);margin:0 0 12px}
 .tech{margin-top:8px;border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:0 14px}
 .tech>summary{list-style:none;cursor:pointer;padding:12px 0;font-size:12.5px;font-weight:700;color:var(--brass)}
 .tech>summary::-webkit-details-marker{display:none}
@@ -1369,7 +1276,7 @@ __SUITDEFS__
     </div>
     <div class="prow-h">Mastery by street</div>
     <div id="mastery"></div>
-    <div class="terms-progress">Terms learned: <b id="terms-learned">0 / 17</b></div>
+    <div class="terms-progress">Terms learned: <b id="terms-learned">0 / 16</b></div>
   </section>
 
   <section class="view" id="v-settings">
@@ -1646,15 +1553,12 @@ function standingText(rd){
 // Plain (no jargon) vs Poker (real terminology) — the same data, two vocabularies.
 const TERMS = {
   poker:{
-    pos:{BTN:"BTN",BB:"BB",SB:"SB"},
     act:{check:"Check",bet:"Bet",fold:"Fold",call:"Call",raise:"Raise"},
     reason:{value:"Value bet",protection:"Protection",bluff:"Bluff",semi_bluff:"Semi-bluff",
       pot_control:"Pot control",trap:"Trap",realization:"Give up / realize equity",value_call:"Value call",
       bluff_catch:"Bluff-catch",call_odds:"Call on odds",raise_value:"Value raise",raise_bluff:"Bluff raise",
-      raise_semibluff:"Semi-bluff raise",fold:"Fold",mixed:"Mixed / close"},
-    boardcap:{flop:"Flop",turn:"Turn",river:"River"},herocap:"Your hand"},
+      raise_semibluff:"Semi-bluff raise",fold:"Fold",mixed:"Mixed / close"}},
   plain:{
-    pos:{BTN:"You act last",BB:"You act first",SB:"You act first"},
     act:{check:"Check (pass, no bet)",bet:"Bet (put chips in)",fold:"Fold (give up the hand)",
       call:"Call (match their bet)",raise:"Raise (bet even more)"},
     reason:{value:"Bet a strong hand to get paid",protection:"Bet so hands hoping to improve have to pay",
@@ -1664,11 +1568,8 @@ const TERMS = {
       bluff_catch:"Call — you beat the hands they'd bluff with",call_odds:"Call — cheap enough to keep going",
       raise_value:"Raise a strong hand to build the pot",raise_bluff:"Raise as a bluff to make them fold",
       raise_semibluff:"Raise a hand that can improve",fold:"Fold — not strong enough to continue",
-      mixed:"It's close — any choice is fine"},
-    boardcap:{flop:"The 3 shared cards",turn:"The 4th shared card is out",river:"The last (5th) shared card"},
-    herocap:"Your 2 cards (only you can see these)"},
+      mixed:"It's close — any choice is fine"}},
   learning:{
-    pos:{BTN:"BTN",BB:"BB",SB:"SB"},
     act:{check:"Check",bet:"Bet",fold:"Fold",call:"Call",raise:"Raise"},
     reason:{value:"Value bet — get paid by worse hands",protection:"Protection — charge the hands still chasing a card",
       bluff:"Bluff — make better hands fold",semi_bluff:"Semi-bluff — bet a hand that can still improve",
@@ -1676,9 +1577,7 @@ const TERMS = {
       realization:"Realize equity — check and take a free card to improve",value_call:"Value call — you're ahead",
       bluff_catch:"Bluff-catch — you beat the hands they'd bluff with",call_odds:"Call on odds — the price is right to chase",
       raise_value:"Value raise — build the pot",raise_bluff:"Bluff raise — make them fold",
-      raise_semibluff:"Semi-bluff raise — raise a hand that can improve",fold:"Fold — not strong enough",mixed:"Mixed — any is fine"},
-    boardcap:{flop:"Flop (first 3 shared cards)",turn:"Turn (4th card)",river:"River (5th card)"},
-    herocap:"Your hand (your 2 private cards)"}
+      raise_semibluff:"Semi-bluff raise — raise a hand that can improve",fold:"Fold — not strong enough",mixed:"Mixed — any is fine"}}
 };
 const SESSION_SIZE=10;
 function freshStats(){return {n:0,solid:0,ok:0,leak:0,street:{}};}
@@ -1718,19 +1617,13 @@ let mode=(function(){try{const m=localStorage.getItem("lang");return (m==="poker
 let cat=(function(){try{const c=localStorage.getItem("cat");return (["all","preflop","flop","turn","river","basics"].includes(c)||(typeof c==="string"&&c.startsWith("ex:")&&(EXPLOIT[c.slice(3)]||[]).length))?c:"all";}catch(e){return "all";}})();
 // Adaptive mode: each concept shows in plain words until you've EARNED it (played a
 // spot that uses it well); then it graduates to the poker term + its meaning.
-const VALID_TERMS=new Set(["positions","streets"].concat(Object.keys(TERMS.poker.reason).map(r=>"reason:"+r)));
+const VALID_TERMS=new Set(["positions"].concat(Object.keys(TERMS.poker.reason).map(r=>"reason:"+r)));
 let learned=(function(){try{
   const raw=JSON.parse(localStorage.getItem("learned")||"[]");
   return new Set(Array.isArray(raw)?raw.filter(t=>VALID_TERMS.has(t)):[]);
 }catch(e){return new Set();}})();
 const VOCAB_TOTAL=VALID_TERMS.size;
 function eff(term){return mode!=="progressive"?mode:(learned.has(term)?"learning":"plain");}
-function T(){return TERMS[eff("streets")];}
-function posLabel(q){const m=eff("positions");
-  // Seat ROLE, not this decision's order — "You act first" reads as wrong when you're
-  // facing a bet (they just acted), so use the plain role: in / out of position.
-  if(m==="plain")return q.is_oop?"Out of position":"In position";
-  return (TERMS[m].pos[q.acting_player]||q.acting_player);}
 function actLabel(a){const m=eff("positions");
   if(m!=="plain"&&cur&&cur.labels&&cur.labels[a])return cur.labels[a];  // per-pack bet/raise sizing
   const t=TERMS[m].act[baseAct(a)]||a;
@@ -1950,11 +1843,6 @@ function pfSituation(q){
   if(q.ctx==="vs3bet")return "You opened from "+pfPos(q.pos)+", and "+pfPos(q.tbettor)+" 3-bets. Back on you.";
   return "You're on "+pfPos(q.pos)+". It folds to you.";   // rfi
 }
-function pfHeadline(q){
-  if(q.ctx==="def")return (q.opener||"Opponent")+" opens";
-  if(q.ctx==="vs3bet")return (q.tbettor||"Opponent")+" 3-bets";
-  return "Action folds to you";
-}
 function addActionButton(box,a,i){
   const b=document.createElement("button");b.type="button";b.className="act";b.dataset.a=a;
   // Preflop buttons share the same labels as feedback (Open 2.5bb / 3-bet / …).
@@ -2020,7 +1908,6 @@ function renderPreflop(q){
 }
 // Conditioned turn/river drills carry q.line — the earlier streets of the solved hand — so
 // the learner knows how the pot got here (the answer depends on it). Level-aware wording.
-const LINE_PAST={check:"checked",bet:"bet",call:"called",fold:"folded",raise:"raised"};
 function lineText(q){
   if(!q||!q.line||!q.line.length)return "";
   const sm=eff("positions"),opp=sm==="poker"?(q.villain||"Opponent"):"your opponent";
@@ -2032,18 +1919,11 @@ function lineText(q){
     const mine={check:"check",bet:"bet "+pct+"%",call:"call",fold:"fold",raise:"raise"};
     const past={check:"checked",bet:"bet "+pct+"% of the pot",call:"called",fold:"folded",raise:"raised"};
     const parts=st.acts.map(([who,a])=>sm==="plain"
-      ?(who==="you"?"you ":opp+" ")+(past[a]||LINE_PAST[a]||a)
+      ?(who==="you"?"you ":opp+" ")+(past[a]||a)
       :(who==="you"?"you "+(mine[a]||a):opp+" "+(he[a]||a)));
     const list=parts.length>1?parts.slice(0,-1).join(", ")+(sm==="plain"?", and ":", ")+parts[parts.length-1]:parts[0];
     return (sm==="plain"?"On the "+st.street+", ":cap1(st.street)+": ")+list+".";
   }).join(" ");
-}
-function decisionHeadline(q){
-  // Plain levels say "Opponent"; poker level names the seat (UTG / SB / ...).
-  const villain=(eff("positions")==="poker"?(q.villain||"Opponent"):"Opponent"),node=q.node||"";
-  if(node.endsWith("_vs_check"))return villain+" checks";
-  if(node.endsWith("_vs_bet"))return villain+" bets "+(q.bet_pct||66)+"% pot";
-  return "Your action";
 }
 function renderQuestion(q){
   var mc=document.getElementById("movecue");if(mc){mc.hidden=false;mc.textContent=q.basics?"Tap your answer":"Your move — tap what you'd do";}   // show the decision cue on a fresh hand
@@ -2055,7 +1935,7 @@ function renderQuestion(q){
   document.getElementById("sitcontext").textContent=cap1(q.street);
   const bd=document.getElementById("demotag");bd.hidden=!q.badge;bd.textContent=q.badge||"";
   const lt=lineText(q),lc=document.getElementById("linectx");lc.hidden=!lt;lc.textContent=lt?"So far — "+lt:"";
-  renderSeats(q);   // build the unified felt table first (creates the #board/#hero slots)
+  renderSeats(q);   // seat graphic first (creates the #board/#hero slots)
   document.getElementById("boardcap").textContent="Board";
   document.getElementById("herocap").textContent="Your hand";
   // Continuation step>0: hero cards + prior board cards stay put (no re-bounce). Deal only the
@@ -2084,17 +1964,9 @@ function renderSeats(q){
 const RING_ORDER=["BTN","SB","BB","UTG","HJ","CO"];
 const RING_SLOTS=[[50,85,1],[15,67,1],[15,33,0],[50,15,0],[85,33,0],[85,67,1]]; // x%,y%,labelAbove
 // Plain, beginner-friendly seat names by default; real poker terms only in "poker" level.
-const RING_POKER={BTN:"the button",BB:"the big blind",SB:"the small blind",CO:"the cutoff",HJ:"the hijack",UTG:"under the gun"};
-const RING_PLAIN={BTN:"the button",BB:"the big blind",SB:"the small blind",CO:"a late seat",HJ:"a middle seat",UTG:"an early seat"};
-function posName(p){return (eff("positions")==="poker"?RING_POKER:RING_PLAIN)[p]||p;}
 // short label for the preflop seat chip: plain words for beginners, raw seat code only in expert mode
 const CHIP_PLAIN={BTN:"Button",SB:"Small blind",BB:"Big blind",CO:"Late seat",HJ:"Middle seat",UTG:"Early seat"};
 function posChip(p){return eff("positions")==="poker"?p:(CHIP_PLAIN[p]||p);}
-function posLine(hero,villain){   // header: where you and the opponent sit
-  var s='<span class="hl-you">You</span> '+posName(hero);
-  if(villain)s+=' <span class="fl-dot">·</span> <span class="hl-opp">Opponent</span> '+posName(villain);
-  return s;
-}
 // Abstract "constellation": the six seats as small nodes (you at the bottom), the live
 // opponent(s) highlighted, the button ringed, faint links between seats. Position at a glance.
 function constellation(hero,villain){
@@ -2205,9 +2077,9 @@ function ringTable(q){
   const hero=q.acting_player||"BB";
   const villain=q.villain||(hero==="BTN"?"BB":"BTN");
   const node=q.node||"";
-  let oppAct="",ok="wait";
-  if(node.endsWith("_vs_check")){oppAct="Checked";ok="check";}
-  else if(node.endsWith("_vs_bet")){oppAct="Bets "+(q.bet_pct||66)+"%";ok="bet";}
+  let ok="wait";
+  if(node.endsWith("_vs_check"))ok="check";
+  else if(/_vs_bet(?:_\d+)?$/.test(node))ok="bet";
   const actLine=ok==="bet"?'<b class="hl-opp">Opponent</b> bets '+(q.bet_pct||66)+'% of the pot'
     :ok==="check"?'<b class="hl-opp">Opponent</b> checks — it’s on you'
     :'No bet yet — you act first';
@@ -2215,12 +2087,10 @@ function ringTable(q){
     +'<div class="action-line">'+actLine+'</div></div>';
   html+='<div class="t-mid"><div class="cap" id="boardcap">Flop</div><div class="cards" id="board"></div>'
     +'<div class="cap" id="herocap">Your hand</div><div class="cards" id="hero"></div></div>';
-  const w=document.createElement("div");w.className="stage duel";w.innerHTML=html;return w;
+  const w=document.createElement("div");w.className="stage";w.innerHTML=html;return w;
 }
 function preflopRing(q){
   const hero=q.pos, villain=q.tbettor||q.opener||null;
-  const act=q.tbettor?"3-bets":q.opener?"Opens":"";
-  const ok=villain?"bet":"wait";
   const actLine=q.tbettor?'<b class="hl-opp">Opponent</b> 3-bets (re-raises)'
     :q.opener?'<b class="hl-opp">Opponent</b> opens (raises first)'
     :'It folds to you — you’re first to act';
@@ -2481,49 +2351,30 @@ function closeHandDetail(){document.getElementById("handdetail").className="hd";
 // reason IS the rule of thumb, so a confusing twin = same hand tier + the paired opposite
 // reason. We surface the closest twin and name the deciding factor that flips it. =====
 const CONTRAST={
-  value:{vs:["trap","pot_control"],axis:"strong"},
-  trap:{vs:["value","protection"],axis:"strong"},
-  protection:{vs:["pot_control","trap"],axis:"medium"},
-  pot_control:{vs:["protection","value"],axis:"medium"},
-  bluff:{vs:["realization"],axis:"weak"},
-  semi_bluff:{vs:["realization"],axis:"draw"},
-  realization:{vs:["bluff","semi_bluff"],axis:"weak"},
-  bluff_catch:{vs:["fold"],axis:"face"},
-  value_call:{vs:["fold"],axis:"face"},
-  call_odds:{vs:["fold"],axis:"draw2"},
-  fold:{vs:["bluff_catch","value_call"],axis:"face"},
-  raise_value:{vs:["value_call","call_odds"],axis:"raise"},
-  raise_bluff:{vs:["fold","call_odds"],axis:"raise"},
-  raise_semibluff:{vs:["call_odds"],axis:"raise"}
+  value:["trap","pot_control"],
+  trap:["value","protection"],
+  protection:["pot_control","trap"],
+  pot_control:["protection","value"],
+  bluff:["realization"],
+  semi_bluff:["realization"],
+  realization:["bluff","semi_bluff"],
+  bluff_catch:["fold"],
+  value_call:["fold"],
+  call_odds:["fold"],
+  fold:["bluff_catch","value_call"],
+  raise_value:["value_call","call_odds"],
+  raise_bluff:["fold","call_odds"],
+  raise_semibluff:["call_odds"]
 };
 const SHORT_RULE={value:"bet for value",protection:"bet to protect",trap:"check to trap",
   pot_control:"check for pot control",bluff:"bet as a bluff",semi_bluff:"bet as a semi-bluff",
   realization:"check and give up",value_call:"call — you're ahead",bluff_catch:"call to catch a bluff",
   call_odds:"call on the odds",fold:"fold",raise_value:"raise for value",raise_bluff:"raise as a bluff",
   raise_semibluff:"raise as a semi-bluff"};
-const AXIS_WHY={
-  strong:"whether a bet gets <b>called by worse hands</b>. Bet to build the pot when weaker hands will pay you off; check to trap when a bet would fold out everything worse — so you keep their bluffs and weak hands in.",
-  medium:"how exposed your hand is and how many worse hands call. Bet to charge draws and get value when a later card could beat you; check to keep the pot small when the board is safe and betting only folds out worse.",
-  weak:"whether betting can win a pot you'd otherwise lose. Bet as a bluff when you can't win by checking but can make better hands fold; check (give up) when a free card or keeping their bluffs in is worth more.",
-  draw:"whether the draw is worth betting now. Bet it as a semi-bluff to fold out better hands and build a pot you'll often win; check to take a free card and keep the pot small.",
-  draw2:"the price versus your chance to improve. Call when the pot lays you enough to chase; fold when it's too expensive for how often you get there.",
-  face:"how many <b>bluffs</b> are in their betting range versus real hands. Call when they'd bet worse (or bluff) often enough that you beat those; fold when their bet is mostly hands that already beat you.",
-  raise:"whether raising wins more than flat-calling. Raise to build the pot / deny equity when worse hands pay or draws must fold; just call to keep their bluffs and weaker hands in."
-};
-// River: no "later card" / "free card" / "chance to improve" — board is final.
-const RIVER_AXIS_WHY={
-  strong:"whether a bet gets <b>called by worse hands</b>. Bet to get paid when weaker hands call; check to trap when a bet would fold out everything worse — so you keep their bluffs in.",
-  medium:"how exposed your hand is on a completed board. Bet thin value/denial when worse still calls; check to keep the pot small when betting only folds out worse.",
-  weak:"whether betting can win a pot you'd otherwise lose. Bet as a bluff when you can't win by checking; check when keeping their bluffs in is worth more.",
-  draw:"draws are done — leftover 'draw' labels are bluffs or give-ups on the river.",
-  draw2:"the price versus showdown value. Call when the pot lays you enough to see who wins; fold when it's too expensive.",
-  face:"how many <b>bluffs</b> are in their betting range versus real hands. Call when you'd beat their bluffs often enough; fold when their bet is mostly hands that already beat you.",
-  raise:"whether raising wins more than flat-calling. Raise to build the pot / get folds; just call to keep their bluffs and weaker hands in."
-};
 function cap1(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
 function findContrast(q){
   if(q.preflop||q.basics||!CONTRAST[q.reason])return null;
-  const rd=handRead(q.hero,q.board),vs=CONTRAST[q.reason].vs;
+  const rd=handRead(q.hero,q.board),vs=CONTRAST[q.reason];
   // A twin is only instructive if the HAND is genuinely similar — otherwise the strength gap
   // IS the reason it plays differently (two pair calls / one pair folds is trivial, not a
   // "same hand, opposite play"). Require the SAME made-hand category; if there's no twin of
@@ -2917,15 +2768,15 @@ function reopenSheet(){if(answered){document.getElementById("fb").className="fb 
 })();
 
 // Adaptive unlock: play a spot well (best/good) and its concept graduates into
-// your vocabulary. The 'basics' (positions + streets) unlock on your first good
-// answer; each strategy concept unlocks the first time you nail that spot type.
+// your vocabulary. Positions unlock on your first good answer; each strategy
+// concept unlocks the first time you nail that spot type.
 function tryUnlock(q,g){
   if(mode!=="progressive"||!(g==="best"||g==="good"))return [];
   const gained=[];
-  ["positions","streets"].forEach(t=>{if(!learned.has(t)){learned.add(t);gained.push(t);}});
+  if(!learned.has("positions")){learned.add("positions");gained.push("positions");}
   // Only real vocabulary terms unlock — continuation/exploit steps carry the internal
   // reasons "continuation"/"exploit", which must not enter `learned` (an invalid term
-  // inflates the vocab count to 18/17 and flips eff() off the plain-English path).
+  // inflates the vocab count past 16/16 and flips eff() off the plain-English path).
   const rt="reason:"+q.reason;
   if(VALID_TERMS.has(rt)&&!learned.has(rt)){learned.add(rt);gained.push(rt);}
   if(gained.length){try{localStorage.setItem("learned",JSON.stringify([...learned]));}catch(e){}updateVocab();}

@@ -5,7 +5,7 @@ equity) into concrete, auto-gradeable practice questions. Everything here is
 **deterministic** (fixed inputs + seeds) so a generated set is reproducible and
 can go into a signed pack. Nothing invents strategy — each answer is computed
 from the same primitives the solver pipeline uses (evaluator, board texture,
-pot-odds arithmetic, Monte-Carlo equity).
+pot-odds arithmetic, exact showdown equity).
 
 Each question is a dict:
     {id, unit, kind, prompt, ask, options:[...], answer, explanation, data:{...}}
@@ -25,11 +25,11 @@ import os
 import random
 from typing import Dict, List
 
-from .cards import parse_cards, parse_hand, hand_str, card_str
+from .cards import parse_cards, parse_hand, card_str
 from .content_yield import board_texture
 from .handinfo import describe_hand
-from .mc_equity import mc_equity
 from .presets import BOARDS
+from .showdown import equity_matrix
 
 
 def _board_label(board_str: str) -> str:
@@ -220,7 +220,7 @@ def hand_reading_questions() -> List[Dict]:
 
 
 # --------------------------------------------------------------------------- #
-# 4) Equity — Monte-Carlo equity vs a specific hand, bucketed (montecarlo)       #
+# 4) Equity — exact showdown equity vs a specific hand, bucketed                 #
 # --------------------------------------------------------------------------- #
 
 _EQUITY_SPOTS = [
@@ -244,7 +244,9 @@ def equity_questions() -> List[Dict]:
     out = []
     for i, (hero, vill, board) in enumerate(_EQUITY_SPOTS):
         h, v, b = parse_hand(hero), parse_hand(vill), parse_cards(board)
-        eq = mc_equity(b, h, v, samples=200000, seed=3000 + i)
+        # One pair vs one pair is 1,081 runouts. Enumerate them; sampling 200k was slower
+        # and could not change the rounded percent.
+        eq = float(equity_matrix(b, [h], [v])[0][0, 0])
         ans = _band(eq)
         out.append({
             "id": f"found_equity_{i:02d}", "unit": "equity", "kind": "montecarlo",
@@ -254,7 +256,7 @@ def equity_questions() -> List[Dict]:
                     "how often do you win?"),
             "options": [lbl for _, _, lbl in _BANDS],
             "answer": ans,
-            "explanation": (f"Dealing out the turn and river many thousands of times, you win about "
+            "explanation": (f"Counting every possible turn and river, you win about "
                             f"{round(100 * eq)}% of the time (a split pot counts as half)."),
             "data": {"hero": hero, "villain": vill, "board": board, "equity": round(eq, 4)},
         })
@@ -284,6 +286,7 @@ def run(out_dir: str = "output/foundations") -> List[Dict]:
     qs = generate_all()
     with open(os.path.join(out_dir, "questions.json"), "w") as f:
         json.dump(qs, f, indent=1)
+        f.write("\n")
     from collections import Counter
     by_unit = Counter(q["unit"] for q in qs)
     print(f"generated {len(qs)} foundation questions -> {out_dir}/questions.json")
