@@ -216,7 +216,48 @@ def test_basics_stays_out_of_decision_quality():
     src = (ROOT / "demo" / "build_trainer.py").read_text()
     # quiz answers update the session summary + the Basics row only, never lifetime n/solid/leak
     assert "recordGrade(stats,tier,hit);trackStreet(lifetime,hit);saveLifetime();" in src
-    assert 'out.street.basics={n:n,hit:Math.min(n,safeCount(b.hit))}' in src
+    assert "out.street.basics={n:n,hit:hit}" in src
+    # answers an earlier build folded into n/solid/leak are pulled back out on load
+    assert "pokerN+n===out.n&&pokerN<out.n" in src
+
+
+def test_play_modes_use_the_ev_close_call(bt):
+    """Play-a-hand and exploit call a spot mixed only when every action is within CLEAR_SEP_PCT."""
+    import sqlite3
+    from pokertrainer.content_yield import CLEAR_SEP_PCT
+    cwd = os.getcwd()
+    os.chdir(ROOT)
+    try:
+        hands = bt.load_continuation()
+        exploit = bt.load_exploit()
+    finally:
+        os.chdir(cwd)
+
+    def expect(path):
+        c = sqlite3.connect(ROOT / "output" / "packs" / path)
+        out = {}
+        for ev_s, pot, detail, mixed in c.execute(
+                "SELECT ev, pot_bb, detail, mixed FROM flop_decision"):
+            det = json.loads(detail or "{}")
+            ev = json.loads(ev_s)
+            close = all(100.0 * (max(ev.values()) - v) / pot < CLEAR_SEP_PCT
+                        for v in ev.values())
+            out[(det.get("hand_id"), int(det.get("step_index", 0)))] = (close, bool(mixed))
+        c.close()
+        return out
+
+    def check(groups, table):
+        changed = 0
+        for steps in groups:
+            for s in steps:
+                close, pack = table[(s["hand_id"], s["step_index"])]
+                assert bool(s["mixed"]) == close, s["hand_id"]
+                changed += close != pack
+        return changed
+
+    assert check(hands, expect("flop_pack_continuation_full.db"))
+    exploit_steps = [steps for groups in exploit.values() for steps in groups]
+    assert check(exploit_steps, expect("flop_pack_exploit_full.db"))
 
 
 def test_equity_explanation_names_the_graded_band():

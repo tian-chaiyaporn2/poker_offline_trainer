@@ -265,6 +265,23 @@ def _line_events(step, pref, nxt):
     return ev
 
 
+def _ev_close(evs, pot):
+    """True when every action is within CLEAR_SEP_PCT of the best, as % of pot.
+
+    Same indifference rule the flop packs store in `mixed`. The continuation and
+    exploit packs instead flag a frequency split (second action >= 35%), which
+    disagrees with the EV grades and would call a real gap a close call."""
+    from pokertrainer.content_yield import CLEAR_SEP_PCT
+    try:
+        pot = float(pot)
+    except (TypeError, ValueError):
+        return False
+    if pot <= 0 or not evs:
+        return False
+    best = max(float(v) for v in evs.values())
+    return all(100.0 * (best - float(v)) / pot < CLEAR_SEP_PCT for v in evs.values())
+
+
 @functools.lru_cache(maxsize=None)     # shared by the drills and the contrast pool (read-only)
 def load_conditioned_turnriver():
     """Turn + river decisions taken from the continuation pack: every spot sits on a solved
@@ -277,7 +294,7 @@ def load_conditioned_turnriver():
         raise SystemExit(f"missing core pack {CONT_DB} — turn/river drills would ship empty")
     _require_verified(CONT_DB)
     from pokertrainer.cards import parse_cards, parse_hand
-    from pokertrainer.content_yield import CLEAR_SEP_PCT, board_texture
+    from pokertrainer.content_yield import board_texture
     from pokertrainer.explanations import explain
     from pokertrainer.handinfo import describe_hand
     from pokertrainer.validate_flop import hand_category
@@ -310,9 +327,7 @@ def load_conditioned_turnriver():
                 # The continuation pack stores no ev_sep_pct; derive it exactly as content_yield
                 # does (second-smallest regret as % of pot) so the "gives up ~X%" line is real.
                 regrets = sorted(100.0 * (max(evs.values()) - v) / d["pot_bb"] for v in evs.values())
-                # "Close call" by the same EV rule as the flop packs (every action within
-                # CLEAR_SEP_PCT of the pot), not the continuation pack's frequency-split flag.
-                mixed = all(g < CLEAR_SEP_PCT for g in regrets)
+                mixed = _ev_close(evs, d["pot_bb"])
                 rec = {
                     "node": d["node"], "acting_player": d["acting_player"], "board": d["board"],
                     "board_texture": board_texture(board),
@@ -460,14 +475,15 @@ def load_continuation():
         hid = det.get("hand_id") or d["scenario"].split("|")[1]
         acts = json.loads(d["actions"])
         freq_raw = {k: float(v) for k, v in json.loads(d["freq"]).items()}
+        ev_raw = {k: float(v) for k, v in json.loads(d["ev"]).items()}
         step = {
             "street": det.get("street"), "board": _cards(d["board"]), "hero": _cards(d["hand"]),
             "is_oop": bool(det.get("is_oop")), "acting_player": d["acting_player"],
             "villain": det.get("villain"), "node": d["node"], "bet_pct": 66,
             "actions": acts, "grades": json.loads(d["action_grades"]),
-            "ev": {k: round(v, 2) for k, v in json.loads(d["ev"]).items()},
+            "ev": {k: round(v, 2) for k, v in ev_raw.items()},
             "freq": freq_pct_ints(freq_raw, order=acts),   # integer % summing to 100 (like _to_q)
-            "preferred": d["preferred_action"], "mixed": bool(d["mixed"]),
+            "preferred": d["preferred_action"], "mixed": _ev_close(ev_raw, d["pot_bb"]),
             "hand_id": hid, "step_index": int(det.get("step_index", 0)),
             "villain_action": _hero_checked_back(d["node"], d["preferred_action"],
                                                  det.get("villain_action", "")),
@@ -521,14 +537,15 @@ def load_exploit():
         arch = det.get("archetype") or d["scenario"].split("|")[1]
         acts = json.loads(d["actions"])
         freq_raw = {k: float(v) for k, v in json.loads(d["freq"]).items()}
+        ev_raw = {k: float(v) for k, v in json.loads(d["ev"]).items()}
         step = {
             "street": det.get("street"), "board": _cards(d["board"]), "hero": _cards(d["hand"]),
             "is_oop": bool(det.get("is_oop")), "acting_player": d["acting_player"],
             "villain": det.get("villain"), "node": d["node"], "bet_pct": 66,
             "actions": acts, "grades": json.loads(d["action_grades"]),
-            "ev": {k: round(v, 2) for k, v in json.loads(d["ev"]).items()},
+            "ev": {k: round(v, 2) for k, v in ev_raw.items()},
             "freq": freq_pct_ints(freq_raw, order=acts),
-            "preferred": d["preferred_action"], "mixed": bool(d["mixed"]),
+            "preferred": d["preferred_action"], "mixed": _ev_close(ev_raw, d["pot_bb"]),
             "hand_id": hid, "step_index": int(det.get("step_index", 0)),
             "villain_action": _hero_checked_back(d["node"], d["preferred_action"],
                                                  det.get("villain_action", "")),
@@ -1608,7 +1625,13 @@ function normalizeStats(x){
   });
   // Basics is a quiz, not a graded decision: it lives only in its own row, outside n/solid/leak.
   const b=streets.basics;
-  if(b&&typeof b==="object"){const n=safeCount(b.n);out.street.basics={n:n,hit:Math.min(n,safeCount(b.hit))};}
+  if(b&&typeof b==="object"){const n=safeCount(b.n),hit=Math.min(n,safeCount(b.hit));out.street.basics={n:n,hit:hit};
+    // An earlier build also counted each quiz answer in n/solid/leak, so the poker
+    // streets plus basics.n equalled n. New saves keep the quiz outside that total.
+    const pokerN=out.n-remaining;
+    if(n>0&&pokerN+n===out.n&&pokerN<out.n){
+      out.solid=Math.max(0,out.solid-hit);out.leak=Math.max(0,out.leak-(n-hit));
+      out.n=out.solid+out.ok+out.leak;}}
   return out;
 }
 function loadLifetime(){try{
