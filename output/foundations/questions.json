@@ -1540,7 +1540,7 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "80\u2013100% (big favorite)",
-  "explanation": "Counting every possible turn and river, you win about 100% of the time (a split pot counts as half).",
+  "explanation": "Counting every possible turn and river, you win 100% of the time (a split pot counts as half). That's in the 80\u2013100% range.",
   "data": {
    "hero": "AhKh",
    "villain": "JcTc",
@@ -1562,7 +1562,7 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "80\u2013100% (big favorite)",
-  "explanation": "Counting every possible turn and river, you win about 98% of the time (a split pot counts as half).",
+  "explanation": "Counting every possible turn and river, you win 98.4% of the time (a split pot counts as half). That's in the 80\u2013100% range.",
   "data": {
    "hero": "7c7d",
    "villain": "AhKd",
@@ -1584,7 +1584,7 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "80\u2013100% (big favorite)",
-  "explanation": "Counting every possible turn and river, you win about 81% of the time (a split pot counts as half).",
+  "explanation": "Counting every possible turn and river, you win 81.4% of the time (a split pot counts as half). That's in the 80\u2013100% range.",
   "data": {
    "hero": "QsQd",
    "villain": "Ah5h",
@@ -1606,7 +1606,7 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "20\u201340% (behind)",
-  "explanation": "Counting every possible turn and river, you win about 28% of the time (a split pot counts as half).",
+  "explanation": "Counting every possible turn and river, you win 27.9% of the time (a split pot counts as half). That's in the 20\u201340% range.",
   "data": {
    "hero": "AhKd",
    "villain": "7c7d",
@@ -1628,7 +1628,7 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "80\u2013100% (big favorite)",
-  "explanation": "Counting every possible turn and river, you win about 82% of the time (a split pot counts as half).",
+  "explanation": "Counting every possible turn and river, you win 82.1% of the time (a split pot counts as half). That's in the 80\u2013100% range.",
   "data": {
    "hero": "KdQd",
    "villain": "As5s",
@@ -1650,7 +1650,7 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "20\u201340% (behind)",
-  "explanation": "Counting every possible turn and river, you win about 35% of the time (a split pot counts as half).",
+  "explanation": "Counting every possible turn and river, you win 35.1% of the time (a split pot counts as half). That's in the 20\u201340% range.",
   "data": {
    "hero": "9h8h",
    "villain": "AcAd",
@@ -1672,7 +1672,7 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "20\u201340% (behind)",
-  "explanation": "Counting every possible turn and river, you win about 20% of the time (a split pot counts as half).",
+  "explanation": "Counting every possible turn and river, you win 20.2% of the time (a split pot counts as half). That's in the 20\u201340% range \u2014 just inside it.",
   "data": {
    "hero": "AsQs",
    "villain": "KhKc",
@@ -1694,7 +1694,7 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "40\u201360% (coin flip)",
-  "explanation": "Counting every possible turn and river, you win about 56% of the time (a split pot counts as half).",
+  "explanation": "Counting every possible turn and river, you win 56.3% of the time (a split pot counts as half). That's in the 40\u201360% range.",
   "data": {
    "hero": "JhTh",
    "villain": "AcAd",

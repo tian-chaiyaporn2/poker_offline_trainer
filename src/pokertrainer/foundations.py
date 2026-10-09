@@ -240,6 +240,18 @@ def _band(eq: float) -> str:
     return _BANDS[-1][2]
 
 
+def _equity_why(eq: float) -> str:
+    """Name the exact figure AND the band it lands in, so an edge case like 20.2% can't read
+    as "about 20%" while the graded answer is 20–40%."""
+    pct = f"{100 * eq:.1f}".rstrip("0").rstrip(".")
+    lo, hi = next((lo, min(hi, 1.0)) for lo, hi, lbl in _BANDS if lbl == _band(eq))
+    # Flag a near-boundary figure (not the 0% / 100% ends of the scale, which aren't edges).
+    near = (lo > 0 and eq - lo < 0.01) or (hi < 1.0 and hi - eq < 0.01)
+    edge = " — just inside it" if near else ""
+    return (f"Counting every possible turn and river, you win {pct}% of the time (a split pot "
+            f"counts as half). That's in the {round(100 * lo)}–{round(100 * hi)}% range{edge}.")
+
+
 def equity_questions() -> List[Dict]:
     out = []
     for i, (hero, vill, board) in enumerate(_EQUITY_SPOTS):
@@ -256,8 +268,7 @@ def equity_questions() -> List[Dict]:
                     "how often do you win?"),
             "options": [lbl for _, _, lbl in _BANDS],
             "answer": ans,
-            "explanation": (f"Counting every possible turn and river, you win about "
-                            f"{round(100 * eq)}% of the time (a split pot counts as half)."),
+            "explanation": _equity_why(eq),
             "data": {"hero": hero, "villain": vill, "board": board, "equity": round(eq, 4)},
         })
     return out

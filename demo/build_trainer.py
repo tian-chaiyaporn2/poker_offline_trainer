@@ -7,6 +7,7 @@ with no server. Writes demo/trainer_demo.html + index.html (Pages).
 Run:  PYTHONPATH=src python demo/build_trainer.py
 """
 import base64
+import functools
 import html
 import json
 import os
@@ -108,6 +109,7 @@ BB3BET_Q = 16           # 3-bet-pot spots blended in
 STREET = {6: "flop", 8: "turn", 10: "river"}       # by board-string length
 
 
+@functools.lru_cache(maxsize=None)     # each pack is hashed + verified once per build
 def _require_verified(path: str) -> dict:
     if not os.path.exists(path):
         raise SystemExit(f"required pack not found: {path}")
@@ -226,12 +228,10 @@ def _is_vs_bet(node):
 
 
 def _hero_checked_back(node, preferred, villain_action):
-    """The continuation generator says 'Opponent checks back' when the IP hero checks.
-
-    That node is only reached because the opponent already checked. The check-back is
-    the hero's action, so the resolution text has to say so. OOP spots keep the
-    original sentence: there the opponent really does check back.
-    """
+    """Display-text shim for packs built before the generator fix: they say 'Opponent checks
+    back' when the IP hero checks behind (the opponent already checked to reach the node).
+    Only the narration shown to the learner uses this; the hand LINE is built from structure
+    (`_line_events`), never from these strings. Drop once the packs are regenerated."""
     va = villain_action or ""
     if (str(node).endswith("_vs_check") and preferred == "check"
             and va.lower().startswith("opponent checks back")):
@@ -239,8 +239,17 @@ def _hero_checked_back(node, preferred, villain_action):
     return va
 
 
-def _line_events(step, pref, villain_action):
-    """Hero/opponent actions one continuation step contributes to the hand's line."""
+def _line_events(step, pref, nxt):
+    """Hero/opponent actions one continuation step contributes to the hand's line.
+
+    Derived from the hand's STRUCTURE — this node, the hero's (solver-line) action, and the
+    next step — not from narration text, so rewording a generator can't corrupt it:
+      * the node says what the opponent did first (`_vs_check` = checked, `_vs_bet` = bet);
+      * a hero bet followed by a later street was called;
+      * a first-to-act check followed by a later street was checked back;
+      * a first-to-act check followed by this street's `_vs_bet` step gets its bet from
+        that step; an IP check-back (`_vs_check` + check) closes the street by itself.
+    Nothing after the hand's last step is ever shown, so it adds no opponent reply."""
     node = step["node"]
     ev = []
     if node.endswith("_vs_check"):
@@ -248,18 +257,15 @@ def _line_events(step, pref, villain_action):
     elif _is_vs_bet(node):
         ev.append(("opp", "bet"))
     ev.append(("you", pref))
-    va = _hero_checked_back(node, pref, villain_action).lower()
-    if va.startswith("opponent bets") and pref == "check":
-        pass                      # the next step is this street's _vs_bet node, which adds it
-    elif va.startswith("opponent calls"):
-        ev.append(("opp", "call"))
-    elif va.startswith("opponent checks"):
-        ev.append(("opp", "check"))
-    elif va.startswith("opponent folds"):
-        ev.append(("opp", "fold"))
+    if nxt is not None and len(nxt["board"]) != len(step["board"]):     # street advanced
+        if pref == "bet":
+            ev.append(("opp", "call"))
+        elif pref == "check" and node.endswith("_first"):
+            ev.append(("opp", "check"))
     return ev
 
 
+@functools.lru_cache(maxsize=None)     # shared by the drills and the contrast pool (read-only)
 def load_conditioned_turnriver():
     """Turn + river decisions taken from the continuation pack: every spot sits on a solved
     flop->turn->river line, so both ranges are conditioned on the action that got there (the
@@ -271,7 +277,7 @@ def load_conditioned_turnriver():
         raise SystemExit(f"missing core pack {CONT_DB} — turn/river drills would ship empty")
     _require_verified(CONT_DB)
     from pokertrainer.cards import parse_cards, parse_hand
-    from pokertrainer.content_yield import board_texture
+    from pokertrainer.content_yield import CLEAR_SEP_PCT, board_texture
     from pokertrainer.explanations import explain
     from pokertrainer.handinfo import describe_hand
     from pokertrainer.validate_flop import hand_category
@@ -292,7 +298,7 @@ def load_conditioned_turnriver():
         steps.sort(key=lambda d: int(d["det"].get("step_index", 0)))
         done = []                 # completed streets: [{"street", "acts": [[who, action], ...]}]
         cur = None
-        for d in steps:
+        for i, d in enumerate(steps):
             street = STREET.get(len(d["board"]), "flop")
             if cur is None or cur["street"] != street:
                 if cur is not None:
@@ -304,13 +310,16 @@ def load_conditioned_turnriver():
                 # The continuation pack stores no ev_sep_pct; derive it exactly as content_yield
                 # does (second-smallest regret as % of pot) so the "gives up ~X%" line is real.
                 regrets = sorted(100.0 * (max(evs.values()) - v) / d["pot_bb"] for v in evs.values())
+                # "Close call" by the same EV rule as the flop packs (every action within
+                # CLEAR_SEP_PCT of the pot), not the continuation pack's frequency-split flag.
+                mixed = all(g < CLEAR_SEP_PCT for g in regrets)
                 rec = {
                     "node": d["node"], "acting_player": d["acting_player"], "board": d["board"],
                     "board_texture": board_texture(board),
                     "hand_category": hand_category(describe_hand(parse_hand(d["hand"]), board)),
                     "decision_type": ("first_action" if d["node"].endswith(("_first", "_vs_check"))
                                       else "vs_bet"),
-                    "preferred": d["preferred_action"], "mixed": bool(d["mixed"]),
+                    "preferred": d["preferred_action"], "mixed": mixed,
                     "ev": evs, "freq": json.loads(d["freq"]),
                     "ev_sep_pct": round(regrets[1], 3) if len(regrets) > 1 else 0.0,
                     "pot_bb": d["pot_bb"],
@@ -321,14 +330,14 @@ def load_conditioned_turnriver():
                     "acting_player": d["acting_player"], "hand": d["hand"],
                     "actions": d["actions"], "ev": d["ev"], "freq": d["freq"],
                     "preferred_action": d["preferred_action"],
-                    "action_grades": d["action_grades"], "mixed": d["mixed"],
+                    "action_grades": d["action_grades"], "mixed": int(mixed),
                     "reason": ex["reason"], "headline": ex["headline"],
                     "detail": json.dumps(ex["detail"]),
                     "line": [dict(s, acts=[list(a) for a in s["acts"]]) for s in done],
                     "villain_seat": d["det"].get("villain"),
                 })
             cur["acts"].extend(_line_events(d, d["preferred_action"],
-                                            d["det"].get("villain_action")))
+                                            steps[i + 1] if i + 1 < len(steps) else None))
     return out
 
 
@@ -1016,6 +1025,9 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 /* ===== mobile app shell ===== */
 .app{max-width:440px;margin:0 auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;position:relative;background:transparent;z-index:0}
 .appbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:flex-start;gap:11px;padding:12px 16px;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+/* notch / status bar / landscape side insets, at every width (only non-zero with
+   viewport-fit=cover, i.e. the native app + iOS Safari); the narrow-phone block re-applies it. */
+.appbar{padding-top:calc(12px + env(safe-area-inset-top));padding-left:calc(16px + env(safe-area-inset-left));padding-right:calc(16px + env(safe-area-inset-right))}
 .pager{display:flex;gap:5px;flex:none}
 .revbtn{appearance:none;flex:none;font-family:var(--label);font-size:16px;line-height:1;font-weight:700;color:var(--brass);background:var(--panel2);border:1px solid var(--line);border-radius:9px;width:30px;height:30px;display:grid;place-items:center;cursor:pointer;transition:.12s;padding:0}
 .revbtn:hover:not(:disabled){border-color:var(--brass);background:color-mix(in srgb,var(--brass) 10%,var(--panel2))}
@@ -1157,8 +1169,7 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 .prow .pv{width:84px;white-space:nowrap}
 @media(max-width:390px){
   .appbar{gap:9px;padding:4px 12px}
-/* notch / status bar (only non-zero with viewport-fit=cover, i.e. the native app + iOS Safari) */
-.appbar{padding-top:calc(4px + env(safe-area-inset-top));padding-left:calc(12px + env(safe-area-inset-left));padding-right:calc(12px + env(safe-area-inset-right))}
+  .appbar{padding-top:calc(4px + env(safe-area-inset-top));padding-left:calc(12px + env(safe-area-inset-left));padding-right:calc(12px + env(safe-area-inset-right))}
   .appbar .brand{font-size:15px}
   .street-seg{gap:5px}
   .street-seg button{font-size:9.5px;padding:7px 10px}
@@ -1590,11 +1601,14 @@ function normalizeStats(x){
   const classified=out.solid+out.ok+out.leak;out.n=classified;
   const streets=x.street&&typeof x.street==="object"?x.street:{};
   let remaining=out.n;
-  ["preflop","flop","turn","river","basics"].forEach(k=>{
+  ["preflop","flop","turn","river"].forEach(k=>{
     const s=streets[k];if(!s||typeof s!=="object")return;
     const n=Math.min(remaining,safeCount(s.n)),hit=Math.min(n,safeCount(s.hit));
     out.street[k]={n:n,hit:hit};remaining-=n;
   });
+  // Basics is a quiz, not a graded decision: it lives only in its own row, outside n/solid/leak.
+  const b=streets.basics;
+  if(b&&typeof b==="object"){const n=safeCount(b.n);out.street.basics={n:n,hit:Math.min(n,safeCount(b.hit))};}
   return out;
 }
 function loadLifetime(){try{
@@ -2651,7 +2665,8 @@ function answer(a){
   const inSession=!(hist[hidx]&&hist[hidx].bonus);
   if(cur.basics){
     const hit=a===cur.answer,tier=hit?"solid":"leak";
-    if(inSession){recordGrade(stats,tier,hit);recordGrade(lifetime,tier,hit);saveLifetime();}
+    // The session summary counts the quiz; lifetime decision quality does not (Basics row only).
+    if(inSession){recordGrade(stats,tier,hit);trackStreet(lifetime,hit);saveLifetime();}
     if(inSession&&!hit)sessionMisses.push(cur);
     syncStatsUI();renderFeedback(cur,a,[]);
     document.getElementById("next").focus({preventScroll:true});
@@ -2934,7 +2949,7 @@ const PROVIDERS={
 const COACH_KEY_ID="coach-key";
 function coachSecure(){const cap=window.Capacitor;
   return (cap&&cap.isNativePlatform&&cap.isNativePlatform()&&cap.Plugins&&cap.Plugins.SecureStoragePlugin)||null;}
-let coachKeyMem="";
+let coachKeyMem="",coachKeyEpoch=0;   // epoch bumps on every save so a slow start-up load can't clobber it
 function coachCfg(){try{
   const c=JSON.parse(localStorage.getItem("coach")||"{}");
   if(!c||typeof c!=="object"||Array.isArray(c))return coachSecure()&&coachKeyMem?{provider:"claude",model:"",key:coachKeyMem}:{};
@@ -2946,13 +2961,21 @@ function coachCfg(){try{
 }catch(e){return {};}}
 // Returns true once the key is stored. On a native device the key goes to the secure
 // store first; localStorage drops it only after that write resolves. A failed write keeps
-// the key in localStorage so a migration cannot delete the only copy.
-async function coachSaveCfg(c){
+// the key in localStorage so a migration cannot delete the only copy. Saves run one at a
+// time, in call order, so a start-up migration and a user save can't land out of order.
+let coachSaveQ=Promise.resolve();
+function coachSaveCfg(c){
+  coachKeyEpoch++;
+  if(coachSecure())coachKeyMem=c.key||"";      // the live coach uses the newest key at once
+  const run=coachSaveQ.then(()=>coachSaveNow(c));
+  coachSaveQ=run.catch(()=>{});
+  return run;
+}
+async function coachSaveNow(c){
   const ss=coachSecure();
   const key=c.key||"";
   const pub={provider:c.provider,model:c.model};
   if(ss){
-    coachKeyMem=key;
     try{
       if(key) await ss.set({key:COACH_KEY_ID,value:key});
       else await ss.remove({key:COACH_KEY_ID});
@@ -2972,7 +2995,10 @@ async function coachLoadSecureKey(){
   const ss=coachSecure();if(!ss)return;
   let legacy=null;try{legacy=JSON.parse(localStorage.getItem("coach")||"{}");}catch(e){}
   if(legacy&&typeof legacy.key==="string"&&legacy.key){await coachSaveCfg(legacy);}
-  else{try{const r=await ss.get({key:COACH_KEY_ID});coachKeyMem=(r&&typeof r.value==="string")?r.value:"";}catch(e){coachKeyMem="";}}
+  else{const epoch=coachKeyEpoch;let v="";
+    try{const r=await ss.get({key:COACH_KEY_ID});v=(r&&typeof r.value==="string")?r.value:"";}catch(e){v="";}
+    if(epoch!==coachKeyEpoch)return;     // the user saved a key while this read was in flight — theirs wins
+    coachKeyMem=v;}
   const k=document.getElementById("coach-key");if(k&&coachKeyMem)k.value=coachKeyMem;
   coachSettings(false);
 }

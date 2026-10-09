@@ -73,27 +73,29 @@ def test_turnriver_drill_mixes_both_streets(bt):
     assert all(q["line"] for q in qs)
 
 
-def test_line_events_follow_the_node_and_villain_reply(bt):
-    ev = bt._line_events({"node": "bb_first"}, "check", "Opponent bets 66% of the pot.")
-    assert ev == [("you", "check")]                          # the bet arrives with the vs_bet step
-    ev = bt._line_events({"node": "bb_vs_bet"}, "call", "You call — the turn comes.")
-    assert ev == [("opp", "bet"), ("you", "call")]
-    ev = bt._line_events({"node": "btn_vs_check"}, "bet", "Opponent calls — the river comes.")
-    assert ev == [("opp", "check"), ("you", "bet"), ("opp", "call")]
-    ev = bt._line_events({"node": "bb_first"}, "bet", "Opponent folds — you win the pot.")
-    assert ev == [("you", "bet"), ("opp", "fold")]
-    # A sized facing node is still "they bet, then you answer" — the size lives on the node.
-    ev = bt._line_events({"node": "bb_vs_bet_33"}, "fold", "You fold — you lose the pot.")
-    assert ev == [("opp", "bet"), ("you", "fold")]
-    # IP check-back is the hero's check. The authored "Opponent checks back" must not
-    # add a third check (opponent already checked to reach this node).
-    ev = bt._line_events({"node": "btn_vs_check"}, "check",
-                         "Opponent checks back — the turn comes.")
-    assert ev == [("opp", "check"), ("you", "check")]
-    # OOP check, then the opponent really checks back: still exactly two checks.
-    ev = bt._line_events({"node": "bb_first"}, "check",
-                         "Opponent checks back — the turn comes.")
-    assert ev == [("you", "check"), ("opp", "check")]
+def test_line_events_come_from_structure_not_narration(bt):
+    FLOP, TURN = "As7h2d", "As7h2dKc"
+    st = lambda node, board=FLOP: {"node": node, "board": board}
+    # OOP check, then this street's facing-a-bet step: the bet comes from that step.
+    assert bt._line_events(st("bb_first"), "check", st("bb_vs_bet")) == [("you", "check")]
+    # OOP check, then the next street: the opponent checked back.
+    assert bt._line_events(st("bb_first"), "check", st("bb_first", TURN)) == \
+        [("you", "check"), ("opp", "check")]
+    # IP check-back closes the street itself — exactly two checks, never three.
+    assert bt._line_events(st("btn_vs_check"), "check", st("btn_vs_check", TURN)) == \
+        [("opp", "check"), ("you", "check")]
+    # A bet followed by a later street was called.
+    assert bt._line_events(st("btn_vs_check"), "bet", st("btn_vs_check", TURN)) == \
+        [("opp", "check"), ("you", "bet"), ("opp", "call")]
+    assert bt._line_events(st("bb_vs_bet"), "call", st("bb_first", TURN)) == \
+        [("opp", "bet"), ("you", "call")]
+    # Last step of the hand: no opponent reply is invented.
+    assert bt._line_events(st("bb_first"), "bet", None) == [("you", "bet")]
+    # A sized facing node is still "they bet, then you answer".
+    assert bt._line_events(st("bb_vs_bet_33"), "fold", None) == [("opp", "bet"), ("you", "fold")]
+
+
+def test_hero_checked_back_rewrites_only_display_text(bt):
     assert bt._hero_checked_back(
         "btn_vs_check", "check", "Opponent checks back — the turn comes."
     ) == "You check back — the turn comes."
@@ -153,7 +155,7 @@ def test_basics_session_persists_and_pot_odds_are_possible():
     """Basics answers must survive a reload, and a 'how often' choice can't exceed 100%."""
     for path in (ROOT / "index.html", ROOT / "demo" / "trainer_demo.html"):
         html = path.read_text()
-        assert '["preflop","flop","turn","river","basics"]' in html, path
+        assert "const b=streets.basics;" in html, path          # Basics row survives a reload
         assert 'basics:"Basics"' in html, path
         assert 'id="session-unit"' in html, path
         assert "every question was right" in html, path
@@ -193,3 +195,34 @@ def test_multi_size_records_render_as_sized_actions(bt):
                            preferred_action="call",
                            action_grades='{"fold":"costly","call":"best"}'), bet_pct=33)
     assert facing["node"] == "bb_vs_bet" and facing["bet_pct"] == 75
+
+
+def test_conditioned_mixed_uses_the_ev_rule(cond):
+    """Turn/river close calls use the flop packs' EV rule (all actions within CLEAR_SEP_PCT)."""
+    import sqlite3
+    from pokertrainer.content_yield import CLEAR_SEP_PCT
+    c = sqlite3.connect(ROOT / "output" / "packs" / "flop_pack_continuation_full.db")
+    pots = dict(c.execute("SELECT id, pot_bb FROM flop_decision"))
+    c.close()
+    assert any(d["mixed"] for d in cond) and any(not d["mixed"] for d in cond)
+    for d in cond:
+        ev = json.loads(d["ev"])
+        close = all(100.0 * (max(ev.values()) - v) / pots[d["id"]] < CLEAR_SEP_PCT
+                    for v in ev.values())
+        assert bool(d["mixed"]) == close, d["id"]
+
+
+def test_basics_stays_out_of_decision_quality():
+    src = (ROOT / "demo" / "build_trainer.py").read_text()
+    # quiz answers update the session summary + the Basics row only, never lifetime n/solid/leak
+    assert "recordGrade(stats,tier,hit);trackStreet(lifetime,hit);saveLifetime();" in src
+    assert 'out.street.basics={n:n,hit:Math.min(n,safeCount(b.hit))}' in src
+
+
+def test_equity_explanation_names_the_graded_band():
+    from pokertrainer.foundations import generate_all
+    for q in generate_all():
+        if q["unit"] != "equity":
+            continue
+        lo_hi = q["answer"].split("%")[0]                      # e.g. "20–40"
+        assert f"in the {lo_hi}% range" in q["explanation"], q["id"]
