@@ -221,6 +221,44 @@ def test_basics_stays_out_of_decision_quality():
     assert "pokerN+n===out.n&&pokerN<out.n" in src
 
 
+def _pack_bet_pct(path):
+    import sqlite3
+    c = sqlite3.connect(ROOT / "output" / "packs" / path)
+    cfg = json.loads(dict(c.execute("SELECT key, value FROM pack_meta"))["config"])
+    c.close()
+    return int(cfg["bet_pct_pot"])
+
+
+def test_play_modes_use_the_pack_bet_size(bt):
+    """Play-a-hand, exploit, and turn/river drills name the size the pack was solved at."""
+    cwd = os.getcwd()
+    os.chdir(ROOT)
+    try:
+        hands = bt.load_continuation()
+        exploit = bt.load_exploit()
+        drills = bt.load_turnriver()
+    finally:
+        os.chdir(cwd)
+    cont_pct = _pack_bet_pct("flop_pack_continuation_full.db")
+    exp_pct = _pack_bet_pct("flop_pack_exploit_full.db")
+    for steps in hands:
+        for s in steps:
+            assert s["bet_pct"] == cont_pct
+            if "bet" in s["actions"]:
+                assert s["labels"]["bet"] == f"Bet {cont_pct}%"
+    for groups in exploit.values():
+        for steps in groups:
+            for s in steps:
+                assert s["bet_pct"] == exp_pct
+                if "bet" in s["actions"]:
+                    assert s["labels"]["bet"] == f"Bet {exp_pct}%"
+    assert drills
+    for q in drills:
+        assert q["bet_pct"] == cont_pct, q["node"]
+        if "bet" in q["actions"]:
+            assert q["labels"]["bet"] == f"Bet {cont_pct}%"
+
+
 def test_play_modes_use_the_ev_close_call(bt):
     """Play-a-hand and exploit call a spot mixed only when every action is within CLEAR_SEP_PCT."""
     import sqlite3

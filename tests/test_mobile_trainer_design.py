@@ -43,6 +43,7 @@ def test_mobile_player_loop_contract_is_generated_from_source():
         "setView(\"train\")",
         "function skipBonus()",
         "html.sheet-open,html.sheet-open body{overflow:hidden}",
+        "padding-bottom:calc(60px + env(safe-area-inset-bottom))",
     )
     for marker in required:
         assert marker in source

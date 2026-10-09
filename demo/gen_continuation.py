@@ -297,7 +297,7 @@ def _write_continuation_pack(recs, conv, version, note, solver):
     if errs:
         print("VALIDATE WARNINGS:", errs[:5])
     config = {"positions": {"ip": "BTN", "oop": "BB"}, "stack_bb": 100, "pot_bb": POT,
-              "bet_pct_pot": 66, "line": "continuation_solved_villain", "note": note,
+              "bet_pct_pot": PCT, "line": "continuation_solved_villain", "note": note,
               "solver_model": ("multistreet_spike_cfr_plus" if solver == "oracle"
                                else "batched_gpu_cfr_plus"), "convergence": conv}
     build_pack(recs, config, "output/packs", version, pot=POT, dedup_cap=999)

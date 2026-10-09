@@ -163,6 +163,20 @@ _SIZED_NODE = re.compile(r"^(.*_vs_bet)_(\d+)$")   # multi-size packs: bb_vs_bet
 _SIZED_BET = re.compile(r"^bet_(\d+)$")              # multi-size packs: bet_33 / bet_75
 
 
+def _action_labels(acts, bet_pct):
+    """Button labels. A plain 'bet' takes the pack's solved size; bet_NN names its own."""
+    labels = {}
+    for a in acts:
+        sized = _SIZED_BET.match(a)
+        if a == "bet":
+            labels[a] = f"Bet {bet_pct}%"
+        elif sized:
+            labels[a] = f"Bet {sized.group(1)}%"
+        else:
+            labels[a] = ALAB.get(a, a)
+    return labels
+
+
 def _to_q(d, oop_pos="BB", ip_pos=None, bet_pct=66):
     from pokertrainer.explanations import freq_pct_ints
     acts = json.loads(d["actions"])
@@ -183,11 +197,7 @@ def _to_q(d, oop_pos="BB", ip_pos=None, bet_pct=66):
         # every matchup (not just BTN/SB-vs-BB): villain = the seat that isn't the hero.
         "villain": (ip_pos or ("BTN" if oop_pos != "BTN" else "BB"))
         if d["acting_player"] == oop_pos else oop_pos,
-        "actions": acts, "labels": {
-            a: (f"Bet {bet_pct}%" if a == "bet" else
-                f"Bet {_SIZED_BET.match(a).group(1)}%" if _SIZED_BET.match(a) else ALAB.get(a, a))
-            for a in acts
-        }, "bet_pct": bet_pct,
+        "actions": acts, "labels": _action_labels(acts, bet_pct), "bet_pct": bet_pct,
         "ev": {k: round(v, 2) for k, v in json.loads(d["ev"]).items()},
         # Largest-remainder ints so the Pro frequency mix always sums to 100.
         "freq": freq_pct_ints(freq_raw, order=acts),
@@ -371,8 +381,9 @@ def load_turnriver(n=TR_Q):
     groups = [g for pair in zip_longest(tg, rg) for g in pair if g is not None]
     picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
     oop = _oop_pos(dicts); ip = _ip_pos(dicts, oop)
+    bet_pct = _bet_pct_from_pack(CONT_DB)
     out = []
-    for q in (_to_q(d, oop, ip, 66) for d in picked):
+    for q in (_to_q(d, oop, ip, bet_pct) for d in picked):
         q["badge"] = q["street"]
         out.append(q)
     streets = {q["street"] for q in out}
@@ -461,6 +472,7 @@ def load_continuation():
         raise SystemExit(f"missing core pack {CONT_DB} — continuation mode would ship empty")
     _require_verified(CONT_DB)
     from pokertrainer.explanations import freq_pct_ints
+    bet_pct = _bet_pct_from_pack(CONT_DB)
     cols = ("scenario board node acting_player hand actions ev freq preferred_action "
             "action_grades pot_bb mixed detail").split()
     conn = sqlite3.connect(CONT_DB)
@@ -479,8 +491,9 @@ def load_continuation():
         step = {
             "street": det.get("street"), "board": _cards(d["board"]), "hero": _cards(d["hand"]),
             "is_oop": bool(det.get("is_oop")), "acting_player": d["acting_player"],
-            "villain": det.get("villain"), "node": d["node"], "bet_pct": 66,
-            "actions": acts, "grades": json.loads(d["action_grades"]),
+            "villain": det.get("villain"), "node": d["node"],
+            "actions": acts, "labels": _action_labels(acts, bet_pct), "bet_pct": bet_pct,
+            "grades": json.loads(d["action_grades"]),
             "ev": {k: round(v, 2) for k, v in ev_raw.items()},
             "freq": freq_pct_ints(freq_raw, order=acts),   # integer % summing to 100 (like _to_q)
             "preferred": d["preferred_action"], "mixed": _ev_close(ev_raw, d["pot_bb"]),
@@ -521,6 +534,7 @@ def load_exploit():
         raise SystemExit(f"missing core pack {EXPLOIT_DB} — exploit mode would ship empty")
     _require_verified(EXPLOIT_DB)
     from pokertrainer.explanations import freq_pct_ints
+    bet_pct = _bet_pct_from_pack(EXPLOIT_DB)
     cols = ("scenario board node acting_player hand actions ev freq preferred_action "
             "action_grades pot_bb mixed detail headline").split()
     conn = sqlite3.connect(EXPLOIT_DB)
@@ -541,8 +555,9 @@ def load_exploit():
         step = {
             "street": det.get("street"), "board": _cards(d["board"]), "hero": _cards(d["hand"]),
             "is_oop": bool(det.get("is_oop")), "acting_player": d["acting_player"],
-            "villain": det.get("villain"), "node": d["node"], "bet_pct": 66,
-            "actions": acts, "grades": json.loads(d["action_grades"]),
+            "villain": det.get("villain"), "node": d["node"],
+            "actions": acts, "labels": _action_labels(acts, bet_pct), "bet_pct": bet_pct,
+            "grades": json.loads(d["action_grades"]),
             "ev": {k: round(v, 2) for k, v in ev_raw.items()},
             "freq": freq_pct_ints(freq_raw, order=acts),
             "preferred": d["preferred_action"], "mixed": _ev_close(ev_raw, d["pot_bb"]),
@@ -648,13 +663,12 @@ def load_contrast_pool(per_bucket=2):
             continue
         if db == CONT_DB:     # turn/river twins come from the conditioned continuation lines
             dicts = load_conditioned_turnriver()
-            bet_pct = 66
         else:
             c = sqlite3.connect(db)
             dicts = [dict(zip(COLS, r)) for r in
                      c.execute(f"SELECT {','.join(COLS)} FROM flop_decision").fetchall()]
             c.close()
-            bet_pct = _bet_pct_from_pack(db)
+        bet_pct = _bet_pct_from_pack(db)
         oop = _oop_pos(dicts); ip = _ip_pos(dicts, oop)
         for d in dicts:
             cs = parse_cards(d["board"]) + parse_cards(d["hand"])
@@ -1051,7 +1065,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .revbtn:disabled{opacity:.3;cursor:default}
 .appbar .brand{white-space:nowrap}
 .appbar .brand{font-size:18px}
-.views{flex:1;padding-bottom:60px;display:flex;flex-direction:column;min-height:0}
+.views{flex:1;padding-bottom:calc(60px + env(safe-area-inset-bottom));display:flex;flex-direction:column;min-height:0}
 .view{display:none;padding:14px 15px 8px}
 .view.on{display:flex;flex-direction:column;flex:1;min-height:0;animation:viewin .24s ease}
 #v-train.view.on>.session-hud,#v-train.view.on>#session-progress{flex:none}
