@@ -85,6 +85,53 @@ def test_line_events_follow_the_node_and_villain_reply(bt):
     # A sized facing node is still "they bet, then you answer" — the size lives on the node.
     ev = bt._line_events({"node": "bb_vs_bet_33"}, "fold", "You fold — you lose the pot.")
     assert ev == [("opp", "bet"), ("you", "fold")]
+    # IP check-back is the hero's check. The authored "Opponent checks back" must not
+    # add a third check (opponent already checked to reach this node).
+    ev = bt._line_events({"node": "btn_vs_check"}, "check",
+                         "Opponent checks back — the turn comes.")
+    assert ev == [("opp", "check"), ("you", "check")]
+    # OOP check, then the opponent really checks back: still exactly two checks.
+    ev = bt._line_events({"node": "bb_first"}, "check",
+                         "Opponent checks back — the turn comes.")
+    assert ev == [("you", "check"), ("opp", "check")]
+    assert bt._hero_checked_back(
+        "btn_vs_check", "check", "Opponent checks back — the turn comes."
+    ) == "You check back — the turn comes."
+    assert bt._hero_checked_back(
+        "bb_first", "check", "Opponent checks back — the turn comes."
+    ) == "Opponent checks back — the turn comes."
+
+
+def test_no_completed_street_checks_three_times(cond):
+    for d in cond:
+        for s in d["line"]:
+            checks = [a for _, a in s["acts"] if a == "check"]
+            assert len(checks) <= 2, (d["id"], s)
+
+
+def test_ip_checkback_narration_names_the_hero(bt):
+    cwd = os.getcwd()
+    os.chdir(ROOT)
+    try:
+        hands = bt.load_continuation()
+        exploit = bt.load_exploit()
+    finally:
+        os.chdir(cwd)
+    seen = 0
+    for steps in hands:
+        for s in steps:
+            if str(s["node"]).endswith("_vs_check") and s["preferred"] == "check":
+                assert s["villain_action"].startswith("You check back"), s["villain_action"]
+                seen += 1
+    assert seen
+    ex_seen = 0
+    for hands in exploit.values():
+        for steps in hands:
+            for s in steps:
+                if str(s["node"]).endswith("_vs_check") and s["preferred"] == "check":
+                    assert s["villain_action"].startswith("You check back"), s["villain_action"]
+                    ex_seen += 1
+    assert ex_seen
 
 
 def test_basics_questions_are_embedded_and_gradeable():
@@ -109,6 +156,8 @@ def test_basics_session_persists_and_pot_odds_are_possible():
         assert '["preflop","flop","turn","river","basics"]' in html, path
         assert 'basics:"Basics"' in html, path
         assert 'id="session-unit"' in html, path
+        assert "every question was right" in html, path
+        assert "Why is that the answer?" in html, path
         m = re.search(r"const FOUND = (\[[^\n]+\]);", html)
         assert m, path
         for q in json.loads(m.group(1)):

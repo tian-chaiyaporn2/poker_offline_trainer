@@ -225,6 +225,20 @@ def _is_vs_bet(node):
     return node.endswith("_vs_bet") or bool(_SIZED_NODE.match(node))
 
 
+def _hero_checked_back(node, preferred, villain_action):
+    """The continuation generator says 'Opponent checks back' when the IP hero checks.
+
+    That node is only reached because the opponent already checked. The check-back is
+    the hero's action, so the resolution text has to say so. OOP spots keep the
+    original sentence: there the opponent really does check back.
+    """
+    va = villain_action or ""
+    if (str(node).endswith("_vs_check") and preferred == "check"
+            and va.lower().startswith("opponent checks back")):
+        return "You check" + va[len("Opponent checks"):]
+    return va
+
+
 def _line_events(step, pref, villain_action):
     """Hero/opponent actions one continuation step contributes to the hand's line."""
     node = step["node"]
@@ -234,7 +248,7 @@ def _line_events(step, pref, villain_action):
     elif _is_vs_bet(node):
         ev.append(("opp", "bet"))
     ev.append(("you", pref))
-    va = (villain_action or "").lower()
+    va = _hero_checked_back(node, pref, villain_action).lower()
     if va.startswith("opponent bets") and pref == "check":
         pass                      # the next step is this street's _vs_bet node, which adds it
     elif va.startswith("opponent calls"):
@@ -446,7 +460,8 @@ def load_continuation():
             "freq": freq_pct_ints(freq_raw, order=acts),   # integer % summing to 100 (like _to_q)
             "preferred": d["preferred_action"], "mixed": bool(d["mixed"]),
             "hand_id": hid, "step_index": int(det.get("step_index", 0)),
-            "villain_action": det.get("villain_action", ""),
+            "villain_action": _hero_checked_back(d["node"], d["preferred_action"],
+                                                 det.get("villain_action", "")),
             "newcard": bool(det.get("newcard", True)),   # did the board grow at this step?
             # renderFeedback needs these on the normal (postflop) path: reason drives the
             # mode lookups (guarded — CONTRAST/RULES fall through for "continuation"), headline
@@ -506,7 +521,8 @@ def load_exploit():
             "freq": freq_pct_ints(freq_raw, order=acts),
             "preferred": d["preferred_action"], "mixed": bool(d["mixed"]),
             "hand_id": hid, "step_index": int(det.get("step_index", 0)),
-            "villain_action": det.get("villain_action", ""),
+            "villain_action": _hero_checked_back(d["node"], d["preferred_action"],
+                                                 det.get("villain_action", "")),
             "newcard": bool(det.get("newcard", True)),
             "archetype": arch, "villain_label": det.get("villain_label", ""),
             # reason "exploit" falls through the mode lookups like "continuation"; headline is the
@@ -1226,6 +1242,9 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 .tech[open]>summary::before{content:"－ "}
 .tech .foot{padding-bottom:13px}
 .pager[hidden]{display:none!important}
+/* These rules set display themselves, which would otherwise beat the hidden attribute
+   and leave the live hand on screen after the session ends. */
+#play-card[hidden],.session-hud[hidden],#session-progress[hidden],#hint[hidden]{display:none!important}
 .revbtn{width:28px;height:28px;font-size:14px}
 .street-seg button{min-height:44px}
 .prow .pv{width:84px;white-space:nowrap}
@@ -2758,7 +2777,7 @@ function renderFeedback(q,a,gained){
     // (which describes the solver playing the hero's spot) as the conditional "you'd call/fold".
     const dev=a&&q.preferred&&a!==q.preferred;
     let tail=q.villain_action;
-    if(dev)tail=tail.replace(/^You call/,"you'd call").replace(/^You fold/,"you'd fold");
+    if(dev)tail=tail.replace(/^You call/,"you'd call").replace(/^You fold/,"you'd fold").replace(/^You check/,"you'd check");
     v.appendChild(document.createTextNode(" "+(dev?"Continuing on the solver's line: "+tail:tail)));
   }
   if(nb)nb.innerHTML=(q.hand_id&&!q.last)?"Continue &nbsp;&#8629;":"Next hand &nbsp;&#8629;";
@@ -2832,9 +2851,11 @@ function showSessionEnd(){
   document.getElementById("session-ok").textContent=stats.ok;
   document.getElementById("session-leak").textContent=stats.leak;
   const retry=document.getElementById("retry-leaks");retry.disabled=!sessionMisses.length;
+  const quiz=cat==="basics";
+  const noun=quiz?"question":"decision";
   document.getElementById("session-summary").textContent=sessionMisses.length
-    ?sessionMisses.length+" decision"+(sessionMisses.length===1?" needs":"s need")+" another look."
-    :"Clean session — every decision was strong or playable.";
+    ?sessionMisses.length+" "+noun+(sessionMisses.length===1?" needs":"s need")+" another look."
+    :(quiz?"Clean session — every question was right.":"Clean session — every decision was strong or playable.");
   window.scrollTo(0,0);
   document.getElementById("session-end").focus({preventScroll:true});
 }
@@ -3248,9 +3269,7 @@ function coachInit(){
   // Best-effort hint that an embedded preview will block the network call.
   try{if(window.self!==window.top)document.getElementById("coach-envnote").textContent="Note: embedded previews block external calls — if chat fails, open the Pages site or app.";}
   catch(e){document.getElementById("coach-envnote").textContent="Note: embedded previews block external calls — if chat fails, open the Pages site or app.";}
-  const chips=["Why is that the best play?","What hands beat me here?","When would the other option be right?"];
-  const cw=document.getElementById("coach-chips");
-  chips.forEach(c=>{const b=document.createElement("button");b.type="button";b.textContent=c;b.onclick=()=>coachAsk(c);cw.appendChild(b);});
+  syncCoachChips();
   const send=document.getElementById("coach-send"),inp=document.getElementById("coach-input");
   const fire=()=>{const t=inp.value.trim();if(t){inp.value="";coachAsk(t);}};
   send.onclick=fire;
@@ -3258,7 +3277,22 @@ function coachInit(){
   coachSettings(false);
   coachLoadSecureKey();
 }
-function coachReset(){coachGen++;coachMsgs=[];coachErr=null;coachBusy=false;coachRender();coachToggleSend();}
+const COACH_CHIPS={
+  spot:["Why is that the best play?","What hands beat me here?","When would the other option be right?"],
+  basics:["Why is that the answer?","What do the other choices get wrong?","How do I spot this next time?"]
+};
+function syncCoachChips(){
+  const cw=document.getElementById("coach-chips");if(!cw)return;
+  const labels=(cur&&cur.basics)?COACH_CHIPS.basics:COACH_CHIPS.spot;
+  const btns=[...cw.querySelectorAll("button")];
+  if(btns.length!==labels.length){
+    cw.innerHTML="";
+    labels.forEach(c=>{const b=document.createElement("button");b.type="button";b.textContent=c;b.onclick=()=>coachAsk(c);cw.appendChild(b);});
+    return;
+  }
+  labels.forEach((c,i)=>{btns[i].textContent=c;btns[i].onclick=()=>coachAsk(c);});
+}
+function coachReset(){coachGen++;coachMsgs=[];coachErr=null;coachBusy=false;syncCoachChips();coachRender();coachToggleSend();}
 
 // ===== mobile-app shell: view switching, progress, settings =====
 function renderProgress(){

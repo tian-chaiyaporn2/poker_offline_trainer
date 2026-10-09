@@ -228,7 +228,8 @@ def _build_trajectory(s, flopb, turn, river, flop_s, seat, hero_idx, version):
                     else:
                         after(r, "Opponent folds — you take the pot."); ended = True
                 else:
-                    after(r, "Opponent checks back — the " + nxt(street) + " comes."); path += "1"
+                    # Hero is IP and checks. The opponent already checked to reach this node.
+                    after(r, "You check back — the " + nxt(street) + " comes."); path += "1"
     if recs:
         recs[-1]["explanation"]["detail"]["last"] = True
     return recs
