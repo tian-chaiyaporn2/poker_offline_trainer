@@ -30,6 +30,7 @@ from .handinfo import describe_hand
 from .presets import BOARDS
 from .ranges import expand_range
 from .presets import BB_SRP, BTN_SRP, SCENARIOS
+from .solver.betsizes import normalize_bet_fracs
 from .validate_flop import _make_solver, hand_category, subsample
 
 # Acceptance thresholds (§9.3; engineering starting points).
@@ -45,6 +46,65 @@ NODE_ROLE = {
     "bb_first": ("oop", "first"), "btn_vs_check": ("ip", "vs_check"),
     "bb_vs_bet": ("oop", "vs_bet"), "btn_vs_bet": ("ip", "vs_bet"),
 }
+
+
+def node_role(node: str):
+    """(role, suffix) for a solver role node. Multi-size response nodes are keyed per
+    faced size ("bb_vs_bet_33" -> ("oop", "vs_bet_33")), so facing a 33% bet and facing
+    a 75% bet stay distinct spots through relabeling, dedup and the convergence gate."""
+    if node in NODE_ROLE:
+        return NODE_ROLE[node]
+    for base in ("bb_vs_bet", "btn_vs_bet"):
+        if node.startswith(base + "_"):
+            role, suffix = NODE_ROLE[base]
+            return role, suffix + node[len(base):]
+    raise KeyError(node)
+
+
+def ev_close(evs, pot) -> bool:
+    """The indifference ("mixed") rule: every action within CLEAR_SEP_PCT of the best, as % of
+    pot. One definition for every pack and the trainer build, so close calls agree with grades."""
+    try:
+        pot = float(pot)
+    except (TypeError, ValueError):
+        return False
+    if pot <= 0 or not evs:
+        return False
+    best = max(float(v) for v in evs.values())
+    return all(100.0 * (best - float(v)) / pot < CLEAR_SEP_PCT for v in evs.values())
+
+
+def parse_bet_sizes(spec):
+    """CLI '--bet-sizes 0.33,0.75' -> [0.33, 0.75]; None/'' -> None (single-size default).
+    Menu validation (positive, distinct labels, all-in collisions) needs the scenario's
+    pot/stack, so it happens in resolve_bet_sizes() before anything is solved/written."""
+    if not spec:
+        return None
+    try:
+        return [float(x) for x in spec.split(",") if x.strip()]
+    except ValueError:
+        raise SystemExit(f"--bet-sizes must be comma-separated pot fractions, got {spec!r}")
+
+
+def resolve_bet_sizes(bet_frac, bet_fracs, pot, eff_stack):
+    """Validate a --bet-sizes menu up front -> (effective bet_frac, bet_fracs).
+
+    Raises SystemExit on a bad menu (non-positive, duplicate 1% labels, >MAX_SIZES,
+    two sizes capping to the same root all-in) BEFORE any checkpoint config is written,
+    so a typo never burns a run of error checkpoints / poisons the --out fingerprint.
+    A single size is exactly `bet_frac=<size>` (legacy tree, plain "bet"): it is
+    returned as the effective bet_frac with bet_fracs=None, so the solve, the records,
+    the solve_config fingerprint and the pack's bet_pct_pot all carry the solved size.
+    `bet_fracs=None` passes through untouched."""
+    if bet_fracs is None:
+        return bet_frac, None
+    try:
+        fracs, _ = normalize_bet_fracs(bet_frac, bet_fracs, pot, eff_stack)
+    except ValueError as e:
+        raise SystemExit(f"invalid --bet-sizes {list(bet_fracs)}: {e}")
+    if len(fracs) == 1:
+        return fracs[0], None
+    return bet_frac, fracs
 
 
 def board_texture(board: List[int]) -> List[str]:
@@ -97,7 +157,7 @@ def extract_records(flop_str, oop, ip, iters, make, pot, bet_frac,
     recs = s.flop_decisions_report()
     btags = board_texture(flop)
     for r in recs:
-        role, suffix = NODE_ROLE[r["node"]]       # r["node"] is still the solver role node
+        role, suffix = node_role(r["node"])       # r["node"] is still the solver role node
         r["board"] = flop_str
         r["board_texture"] = btags
         r["board_favored"] = board_favored
@@ -411,7 +471,8 @@ def _aggregate(out: str, boards_dir: str, board_idx: List[int], hands_per_side: 
 
 def run(n=40, iters=300, roots=None, solver="cpu", dtype="float64",
         out="output/content_yield", full_range_size=250, pot=None, bet_frac=None,
-        raise_x=None, fresh=False, aggregate_only=False, scenario="btn_vs_bb_srp"):
+        raise_x=None, fresh=False, aggregate_only=False, scenario="btn_vs_bb_srp",
+        bet_fracs=None):
     os.makedirs(out, exist_ok=True)
     boards_dir = os.path.join(out, "boards")
     os.makedirs(boards_dir, exist_ok=True)
@@ -421,6 +482,9 @@ def run(n=40, iters=300, roots=None, solver="cpu", dtype="float64",
     pot = sc["pot"] if pot is None else pot
     bet_frac = sc["bet_frac"] if bet_frac is None else bet_frac
     eff_stack = sc.get("eff_stack")     # None for deep SRP; set (~90bb) for 3-bet pots
+    # Fail fast on a bad menu (before _ensure_checkpoint_config writes anything); a single
+    # size collapses to bet_frac so cfg / records / pack config report the solved size.
+    bet_frac, bet_fracs = resolve_bet_sizes(bet_frac, bet_fracs, pot, eff_stack)
     board_idx = list(roots) if roots is not None else list(range(len(BOARDS)))
     # True full range for the projection: when --n >= the range, we solve every
     # combo, so hands_per_side == full range and the scale factor is 1.0 (avoids
@@ -432,12 +496,16 @@ def run(n=40, iters=300, roots=None, solver="cpu", dtype="float64",
     cfg = _solve_config(n, iters, solver, dtype, pot, bet_frac, raise_x, board_idx)
     cfg["scenario"] = scenario
     cfg["eff_stack"] = eff_stack
+    if bet_fracs is not None:
+        # Only fingerprinted when set, so existing single-size checkpoint dirs still resume.
+        cfg["bet_fracs"] = sorted(float(f) for f in bet_fracs)
     # Always fingerprint-check, including --aggregate-only: rebuilding reports
     # from checkpoints under mismatched CLI settings would silently mix runs.
     _ensure_checkpoint_config(out, cfg, fresh=False if aggregate_only else fresh)
 
     if not aggregate_only:
-        make = _make_solver(solver, dtype, raise_x=raise_x, eff_stack=eff_stack)
+        make = _make_solver(solver, dtype, raise_x=raise_x, eff_stack=eff_stack,
+                            bet_fracs=bet_fracs)
         t0 = time.time()
         for k, i in enumerate(board_idx, 1):
             bstr = BOARDS[i]["board"]
@@ -521,8 +589,14 @@ if __name__ == "__main__":
                          "from existing board checkpoints")
     ap.add_argument("--scenario", default="btn_vs_bb_srp", choices=list(SCENARIOS),
                     help="position matchup / ranges to solve (see presets.SCENARIOS)")
+    ap.add_argument("--bet-sizes", default=None,
+                    help="comma-separated pot fractions for a multi-size tree, e.g. 0.33,0.75 "
+                         "(actions bet_33/bet_75, one response node per size). "
+                         "Default: the scenario's single bet_frac (plain 'bet').")
     a = ap.parse_args()
     roots = [int(x) for x in a.roots.split(",")] if a.roots else None
+    bet_fracs = parse_bet_sizes(a.bet_sizes)
     run(n=a.n, iters=a.iters, roots=roots, solver=a.solver, dtype=a.dtype,
         out=a.out, full_range_size=a.full_range_size, raise_x=a.raise_x,
-        fresh=a.fresh, aggregate_only=a.aggregate_only, scenario=a.scenario)
+        fresh=a.fresh, aggregate_only=a.aggregate_only, scenario=a.scenario,
+        bet_fracs=bet_fracs)

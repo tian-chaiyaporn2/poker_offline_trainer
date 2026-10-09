@@ -28,6 +28,7 @@ reference/**/output/
 *.swp
 .idea/
 .vscode/
+.claude/worktrees/
 
 # Colab upload bundle (regenerable: zip -r poker_solver_gpu.zip src bench)
 poker_solver_gpu.zip

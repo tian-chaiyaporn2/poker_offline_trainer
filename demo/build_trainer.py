@@ -7,9 +7,11 @@ with no server. Writes demo/trainer_demo.html + index.html (Pages).
 Run:  PYTHONPATH=src python demo/build_trainer.py
 """
 import base64
+import functools
 import html
 import json
 import os
+import re
 import sqlite3
 import subprocess
 import sys
@@ -55,14 +57,14 @@ def _fontface():
 # suit shapes + per-suit (light, light_hi, dark, dark_lo, lightRegion, foldCurve)
 _SPD = 'M50 9 C 61 32, 90 46, 90 64 C 90 78, 79 85, 68 82.5 C 62 81, 57 77, 54.5 72 C 55 79, 58 87, 65 92 L 35 92 C 42 87, 45 79, 45.5 72 C 43 77, 38 81, 32 82.5 C 21 85, 10 78, 10 64 C 10 46, 39 32, 50 9 Z'
 _HRT = 'M50 86 C 22 63, 8 48, 8 32 C 8 18, 19 10, 31 10 C 40 10, 47 15, 50 23 C 53 15, 60 10, 69 10 C 81 10, 92 18, 92 32 C 92 48, 78 63, 50 86 Z'
-_DIA = 'M50 8 C 58 24, 76 42, 92 50 C 76 58, 58 76, 50 92 C 42 76, 24 58, 8 50 C 24 42, 42 24, 50 8 Z'
+_DIA = 'M50 6 C 57 24, 70 40, 86 50 C 70 60, 57 76, 50 94 C 43 76, 30 60, 14 50 C 30 40, 43 24, 50 6 Z'
 _CLB = '<circle cx="50" cy="31" r="19"/><circle cx="30" cy="56" r="19"/><circle cx="70" cy="56" r="19"/><path d="M50 48 C 47 68, 41 83, 30 92 L 70 92 C 59 83, 53 68, 50 48 Z"/>'
 _GEOM = {'heart': f'<path d="{_HRT}"/>', 'spade': f'<path d="{_SPD}"/>',
          'diam': f'<path d="{_DIA}"/>', 'club': _CLB}
 _SUIT = {
     'spade': ('#34373d', '#454951', '#141519', '#0c0d11', 'M50 11 C 39 30 12 46 12 64 C 12 79 27 85 39 79 C 51 73 58 56 57 42 C 56 30 54 19 50 11 Z', 'M50 11 C 54 19 56 30 57 42 C 58 56 51 73 39 79'),
     'heart': ('#e8232f', '#f6454f', '#a8121d', '#880c15', 'M50 22 C 45 14 38 10 30 10 C 18 10 8 18 8 32 C 8 47 24 63 50 82 C 61 62 61 36 50 22 Z', 'M50 22 C 61 36 61 62 50 82'),
-    'diam': ('#f4551b', '#ff7134', '#c31f12', '#9f170c', 'M50 8 C 41 26 22 44 8 50 C 24 57 43 75 50 92 C 61 66 61 34 50 8 Z', 'M50 8 C 61 34 61 66 50 92'),
+    'diam': ('#e2532b', '#ee6d45', '#a92a1b', '#86190f', 'M50 6 C 43 24 30 40 14 50 C 30 60 43 76 50 94 C 60 66 60 34 50 6 Z', 'M50 6 C 60 34 60 66 50 94'),
     'club': ('#334339', '#415448', '#15231c', '#0d1712', 'M48 10 C 40 14 34 22 32 30 C 20 33 10 44 12 56 C 14 70 28 80 42 75 C 52 71 58 58 57 42 C 56 28 54 18 48 10 Z', 'M48 10 C 54 18 56 28 57 42 C 58 58 52 71 42 75'),
 }
 
@@ -90,12 +92,11 @@ def _suitdefs():
     return d
 
 DB = "output/packs/flop_pack_v1_fullrange.db"
-TR_DB = "output/packs/flop_pack_turnriver_fullrange.db"  # turn/river decisions (full range; still unconditioned)
 SB_DB = "output/packs/flop_pack_sb_vs_bb.db"           # 2nd scenario: SB vs BB (full range)
 BTNSB_DB = "output/packs/flop_pack_btn_vs_sb.db"       # BTN vs SB single-raised pot
-CO_DB = "output/packs/flop_pack_co_vs_bb.db"           # CO vs BB single-raised pot (pending)
-UTG_DB = "output/packs/flop_pack_utg_vs_bb.db"         # UTG vs BB single-raised pot (pending)
-HJ_DB = "output/packs/flop_pack_hj_vs_bb.db"           # HJ vs BB single-raised pot (pending)
+CO_DB = "output/packs/flop_pack_co_vs_bb.db"           # CO vs BB single-raised pot
+UTG_DB = "output/packs/flop_pack_utg_vs_bb.db"         # UTG vs BB single-raised pot
+HJ_DB = "output/packs/flop_pack_hj_vs_bb.db"           # HJ vs BB single-raised pot
 BB3BET_DB = "output/packs/flop_pack_btn_bb_3bet.db"    # BB 3-bets, BTN calls — low-SPR 3-bet pot
 PER_REASON = 6          # cap questions per reason for variety
 MAX_Q = 60
@@ -108,6 +109,7 @@ BB3BET_Q = 16           # 3-bet-pot spots blended in
 STREET = {6: "flop", 8: "turn", 10: "river"}       # by board-string length
 
 
+@functools.lru_cache(maxsize=None)     # each pack is hashed + verified once per build
 def _require_verified(path: str) -> dict:
     if not os.path.exists(path):
         raise SystemExit(f"required pack not found: {path}")
@@ -127,6 +129,8 @@ def _bet_pct_from_pack(path: str) -> int:
         conn = sqlite3.connect(path)
         meta = dict(conn.execute("SELECT key, value FROM pack_meta"))
         cfg = json.loads(meta.get("config") or "{}")
+        if "bet_pct_pot" not in cfg and cfg.get("bet_sizes_pct"):
+            return int(min(cfg["bet_sizes_pct"]))   # multi-size pack: real sizes ride on bet_NN / node
         return int(cfg.get("bet_pct_pot", 66))
     except (OSError, sqlite3.Error, TypeError, ValueError, json.JSONDecodeError):
         return 66
@@ -155,12 +159,35 @@ def _ip_pos(rows, oop):
     return "BTN" if oop != "BTN" else "BB"
 
 
+_SIZED_NODE = re.compile(r"^(.*_vs_bet)_(\d+)$")   # multi-size packs: bb_vs_bet_33 -> faced 33%
+_SIZED_BET = re.compile(r"^bet_(\d+)$")              # multi-size packs: bet_33 / bet_75
+
+
+def _action_labels(acts, bet_pct):
+    """Button labels. A plain 'bet' takes the pack's solved size; bet_NN names its own."""
+    labels = {}
+    for a in acts:
+        sized = _SIZED_BET.match(a)
+        if a == "bet":
+            labels[a] = f"Bet {bet_pct}%"
+        elif sized:
+            labels[a] = f"Bet {sized.group(1)}%"
+        else:
+            labels[a] = ALAB.get(a, a)
+    return labels
+
+
 def _to_q(d, oop_pos="BB", ip_pos=None, bet_pct=66):
     from pokertrainer.explanations import freq_pct_ints
     acts = json.loads(d["actions"])
     board = [d["board"][i:i+2] for i in range(0, len(d["board"]), 2)]
     street = STREET.get(len(d["board"]), "flop")
     node = d["node"]
+    # A sized facing node folds back to the plain "_vs_bet" role the UI keys on; the faced size
+    # becomes this spot's bet_pct, which every "they bet X%" string already reads.
+    m = _SIZED_NODE.match(node)
+    if m:
+        node, bet_pct = m.group(1), int(m.group(2))
     freq_raw = {k: float(v) for k, v in json.loads(d["freq"]).items()}
     return {
         "board": board, "hero": [d["hand"][0:2], d["hand"][2:4]], "street": street,
@@ -170,9 +197,7 @@ def _to_q(d, oop_pos="BB", ip_pos=None, bet_pct=66):
         # every matchup (not just BTN/SB-vs-BB): villain = the seat that isn't the hero.
         "villain": (ip_pos or ("BTN" if oop_pos != "BTN" else "BB"))
         if d["acting_player"] == oop_pos else oop_pos,
-        "actions": acts, "labels": {
-            a: (f"Bet {bet_pct}%" if a == "bet" else ALAB.get(a, a)) for a in acts
-        }, "bet_pct": bet_pct,
+        "actions": acts, "labels": _action_labels(acts, bet_pct), "bet_pct": bet_pct,
         "ev": {k: round(v, 2) for k, v in json.loads(d["ev"]).items()},
         # Largest-remainder ints so the Pro frequency mix always sums to 100.
         "freq": freq_pct_ints(freq_raw, order=acts),
@@ -181,6 +206,8 @@ def _to_q(d, oop_pos="BB", ip_pos=None, bet_pct=66):
         "headline": d["headline"], "detail": json.loads(d["detail"]),
         # Near-indifferent spots: let feedback treat them as ties, not a punished pick.
         "mixed": bool(d.get("mixed")),
+        # Conditioned turn/river drills: the completed earlier streets of the solved line.
+        **({"line": d["line"]} if d.get("line") else {}),
     }
 
 
@@ -205,42 +232,152 @@ def load_questions():
     return meta, [_to_q(d, oop, ip, bet_pct) for d in picked]
 
 
-def load_turnriver(n=TR_Q, required=True):
-    """Turn + river decisions from the full-range later-street pack (still unconditioned —
-    ranges are card-removal only, not filtered by a prior check/check line)."""
-    if not os.path.exists(TR_DB):
-        msg = f"optional turn/river pack missing ({TR_DB})"
-        if required:
-            raise SystemExit(msg + " — pass --allow-missing-demo-packs to skip")
-        print(f"  warn: {msg} — skipping")
-        return []
-    _require_verified(TR_DB)
-    c = sqlite3.connect(TR_DB)
-    rows = c.execute(f"SELECT {','.join(COLS)} FROM flop_decision").fetchall()
-    c.close()
-    by_key = defaultdict(list)
-    for r in rows:
-        d = dict(zip(COLS, r))
-        street = STREET.get(len(d["board"]), "flop")
-        by_key[(street, d["node"], d["reason"])].append(d)
-    from itertools import zip_longest
-    # Interleave facing-a-bet (Fold/Call/Raise) groups with first-to-act/checked-to
-    # (Check/Bet) groups, so the turn/river sample shows a MIX — otherwise one node type
-    # fills the whole cap and the raise content (or the check/bet content) never appears.
-    items = sorted(by_key.items(), key=lambda kv: kv[0])
-    vb = [g[:2] for k, g in items if "vs_bet" in k[1]]
-    nb = [g[:2] for k, g in items if "vs_bet" not in k[1]]
-    groups = [g for pair in zip_longest(vb, nb) for g in pair if g is not None]
-    picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
-    oop = _oop_pos(picked); ip = _ip_pos(picked, oop)
+def _is_vs_bet(node):
+    """Plain facing node (bb_vs_bet) or a sized one (bb_vs_bet_33)."""
+    return node.endswith("_vs_bet") or bool(_SIZED_NODE.match(node))
+
+
+def _hero_checked_back(node, preferred, villain_action):
+    """Display-text shim for packs built before the generator fix: they say 'Opponent checks
+    back' when the IP hero checks behind (the opponent already checked to reach the node).
+    Only the narration shown to the learner uses this; the hand LINE is built from structure
+    (`_line_events`), never from these strings. Drop once the packs are regenerated."""
+    va = villain_action or ""
+    if (str(node).endswith("_vs_check") and preferred == "check"
+            and va.lower().startswith("opponent checks back")):
+        return "You check" + va[len("Opponent checks"):]
+    return va
+
+
+def _line_events(step, pref, nxt):
+    """Hero/opponent actions one continuation step contributes to the hand's line.
+
+    Derived from the hand's STRUCTURE — this node, the hero's (solver-line) action, and the
+    next step — not from narration text, so rewording a generator can't corrupt it:
+      * the node says what the opponent did first (`_vs_check` = checked, `_vs_bet` = bet);
+      * a hero bet followed by a later street was called;
+      * a first-to-act check followed by a later street was checked back;
+      * a first-to-act check followed by this street's `_vs_bet` step gets its bet from
+        that step; an IP check-back (`_vs_check` + check) closes the street by itself.
+    Nothing after the hand's last step is ever shown, so it adds no opponent reply."""
+    node = step["node"]
+    ev = []
+    if node.endswith("_vs_check"):
+        ev.append(("opp", "check"))
+    elif _is_vs_bet(node):
+        ev.append(("opp", "bet"))
+    ev.append(("you", pref))
+    if nxt is not None and len(nxt["board"]) != len(step["board"]):     # street advanced
+        if pref == "bet":
+            ev.append(("opp", "call"))
+        elif pref == "check" and node.endswith("_first"):
+            ev.append(("opp", "check"))
+    return ev
+
+
+def _ev_close(evs, pot):
+    """Close call by the shared EV rule (content_yield.ev_close). Packs built before the
+    generators used it stored a frequency-split flag, so the build recomputes it."""
+    from pokertrainer.content_yield import ev_close
+    return ev_close(evs, pot)
+
+
+@functools.lru_cache(maxsize=None)     # shared by the drills and the contrast pool (read-only)
+def load_conditioned_turnriver():
+    """Turn + river decisions taken from the continuation pack: every spot sits on a solved
+    flop->turn->river line, so both ranges are conditioned on the action that got there (the
+    old turn/river drill pack was card-removal only). Each record is re-explained from its own
+    solve numbers (reason / headline / detail, like the flop packs) and carries `line` — the
+    completed earlier streets — so the drill can say how the hand got here. Responses are
+    Fold/Call (the continuation tree models no raise)."""
+    if not os.path.exists(CONT_DB):
+        raise SystemExit(f"missing core pack {CONT_DB} — turn/river drills would ship empty")
+    _require_verified(CONT_DB)
+    from pokertrainer.cards import parse_cards, parse_hand
+    from pokertrainer.content_yield import board_texture
+    from pokertrainer.explanations import explain
+    from pokertrainer.handinfo import describe_hand
+    from pokertrainer.validate_flop import hand_category
+    cols = ("id board node acting_player hand actions ev freq preferred_action action_grades "
+            "mixed pot_bb detail scenario").split()
+    conn = sqlite3.connect(CONT_DB)
+    try:
+        rows = [dict(zip(cols, r)) for r in
+                conn.execute(f"SELECT {','.join(cols)} FROM flop_decision").fetchall()]
+    finally:
+        conn.close()
+    hands = defaultdict(list)
+    for d in rows:
+        d["det"] = json.loads(d["detail"] or "{}")
+        hands[d["det"].get("hand_id") or d["scenario"].split("|")[1]].append(d)
     out = []
-    bet_pct = _bet_pct_from_pack(TR_DB)
+    for steps in hands.values():
+        steps.sort(key=lambda d: int(d["det"].get("step_index", 0)))
+        done = []                 # completed streets: [{"street", "acts": [[who, action], ...]}]
+        cur = None
+        for i, d in enumerate(steps):
+            street = STREET.get(len(d["board"]), "flop")
+            if cur is None or cur["street"] != street:
+                if cur is not None:
+                    done.append(cur)
+                cur = {"street": street, "acts": []}
+            if street != "flop":
+                board = parse_cards(d["board"])
+                evs = json.loads(d["ev"])
+                # The continuation pack stores no ev_sep_pct; derive it exactly as content_yield
+                # does (second-smallest regret as % of pot) so the "gives up ~X%" line is real.
+                regrets = sorted(100.0 * (max(evs.values()) - v) / d["pot_bb"] for v in evs.values())
+                mixed = _ev_close(evs, d["pot_bb"])
+                rec = {
+                    "node": d["node"], "acting_player": d["acting_player"], "board": d["board"],
+                    "board_texture": board_texture(board),
+                    "hand_category": hand_category(describe_hand(parse_hand(d["hand"]), board)),
+                    "decision_type": ("first_action" if d["node"].endswith(("_first", "_vs_check"))
+                                      else "vs_bet"),
+                    "preferred": d["preferred_action"], "mixed": mixed,
+                    "ev": evs, "freq": json.loads(d["freq"]),
+                    "ev_sep_pct": round(regrets[1], 3) if len(regrets) > 1 else 0.0,
+                    "pot_bb": d["pot_bb"],
+                }
+                ex = explain(rec)
+                out.append({
+                    "id": d["id"], "board": d["board"], "node": d["node"],
+                    "acting_player": d["acting_player"], "hand": d["hand"],
+                    "actions": d["actions"], "ev": d["ev"], "freq": d["freq"],
+                    "preferred_action": d["preferred_action"],
+                    "action_grades": d["action_grades"], "mixed": int(mixed),
+                    "reason": ex["reason"], "headline": ex["headline"],
+                    "detail": json.dumps(ex["detail"]),
+                    "line": [dict(s, acts=[list(a) for a in s["acts"]]) for s in done],
+                })
+            cur["acts"].extend(_line_events(d, d["preferred_action"],
+                                            steps[i + 1] if i + 1 < len(steps) else None))
+    return out
+
+
+def load_turnriver(n=TR_Q):
+    """Turn/river drill spots: conditioned continuation decisions, balanced across
+    (street, node, reason) so both streets and every node type appear."""
+    dicts = load_conditioned_turnriver()
+    by_key = defaultdict(list)
+    for d in dicts:
+        by_key[(STREET[len(d["board"])], d["node"], d["reason"])].append(d)
+    from itertools import zip_longest
+    # Alternate turn and river groups so the cap can't fill with one street.
+    items = sorted(by_key.items(), key=lambda kv: kv[0])
+    tg = [g[:2] for k, g in items if k[0] == "turn"]
+    rg = [g[:2] for k, g in items if k[0] == "river"]
+    groups = [g for pair in zip_longest(tg, rg) for g in pair if g is not None]
+    picked = [d for tier in zip_longest(*groups) for d in tier if d is not None][:n]
+    oop = _oop_pos(dicts); ip = _ip_pos(dicts, oop)
+    bet_pct = _bet_pct_from_pack(CONT_DB)
+    out = []
     for q in (_to_q(d, oop, ip, bet_pct) for d in picked):
         q["badge"] = q["street"]
         out.append(q)
     streets = {q["street"] for q in out}
-    if required and not ({"turn", "river"} <= streets):
-        raise SystemExit(f"turn/river pack missing street coverage: {streets}")
+    if not ({"turn", "river"} <= streets):
+        raise SystemExit(f"turn/river drills missing street coverage: {streets}")
     return out
 
 
@@ -271,6 +408,36 @@ def load_scenario(db, badge, n):
     return out
 
 
+FOUND_JSON = "output/foundations/questions.json"   # deterministic fundamentals (pokertrainer.foundations)
+FOUND_UNIT = {"board_reading": "Reading the board", "hand_reading": "Reading your hand",
+              "pot_odds": "Pot odds", "equity": "How often you win"}
+
+
+def load_foundations():
+    """Basics: multiple-choice fundamentals (board / hand reading, pot odds, equity). Answers
+    come from the same evaluator + texture + equity code as the solver pipeline. The app draws
+    the cards, so each question carries them split out plus the card-free `ask` text."""
+    if not os.path.exists(FOUND_JSON):
+        raise SystemExit(f"missing {FOUND_JSON} — run: python -m pokertrainer.foundations")
+    with open(FOUND_JSON) as f:
+        raw = json.load(f)
+    out = []
+    for q in raw:
+        if "ask" not in q:
+            raise SystemExit(f"{FOUND_JSON} is stale (no 'ask') — regenerate it")
+        dat = q.get("data", {})
+        out.append({
+            "basics": True, "id": q["id"], "unit": q["unit"],
+            "unit_name": FOUND_UNIT.get(q["unit"], q["unit"]),
+            "ask": q["ask"], "actions": q["options"], "answer": q["answer"],
+            "why": q["explanation"],
+            "board": _cards(dat["board"]) if dat.get("board") else [],
+            "hero": _cards(dat.get("hand") or dat.get("hero") or ""),
+            "opp_cards": _cards(dat.get("villain") or ""),
+        })
+    return out
+
+
 PF_Q = 16   # pre-flop spots blended in ("Chapter 0")
 
 
@@ -294,6 +461,7 @@ def load_continuation():
         raise SystemExit(f"missing core pack {CONT_DB} — continuation mode would ship empty")
     _require_verified(CONT_DB)
     from pokertrainer.explanations import freq_pct_ints
+    bet_pct = _bet_pct_from_pack(CONT_DB)
     cols = ("scenario board node acting_player hand actions ev freq preferred_action "
             "action_grades pot_bb mixed detail").split()
     conn = sqlite3.connect(CONT_DB)
@@ -308,16 +476,19 @@ def load_continuation():
         hid = det.get("hand_id") or d["scenario"].split("|")[1]
         acts = json.loads(d["actions"])
         freq_raw = {k: float(v) for k, v in json.loads(d["freq"]).items()}
+        ev_raw = {k: float(v) for k, v in json.loads(d["ev"]).items()}
         step = {
             "street": det.get("street"), "board": _cards(d["board"]), "hero": _cards(d["hand"]),
             "is_oop": bool(det.get("is_oop")), "acting_player": d["acting_player"],
-            "villain": det.get("villain"), "node": d["node"], "bet_pct": 66,
-            "actions": acts, "grades": json.loads(d["action_grades"]),
-            "ev": {k: round(v, 2) for k, v in json.loads(d["ev"]).items()},
+            "villain": det.get("villain"), "node": d["node"],
+            "actions": acts, "labels": _action_labels(acts, bet_pct), "bet_pct": bet_pct,
+            "grades": json.loads(d["action_grades"]),
+            "ev": {k: round(v, 2) for k, v in ev_raw.items()},
             "freq": freq_pct_ints(freq_raw, order=acts),   # integer % summing to 100 (like _to_q)
-            "preferred": d["preferred_action"], "mixed": bool(d["mixed"]),
+            "preferred": d["preferred_action"], "mixed": _ev_close(ev_raw, d["pot_bb"]),
             "hand_id": hid, "step_index": int(det.get("step_index", 0)),
-            "villain_action": det.get("villain_action", ""),
+            "villain_action": _hero_checked_back(d["node"], d["preferred_action"],
+                                                 det.get("villain_action", "")),
             "newcard": bool(det.get("newcard", True)),   # did the board grow at this step?
             # renderFeedback needs these on the normal (postflop) path: reason drives the
             # mode lookups (guarded — CONTRAST/RULES fall through for "continuation"), headline
@@ -352,6 +523,7 @@ def load_exploit():
         raise SystemExit(f"missing core pack {EXPLOIT_DB} — exploit mode would ship empty")
     _require_verified(EXPLOIT_DB)
     from pokertrainer.explanations import freq_pct_ints
+    bet_pct = _bet_pct_from_pack(EXPLOIT_DB)
     cols = ("scenario board node acting_player hand actions ev freq preferred_action "
             "action_grades pot_bb mixed detail headline").split()
     conn = sqlite3.connect(EXPLOIT_DB)
@@ -368,16 +540,19 @@ def load_exploit():
         arch = det.get("archetype") or d["scenario"].split("|")[1]
         acts = json.loads(d["actions"])
         freq_raw = {k: float(v) for k, v in json.loads(d["freq"]).items()}
+        ev_raw = {k: float(v) for k, v in json.loads(d["ev"]).items()}
         step = {
             "street": det.get("street"), "board": _cards(d["board"]), "hero": _cards(d["hand"]),
             "is_oop": bool(det.get("is_oop")), "acting_player": d["acting_player"],
-            "villain": det.get("villain"), "node": d["node"], "bet_pct": 66,
-            "actions": acts, "grades": json.loads(d["action_grades"]),
-            "ev": {k: round(v, 2) for k, v in json.loads(d["ev"]).items()},
+            "villain": det.get("villain"), "node": d["node"],
+            "actions": acts, "labels": _action_labels(acts, bet_pct), "bet_pct": bet_pct,
+            "grades": json.loads(d["action_grades"]),
+            "ev": {k: round(v, 2) for k, v in ev_raw.items()},
             "freq": freq_pct_ints(freq_raw, order=acts),
-            "preferred": d["preferred_action"], "mixed": bool(d["mixed"]),
+            "preferred": d["preferred_action"], "mixed": _ev_close(ev_raw, d["pot_bb"]),
             "hand_id": hid, "step_index": int(det.get("step_index", 0)),
-            "villain_action": det.get("villain_action", ""),
+            "villain_action": _hero_checked_back(d["node"], d["preferred_action"],
+                                                 det.get("villain_action", "")),
             "newcard": bool(det.get("newcard", True)),
             "archetype": arch, "villain_label": det.get("villain_label", ""),
             # reason "exploit" falls through the mode lookups like "continuation"; headline is the
@@ -466,7 +641,7 @@ def load_contrast_pool(per_bucket=2):
     from pokertrainer.evaluator import evaluate, category_name
     specs = [(DB, None), (SB_DB, "SB vs BB"), (BTNSB_DB, "BTN vs SB"),
              (CO_DB, "CO vs BB"), (UTG_DB, "UTG vs BB"), (HJ_DB, "HJ vs BB"),
-             (BB3BET_DB, "3-bet pot"), (TR_DB, "street")]
+             (BB3BET_DB, "3-bet pot"), (CONT_DB, "street")]
     buckets, seen, out = defaultdict(int), set(), []
     for db, badge in specs:
         if not os.path.exists(db):
@@ -475,11 +650,15 @@ def load_contrast_pool(per_bucket=2):
             _require_verified(db)
         except SystemExit:
             continue
-        c = sqlite3.connect(db)
-        dicts = [dict(zip(COLS, r)) for r in
-                 c.execute(f"SELECT {','.join(COLS)} FROM flop_decision").fetchall()]
-        c.close()
-        oop = _oop_pos(dicts); ip = _ip_pos(dicts, oop); bet_pct = _bet_pct_from_pack(db)
+        if db == CONT_DB:     # turn/river twins come from the conditioned continuation lines
+            dicts = load_conditioned_turnriver()
+        else:
+            c = sqlite3.connect(db)
+            dicts = [dict(zip(COLS, r)) for r in
+                     c.execute(f"SELECT {','.join(COLS)} FROM flop_decision").fetchall()]
+            c.close()
+        bet_pct = _bet_pct_from_pack(db)
+        oop = _oop_pos(dicts); ip = _ip_pos(dicts, oop)
         for d in dicts:
             cs = parse_cards(d["board"]) + parse_cards(d["hand"])
             if len(cs) < 5:
@@ -509,9 +688,9 @@ def load_contrast_pool(per_bucket=2):
     return out
 
 
-def build(allow_missing_demo_packs=False):
+def build():
     meta, qs = load_questions()
-    tr_qs = load_turnriver(required=not allow_missing_demo_packs)
+    tr_qs = load_turnriver()
     sb_qs = load_scenario(SB_DB, "SB vs BB", SB_Q)
     btnsb_qs = load_scenario(BTNSB_DB, "BTN vs SB", BTNSB_Q)
     co_qs = load_scenario(CO_DB, "CO vs BB", CO_Q)
@@ -530,6 +709,8 @@ def build(allow_missing_demo_packs=False):
     cont = load_continuation()
     print(f"  ({sum(len(h) for h in cont)} continuation step-records in {len(cont)} hands)")
     exploit = load_exploit()
+    found = load_foundations()
+    print(f"  ({len(found)} basics questions)")
     print(f"  ({sum(len(h) for hs in exploit.values() for h in hs)} exploit step-records in "
           f"{sum(len(hs) for hs in exploit.values())} hands across {len(exploit)} archetypes)")
     # Escape </script> so pack strings cannot break out of the inline script.
@@ -537,7 +718,8 @@ def build(allow_missing_demo_packs=False):
     cdata = json.dumps(cpool, separators=(",", ":")).replace("<", "\\u003c")
     contdata = json.dumps(cont, separators=(",", ":")).replace("<", "\\u003c")
     edata = json.dumps(exploit, separators=(",", ":")).replace("<", "\\u003c")
-    body = TEMPLATE.replace("__DATA__", data).replace("__CPOOL__", cdata).replace("__CONT__", contdata).replace("__EXPLOIT__", edata).replace("__VERSION__", html.escape(meta.get("version", ""))) \
+    fdata = json.dumps(found, separators=(",", ":")).replace("<", "\\u003c")
+    body = TEMPLATE.replace("__DATA__", data).replace("__CPOOL__", cdata).replace("__CONT__", contdata).replace("__EXPLOIT__", edata).replace("__FOUND__", fdata).replace("__VERSION__", html.escape(meta.get("version", ""))) \
                    .replace("__RECORDS__", html.escape(str(meta.get("record_count", "")))).replace("__COMMIT__", html.escape(commit)) \
                    .replace("__FONTFACE__", _fontface()).replace("__SUITDEFS__", _suitdefs()) \
                    .replace("__ROOMPHOTOS__", _roomphotos())
@@ -550,7 +732,7 @@ def build(allow_missing_demo_packs=False):
            "base-uri 'none'; form-action 'none'")
     doc = ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
            '<meta http-equiv="Content-Security-Policy" content="' + csp + '">\n'
-           '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+           '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
            '<title>Full-Street Flop Trainer</title>\n'
            '<meta name="description" content="Interactive GTO flop trainer — pick an action, '
            'get graded, learn why.">\n</head>\n<body>\n' + body + '\n</body>\n</html>\n')
@@ -572,7 +754,6 @@ __FONTFACE__
   --bg:#0b0c10; --panel:#16171d; --panel2:#1d1f27; --ink:#f2f1ea; --muted:#888e9b; --line:#2a2c35;
   --brass:#e0b24e; --brass-soft:#c8933a;   /* brass accent on the cool modern base */
   --best:#2fd08a; --good:#5ee7a8; --accept:#ffc24d; --costly:#ff8a6e; --major:#e0341a;
-  --felt:#173a30; --felt-lo:#0e2119;   /* deep cool table green */
   --disp:"Rye","Iowan Old Style",Georgia,serif;
   --sans:"Avenir Next","Avenir",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,sans-serif;
   --mono:"Space Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
@@ -620,17 +801,18 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 @media (prefers-reduced-motion:reduce){.hall-room{opacity:.8}}
 .sit{padding:8px 15px 4px;display:flex;align-items:center;gap:9px;font-family:var(--sans);font-size:12.5px;line-height:1.3}
 .sit-street{color:var(--muted);font-weight:600}
+.line-ctx{padding:0 15px 4px;font-family:var(--sans);font-size:12px;line-height:1.45;color:var(--muted)}
+.line-ctx b{color:var(--ink);font-weight:600}
 .sit .pos{margin-left:auto}
 .pos{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.05em;padding:2px 8px;border-radius:6px;flex:none}
-.pos.BB,.pos.SB,.pos.UTG,.pos.HJ,.pos.CO{background:color-mix(in srgb,var(--brass) 20%,transparent);color:var(--brass)}
-.pos.BTN{background:color-mix(in srgb,var(--best) 20%,transparent);color:var(--best)}
+.pos.BB,.pos.SB,.pos.UTG,.pos.HJ,.pos.CO{background:color-mix(in srgb,var(--brass) 13%,transparent);color:color-mix(in srgb,var(--brass) 75%,var(--ink))}
+.pos.BTN{background:color-mix(in srgb,var(--best) 13%,transparent);color:color-mix(in srgb,var(--best) 75%,var(--ink))}
 /* postflop: colour by the in/out-of-position advantage, not the seat code, so position
    is obvious at a glance on every spot (green = you act last / the good seat). */
-.pos.ip{background:color-mix(in srgb,var(--best) 20%,transparent);color:var(--best)}
-.pos.oop{background:color-mix(in srgb,var(--accept) 22%,transparent);color:var(--accept)}
-.demo{margin-left:auto;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accept);border:1px solid color-mix(in srgb,var(--accept) 45%,var(--line));border-radius:6px;padding:1px 6px}
+.pos.ip{background:color-mix(in srgb,var(--best) 13%,transparent);color:color-mix(in srgb,var(--best) 75%,var(--ink))}
+.pos.oop{background:color-mix(in srgb,var(--accept) 14%,transparent);color:color-mix(in srgb,var(--accept) 75%,var(--ink))}
+.demo{margin-left:auto;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:color-mix(in srgb,var(--accept) 60%,var(--muted));border:1px solid color-mix(in srgb,var(--accept) 28%,var(--line));border-radius:6px;padding:1px 6px}
 .tablewrap{padding:2px 14px 4px}
-/* unified poker table: opponent on top, the board on the felt, your hand at your seat */
 /* position shown as an abstract constellation of seats; cards sit cleanly below it */
 .stage{display:flex;flex-direction:column;align-items:center;gap:7px;padding:4px 12px 4px}
 .posdial{display:flex;flex-direction:column;align-items:center;gap:3px}
@@ -643,33 +825,10 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 .cn-you{fill:var(--best)}
 .cn-btn{fill:none;stroke:#efe7d6;stroke-width:1.4}
 .cnst-wrap{position:relative;width:188px;height:90px}
-.cn-flow{fill:none;stroke-width:2;stroke-linecap:round}
-.fl-bet{stroke:var(--costly)}
-.fl-check{stroke:color-mix(in srgb,var(--accept) 78%,transparent);stroke-dasharray:3.5 3.5}
-.ah-bet{fill:var(--costly)}.ah-check{fill:var(--accept)}
-.flowchip{display:inline-block;font-family:var(--label);font-size:11px;font-weight:650;white-space:nowrap;padding:2px 9px;border-radius:999px}
-.flowchip.a-bet{background:color-mix(in srgb,var(--costly) 20%,var(--bg));color:var(--costly);border:1px solid color-mix(in srgb,var(--costly) 45%,transparent)}
-.flowchip.a-check{background:color-mix(in srgb,var(--accept) 18%,var(--bg));color:var(--accept);border:1px solid color-mix(in srgb,var(--accept) 40%,transparent)}
-.pos-cap{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:center}
-.pos-cap b{font-weight:700}.pos-cap .you{color:var(--best)}.pos-cap .opp{color:var(--brass)}
-/* under the constellation: a quiet position legend, then the prominent action line */
-.pos-legend{margin-top:7px;text-align:center;font-size:11.5px;color:var(--muted)}
 .action-line{margin-top:3px;text-align:center;font-size:16px;font-weight:650;color:var(--ink);line-height:1.3}
-.hl-you{color:var(--best);font-weight:700}.hl-opp{color:var(--brass);font-weight:700}
-.fl-arrow,.fl-dot{color:color-mix(in srgb,var(--muted) 60%,transparent);font-weight:700}
+.hl-opp{color:var(--brass);font-weight:700}
 .t-mid{display:flex;flex-direction:column;align-items:center;gap:3px}
-.t-opp,.t-you{display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.12;text-align:center}
-.t-seatline{display:flex;align-items:center;gap:6px;justify-content:center}
-.t-seatline .nm{font-size:11.5px;font-weight:700;color:var(--ink)}
-.t-you .t-seatline .nm{color:var(--best)}.t-opp .t-seatline .nm{color:var(--brass)}
-.t-ps{font-size:9.5px;color:color-mix(in srgb,#eaf5ef 52%,transparent)}
-.dchip{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;background:#f5f0e7;color:#15171e;
-  font-family:var(--mono);font-weight:700;font-size:9px;box-shadow:0 1px 2px rgba(0,0,0,.55)}
-.t-move{font-family:var(--label);font-size:10px;font-weight:600;letter-spacing:.005em;color:var(--best)}
-.t-board,.t-you{width:100%}
-.t-board .cards,.t-you .cards{display:flex;justify-content:center}
 .cap{font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:.01em;color:var(--muted);margin-bottom:2px;text-align:center}
-.ftable .cap{color:color-mix(in srgb,#eaf5ef 62%,transparent)}
 .cards{display:flex;gap:8px;justify-content:center}
 /* folded-suit playing cards: corner rank (Space Mono) + centered paper-craft suit */
 .pc{position:relative;background:linear-gradient(160deg,#f5f0e7,#e7e1d3);border-radius:7px;width:40px;height:54px;
@@ -677,10 +836,11 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 .pc::after{content:"";position:absolute;inset:3px;border:1px solid rgba(20,25,40,.09);border-radius:5px;pointer-events:none}
 .pc .ix{position:absolute;top:3px;left:4px;display:flex;flex-direction:column;align-items:center;line-height:.82;z-index:2}
 .pc .ix b{font-family:var(--mono);font-weight:700;font-size:12px}
+.pc .ix b.ten{letter-spacing:-.04em;display:inline-block;transform:scaleX(.8);transform-origin:center}
 .pc .ix .mini{width:8px;height:8px;margin-top:1px}
 .pc .center{position:absolute;inset:0;display:grid;place-items:center;z-index:1}
 .pc .center .psuit{width:21px;height:21px;filter:drop-shadow(0 2px 3px rgba(20,15,10,.4))}
-.pc.pc-heart .ix{color:#cf1a2c}.pc.pc-diam .ix{color:#d84a17}.pc.pc-club .ix{color:#2f3d35}.pc.pc-spade .ix{color:#26282e}
+.pc.pc-heart .ix{color:#cf1a2c}.pc.pc-diam .ix{color:#c9441f}.pc.pc-club .ix{color:#2f3d35}.pc.pc-spade .ix{color:#26282e}
 .cards .pc:nth-child(2){animation-delay:.08s}.cards .pc:nth-child(3){animation-delay:.16s}.cards .pc:nth-child(4){animation-delay:.24s}.cards .pc:nth-child(5){animation-delay:.32s}
 /* continuation: cards already on the board don't re-deal (they just shift as the row grows);
    only the freshly-revealed card bounces, and it bounces immediately (no stagger delay). */
@@ -688,8 +848,6 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 .pc.dealnew{animation-delay:0s}
 @keyframes dealIn{from{opacity:0;transform:translateY(16px) rotate(-8deg) scale(.9)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.pc{animation:none}}
-.hero{margin-top:5px}
-.hero .cap{color:var(--brass);font-weight:600}
 .move-cue{text-align:center;font-size:12.5px;font-weight:600;color:color-mix(in srgb,var(--ink) 80%,transparent);margin:2px 4px 5px}
 .move-cue::after{content:" ↓";color:var(--brass)}
 .acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;padding:10px 16px}
@@ -809,7 +967,7 @@ body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);font-famil
 .mix h4{margin:8px 0 8px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
 .row{margin:9px 0}
 .rlab{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;margin-bottom:4px;gap:8px}
-.rlab .nm{font-weight:600}
+.rlab .nm{font-weight:600;color:var(--ink)}
 .rlab .you{font-size:10px;color:var(--brass);font-weight:700;letter-spacing:.04em}
 .rlab .star{color:var(--rc)}
 .rlab .num{font-family:var(--mono);font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
@@ -887,13 +1045,16 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 /* ===== mobile app shell ===== */
 .app{max-width:440px;margin:0 auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;position:relative;background:transparent;z-index:0}
 .appbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:flex-start;gap:11px;padding:12px 16px;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+/* notch / status bar / landscape side insets, at every width (only non-zero with
+   viewport-fit=cover, i.e. the native app + iOS Safari); the narrow-phone block re-applies it. */
+.appbar{padding-top:calc(12px + env(safe-area-inset-top));padding-left:calc(16px + env(safe-area-inset-left));padding-right:calc(16px + env(safe-area-inset-right))}
 .pager{display:flex;gap:5px;flex:none}
 .revbtn{appearance:none;flex:none;font-family:var(--label);font-size:16px;line-height:1;font-weight:700;color:var(--brass);background:var(--panel2);border:1px solid var(--line);border-radius:9px;width:30px;height:30px;display:grid;place-items:center;cursor:pointer;transition:.12s;padding:0}
 .revbtn:hover:not(:disabled){border-color:var(--brass);background:color-mix(in srgb,var(--brass) 10%,var(--panel2))}
 .revbtn:disabled{opacity:.3;cursor:default}
 .appbar .brand{white-space:nowrap}
 .appbar .brand{font-size:18px}
-.views{flex:1;padding-bottom:60px;display:flex;flex-direction:column;min-height:0}
+.views{flex:1;padding-bottom:calc(60px + env(safe-area-inset-bottom));display:flex;flex-direction:column;min-height:0}
 .view{display:none;padding:14px 15px 8px}
 .view.on{display:flex;flex-direction:column;flex:1;min-height:0;animation:viewin .24s ease}
 #v-train.view.on>.session-hud,#v-train.view.on>#session-progress{flex:none}
@@ -927,7 +1088,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .prow .pn{font-family:var(--label);font-size:11px;text-transform:uppercase;width:62px;color:var(--ink);font-weight:700}
 .prow .pbar{flex:1;height:9px;background:var(--panel2);border-radius:5px;overflow:hidden}
 .prow .pbar>i{display:block;height:100%;border-radius:5px;transition:width .5s ease}
-.c-pre{background:linear-gradient(90deg,#8aa0ff,#5b74ff)}.c-flop{background:linear-gradient(90deg,#5ee7a8,#2fd08a)}.c-turn{background:linear-gradient(90deg,#ffd67a,#ffb020)}.c-river{background:linear-gradient(90deg,#ff8a6e,#ff6a4d)}
+.c-pre{background:linear-gradient(90deg,#8aa0ff,#5b74ff)}.c-flop{background:linear-gradient(90deg,#5ee7a8,#2fd08a)}.c-turn{background:linear-gradient(90deg,#ffd67a,#ffb020)}.c-river{background:linear-gradient(90deg,#ff8a6e,#ff6a4d)}.c-basics{background:linear-gradient(90deg,#b9a3ff,#9a7cff)}
 .prow .pv{font-family:var(--mono);font-size:11px;color:var(--muted);width:36px;text-align:right}
 /* settings view */
 .s-sec{font-family:var(--label);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;margin:20px 0 8px}
@@ -942,51 +1103,6 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
 .s-reset{appearance:none;width:100%;background:none;border:1px solid var(--line);color:var(--costly);font-family:var(--label);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:13px;border-radius:12px;cursor:pointer;margin-top:16px}
 .view .foot{text-align:left;margin-top:6px}
 .view .intro,.view .glossary{margin-top:8px}
-/* ===== position / situation graphic ===== */
-.seats{padding:6px 14px 2px}
-/* 6-max ring seen from above: all seats, folded ones dimmed, button on its seat */
-.tv{position:relative;height:146px;max-width:320px;margin:0 auto;
-  background:radial-gradient(120% 130% at 50% 40%, color-mix(in srgb,var(--felt) 84%,#000) 0%, color-mix(in srgb,var(--felt) 62%,#000) 60%, var(--felt-lo) 100%);
-  border:1px solid rgba(255,255,255,.05);border-radius:118px/56px;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.03),inset 0 10px 30px rgba(0,0,0,.5)}
-.tv.ring6{height:212px;max-width:340px;border-radius:134px/82px}
-.tv.ring6 .tvmid{top:58%;gap:2px}   /* sit the hand low-centre so a top-seat opponent can't overlap it */
-.pf-hand{display:flex;flex-direction:column;align-items:center}
-.pf-hand .cap{color:color-mix(in srgb,#eaf5ef 60%,transparent);margin-bottom:3px}
-.pf-hand .t-seatline{margin-top:3px}.pf-hand .nm.you{color:var(--best)}
-.tv.ring6 #hero{gap:7px}
-.tv.ring6 #hero .pc{width:46px;height:62px;border-radius:7px}
-.tv.ring6 #hero .pc::after{inset:3px;border-radius:5px}
-.tv.ring6 #hero .pc .ix b{font-size:12px}
-.tv.ring6 #hero .pc .center .psuit{width:24px;height:24px}
-.tvs{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:1px;width:72px;text-align:center;line-height:1.12}
-.tvs.ab{flex-direction:column-reverse}
-.av{width:21px;height:21px;border-radius:50%;position:relative;
-  background:radial-gradient(70% 70% at 50% 35%, var(--panel2), var(--panel));border:1.5px solid var(--line)}
-.av::after{content:"";position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);width:9px;height:9px;border-radius:50%;
-  background:color-mix(in srgb,var(--muted) 50%,transparent)}
-.tvs.fold{opacity:.4}
-.tvs.fold .av{width:17px;height:17px}
-.tvs.opp .av{border-color:var(--brass);box-shadow:0 0 0 3px color-mix(in srgb,var(--brass) 20%,transparent)}
-.tvs.opp .av::after{background:color-mix(in srgb,var(--brass) 75%,transparent)}
-.tvs.you .av{width:26px;height:26px;border-color:var(--best);box-shadow:0 0 0 3px color-mix(in srgb,var(--best) 20%,transparent)}
-.tvs.you .av::after{width:11px;height:11px;background:color-mix(in srgb,var(--best) 78%,transparent)}
-.dbtn{position:absolute;right:-5px;bottom:-3px;width:14px;height:14px;border-radius:50%;
-  background:#f5f0e7;color:#15171e;font-family:var(--mono);font-weight:700;font-size:9px;
-  display:grid;place-items:center;border:1px solid rgba(0,0,0,.4);box-shadow:0 1px 3px rgba(0,0,0,.4);z-index:3}
-.nm{font-size:9.5px;font-weight:700;color:var(--ink)}
-.tvs.fold .nm{font-size:8.5px;color:var(--muted);font-family:var(--label);letter-spacing:.04em}
-.tvs.you .nm{color:var(--best)}
-.tvs.opp .nm{color:var(--brass)}
-.ps{font-size:8.5px;color:var(--muted)}
-.turn{font-family:var(--label);font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--best)}
-.tvmid{position:absolute;top:46%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:6px}
-.potlab{font-family:var(--label);font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
-  border:1px dashed color-mix(in srgb,var(--muted) 40%,transparent);border-radius:999px;padding:3px 13px}
-.oppchip{font-family:var(--label);font-size:11px;font-weight:650;letter-spacing:0;
-  padding:4px 12px;border-radius:999px;border:1px solid transparent}
-.oppchip.a-check{background:color-mix(in srgb,var(--accept) 16%,transparent);color:var(--accept);border-color:color-mix(in srgb,var(--accept) 40%,var(--line))}
-.oppchip.a-bet{background:color-mix(in srgb,var(--costly) 16%,transparent);color:var(--costly);border-color:color-mix(in srgb,var(--costly) 40%,var(--line))}
 /* ===== mobile-first player loop ===== */
 .session-hud{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 2px 7px;
   font-family:var(--label);font-size:11.5px;letter-spacing:0;color:var(--muted)}
@@ -996,40 +1112,36 @@ kbd{font-family:var(--mono);font-size:10.5px;background:color-mix(in srgb,var(--
   padding:5px 10px;cursor:pointer}
 html.sheet-open,html.sheet-open body{overflow:hidden}
 .sit{padding:9px 14px 11px}
-.sit-copy{min-width:0;display:flex;flex-direction:column;gap:2px;line-height:1.25}
-.sit-main{font-size:14px;font-weight:700;color:var(--ink)}
-.sit-context{font-size:11.5px;color:var(--muted)}
 .sit .demo{align-self:center}
-.felt{padding:7px 12px 10px}
 #board{gap:6px}
 #hero{gap:8px}
 #board .pc{width:42px;height:57px}
 #board .pc .ix b{font-size:13px}
 #board .pc .ix .mini{width:9px;height:9px}
 #board .pc .center .psuit{width:25px;height:25px}
+/* basics quiz card: question text, then labelled card rows; long answers stack one per row */
+.pos.basics{background:color-mix(in srgb,#9a7cff 14%,transparent);color:color-mix(in srgb,#b9a3ff 75%,var(--ink))}
+.basics-stage{flex:1;justify-content:center;gap:12px;padding:10px 16px}
+.b-ask{font-family:var(--sans);font-size:16px;font-weight:600;line-height:1.4;color:var(--ink);text-align:center;margin:0 0 4px;max-width:340px}
+.b-cards .pc{width:46px;height:62px}
+.b-cards .pc .center .psuit{width:26px;height:26px}
+.b-cards.b-hero .pc{width:56px;height:76px}
+.acts.basics{grid-template-columns:1fr}
+.acts.basics.n-2,.acts.basics.n-3{grid-template-columns:repeat(auto-fit,minmax(0,1fr))}
+.acts.basics .act{min-height:46px;padding:8px 12px}
+.acts.basics .al{font-size:13.5px;font-weight:650}
 #hero .pc{width:68px;height:92px;border-radius:9px}
 #hero .pc::after{inset:4px;border-radius:6px}
 #hero .pc .ix{top:4px;left:5px}
 #hero .pc .ix b{font-size:16px}
 #hero .pc .ix .mini{width:10px;height:10px}
 #hero .pc .center .psuit{width:32px;height:32px}
-.hero{margin-top:7px}
 .acts{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:11px 13px 13px}
 .acts.n-3{grid-template-columns:repeat(3,minmax(0,1fr))}
 .act{min-width:0;min-height:52px;padding:8px 5px;justify-content:center;gap:1px}
 .act .al{font-size:14px;font-weight:700;line-height:1.15}
 .act .asub{font-size:10px;color:var(--muted);font-weight:500;line-height:1.2;text-align:center}
 .act .k{margin-top:2px;font-size:9px}
-/* Postflop is heads-up: only the two players, their roles, and the action matter. */
-.tv.duel{height:152px;border-radius:100px/58px}
-.tv.duel .tvs{width:105px}
-.tv.duel .tvs.opp{left:50%;top:16%}
-.tv.duel .tvs.you{left:50%;top:84%}
-.tv.duel .tvs.opp .av,.tv.duel .tvs.you .av{width:25px;height:25px}
-.tv.duel .tvs.opp .ps,.tv.duel .tvs.you .ps{font-size:8px}
-.tv.duel .tvmid{top:50%;gap:4px}
-.tv.duel .oppchip{padding:3px 10px}
-.tv.duel .potlab{padding:2px 12px}
 .fb-brief{padding:0 18px 2px}
 .fb-brief .head{font-size:14px;line-height:1.45;margin:0}
 .learn{margin:8px 18px 2px;border:1px solid var(--line);border-radius:12px;
@@ -1062,12 +1174,6 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 .progress-note{font-size:12px;color:var(--muted);margin:-7px 0 16px}
 .terms-progress{margin-top:20px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
 .terms-progress b{font-family:var(--mono);color:var(--brass)}
-.train-primer{margin-top:12px;border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:0 14px}
-.train-primer>summary{list-style:none;cursor:pointer;padding:11px 0;font-size:12px;font-weight:700;color:var(--brass)}
-.train-primer>summary::-webkit-details-marker{display:none}
-.train-primer>summary::after{content:"＋";float:right}
-.train-primer[open]>summary::after{content:"－"}
-.train-primer p{font-size:12.5px;line-height:1.55;color:var(--muted);margin:0 0 12px}
 .tech{margin-top:8px;border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:0 14px}
 .tech>summary{list-style:none;cursor:pointer;padding:12px 0;font-size:12.5px;font-weight:700;color:var(--brass)}
 .tech>summary::-webkit-details-marker{display:none}
@@ -1075,11 +1181,15 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 .tech[open]>summary::before{content:"－ "}
 .tech .foot{padding-bottom:13px}
 .pager[hidden]{display:none!important}
+/* These rules set display themselves, which would otherwise beat the hidden attribute
+   and leave the live hand on screen after the session ends. */
+#play-card[hidden],.session-hud[hidden],#session-progress[hidden],#hint[hidden]{display:none!important}
 .revbtn{width:28px;height:28px;font-size:14px}
 .street-seg button{min-height:44px}
-.prow .pv{width:58px}
+.prow .pv{width:84px;white-space:nowrap}
 @media(max-width:390px){
   .appbar{gap:9px;padding:4px 12px}
+  .appbar{padding-top:calc(4px + env(safe-area-inset-top));padding-left:calc(12px + env(safe-area-inset-left));padding-right:calc(12px + env(safe-area-inset-right))}
   .appbar .brand{font-size:15px}
   .street-seg{gap:5px}
   .street-seg button{font-size:9.5px;padding:7px 10px}
@@ -1108,11 +1218,12 @@ __SUITDEFS__
   </div>
   <div class="views">
   <section class="view on" id="v-train">
-    <div class="session-hud" id="session-hud"><span id="session-kind">Quick session</span><span id="session-counter">Hand <b id="session-step">1</b> of <b id="session-total">10</b></span><span id="session-bonus" hidden>Bonus hand</span><button type="button" class="skip-bonus" id="skip-bonus" hidden>Skip</button></div>
+    <div class="session-hud" id="session-hud"><span id="session-kind">Quick session</span><span id="session-counter"><span id="session-unit">Hand</span> <b id="session-step">1</b> of <b id="session-total">10</b></span><span id="session-bonus" hidden>Bonus hand</span><button type="button" class="skip-bonus" id="skip-bonus" hidden>Skip</button></div>
     <div class="bar-top" id="session-progress" role="progressbar" aria-label="Session progress" aria-valuemin="1" aria-valuemax="10" aria-valuenow="1"><i id="prog" style="width:0"></i></div>
 
   <div class="card" id="play-card" tabindex="-1">
     <div class="sit"><span class="sit-street" id="sitcontext"></span><span class="pos" id="pos"></span><span class="demo" id="demotag" hidden></span></div>
+    <div class="line-ctx" id="linectx" hidden></div>
     <div class="tablewrap" id="seats"></div>
     <div class="move-cue" id="movecue">Your move — tap what you'd do</div>
     <div class="acts" id="acts"></div>
@@ -1196,16 +1307,16 @@ __SUITDEFS__
     </div>
     <div class="prow-h">Mastery by street</div>
     <div id="mastery"></div>
-    <div class="terms-progress">Terms learned: <b id="terms-learned">0 / 17</b></div>
+    <div class="terms-progress">Terms learned: <b id="terms-learned">0 / 16</b></div>
   </section>
 
   <section class="view" id="v-settings">
     <div class="phead"><div class="ptitle">Settings</div></div>
     <div class="s-sec">What to train</div>
     <div class="street-seg" id="cats" role="group" aria-label="Which part to train">
-      <button data-c="all" type="button">All</button><button data-c="preflop" type="button">Pre-flop</button><button data-c="flop" type="button">Flop</button><button data-c="turn" type="button">Turn</button><button data-c="river" type="button">River</button>
+      <button data-c="all" type="button">All</button><button data-c="preflop" type="button">Pre-flop</button><button data-c="flop" type="button">Flop</button><button data-c="turn" type="button">Turn</button><button data-c="river" type="button">River</button><button data-c="basics" type="button">Basics</button>
     </div>
-    <p class="lvl-hint">Pick a street to drill, or All for a mix. Changing this starts a fresh session.</p>
+    <p class="lvl-hint">Pick a street to drill, All for full hands, or Basics for the fundamentals (reading the board and your hand, pot odds, how often you win). Changing this starts a fresh session.</p>
     <div class="s-sec">Exploit an opponent</div>
     <div class="street-seg" id="excats" role="group" aria-label="Which opponent to exploit">
       <button data-c="ex:station" type="button">Station</button><button data-c="ex:nit" type="button">Nit</button><button data-c="ex:maniac" type="button">Maniac</button><button data-c="ex:lag" type="button">LAG</button><button data-c="ex:reg" type="button">Reg</button>
@@ -1239,11 +1350,12 @@ __SUITDEFS__
     Real solver output — pack <code>__VERSION__</code>, <b>__RECORDS__</b> integrity-checked records, build <code>__COMMIT__</code>.
     Every grade &amp; explanation is computed from a full flop&rarr;turn&rarr;river solve; nothing is hand-written.<br>
     Flop spots — including Fold/Call/Raise when you face a bet — come from the full-range pack.
-    <span class="demo">Turn / river</span> spots are now full-range solver output too, but
-    <b>unconditioned</b> (ranges are card-removal only, not filtered by a prior check/check line),
-    with Fold/Call/Raise available on facing-a-bet nodes.
+    <span class="demo">Turn / river</span> spots come from full solved hands, so both players'
+    ranges reflect the earlier streets' action (shown above the cards as "So far");
+    facing a bet there is Fold/Call (no raise is modeled on those lines).
+    Basics questions are graded from the cards themselves (board, hand, pot odds, how often you win), not from the solver.
     Pre-flop spots are calibrated ranges (solver-approximate, tuned to standard frequencies).<br>
-    Prefer to review the answers at a glance? See the <a href="preview.html">content gallery</a>.
+    <span id="gallery-note">Prefer to review the answers at a glance? See the <a href="preview.html">content gallery</a>.</span>
     </div>
     </details>
   <div class="s-sec">Poker terms</div>
@@ -1315,6 +1427,7 @@ const ALLSPOTS = Q.concat(CPOOL);
 // Continuation hands (C): each is an ordered [flop,turn,river] list of linked step-questions
 // (same hero, growing board). Drives the "play a hand through" session (the default when present).
 const CONT = __CONT__;
+const FOUND = __FOUND__;       // basics: multiple-choice fundamentals (board/hand reading, pot odds, equity)
 const EXPLOIT = __EXPLOIT__;   // {archetype: [[step,...],...]} — play-a-hand vs an archetype (B)
 const EX_LABEL = {station:"Calling Station",nit:"Nit",maniac:"Maniac",lag:"LAG",reg:"Reg"};
 
@@ -1471,15 +1584,12 @@ function standingText(rd){
 // Plain (no jargon) vs Poker (real terminology) — the same data, two vocabularies.
 const TERMS = {
   poker:{
-    pos:{BTN:"BTN",BB:"BB",SB:"SB"},
     act:{check:"Check",bet:"Bet",fold:"Fold",call:"Call",raise:"Raise"},
     reason:{value:"Value bet",protection:"Protection",bluff:"Bluff",semi_bluff:"Semi-bluff",
       pot_control:"Pot control",trap:"Trap",realization:"Give up / realize equity",value_call:"Value call",
       bluff_catch:"Bluff-catch",call_odds:"Call on odds",raise_value:"Value raise",raise_bluff:"Bluff raise",
-      raise_semibluff:"Semi-bluff raise",fold:"Fold",mixed:"Mixed / close"},
-    boardcap:{flop:"Flop",turn:"Turn",river:"River"},herocap:"Your hand"},
+      raise_semibluff:"Semi-bluff raise",fold:"Fold",mixed:"Mixed / close"}},
   plain:{
-    pos:{BTN:"You act last",BB:"You act first",SB:"You act first"},
     act:{check:"Check (pass, no bet)",bet:"Bet (put chips in)",fold:"Fold (give up the hand)",
       call:"Call (match their bet)",raise:"Raise (bet even more)"},
     reason:{value:"Bet a strong hand to get paid",protection:"Bet so hands hoping to improve have to pay",
@@ -1489,11 +1599,8 @@ const TERMS = {
       bluff_catch:"Call — you beat the hands they'd bluff with",call_odds:"Call — cheap enough to keep going",
       raise_value:"Raise a strong hand to build the pot",raise_bluff:"Raise as a bluff to make them fold",
       raise_semibluff:"Raise a hand that can improve",fold:"Fold — not strong enough to continue",
-      mixed:"It's close — any choice is fine"},
-    boardcap:{flop:"The 3 shared cards",turn:"The 4th shared card is out",river:"The last (5th) shared card"},
-    herocap:"Your 2 cards (only you can see these)"},
+      mixed:"It's close — any choice is fine"}},
   learning:{
-    pos:{BTN:"BTN",BB:"BB",SB:"SB"},
     act:{check:"Check",bet:"Bet",fold:"Fold",call:"Call",raise:"Raise"},
     reason:{value:"Value bet — get paid by worse hands",protection:"Protection — charge the hands still chasing a card",
       bluff:"Bluff — make better hands fold",semi_bluff:"Semi-bluff — bet a hand that can still improve",
@@ -1501,9 +1608,7 @@ const TERMS = {
       realization:"Realize equity — check and take a free card to improve",value_call:"Value call — you're ahead",
       bluff_catch:"Bluff-catch — you beat the hands they'd bluff with",call_odds:"Call on odds — the price is right to chase",
       raise_value:"Value raise — build the pot",raise_bluff:"Bluff raise — make them fold",
-      raise_semibluff:"Semi-bluff raise — raise a hand that can improve",fold:"Fold — not strong enough",mixed:"Mixed — any is fine"},
-    boardcap:{flop:"Flop (first 3 shared cards)",turn:"Turn (4th card)",river:"River (5th card)"},
-    herocap:"Your hand (your 2 private cards)"}
+      raise_semibluff:"Semi-bluff raise — raise a hand that can improve",fold:"Fold — not strong enough",mixed:"Mixed — any is fine"}}
 };
 const SESSION_SIZE=10;
 function freshStats(){return {n:0,solid:0,ok:0,leak:0,street:{}};}
@@ -1521,6 +1626,15 @@ function normalizeStats(x){
     const n=Math.min(remaining,safeCount(s.n)),hit=Math.min(n,safeCount(s.hit));
     out.street[k]={n:n,hit:hit};remaining-=n;
   });
+  // Basics is a quiz, not a graded decision: it lives only in its own row, outside n/solid/leak.
+  const b=streets.basics;
+  if(b&&typeof b==="object"){const n=safeCount(b.n),hit=Math.min(n,safeCount(b.hit));out.street.basics={n:n,hit:hit};
+    // An earlier build also counted each quiz answer in n/solid/leak, so the poker
+    // streets plus basics.n equalled n. New saves keep the quiz outside that total.
+    const pokerN=out.n-remaining;
+    if(n>0&&pokerN+n===out.n&&pokerN<out.n){
+      out.solid=Math.max(0,out.solid-hit);out.leak=Math.max(0,out.leak-(n-hit));
+      out.n=out.solid+out.ok+out.leak;}}
   return out;
 }
 function loadLifetime(){try{
@@ -1540,30 +1654,31 @@ function recordGrade(bucket,tier,hit){
 function saveLifetime(){try{localStorage.setItem("trainer-progress",JSON.stringify(lifetime));}catch(e){}}
 let mode=(function(){try{const m=localStorage.getItem("lang");return (m==="poker"||m==="learning"||m==="plain"||m==="progressive")?m:"progressive";}catch(e){return "progressive";}})();
 // Which part to train (pre-flop / flop / turn / river / all).
-let cat=(function(){try{const c=localStorage.getItem("cat");return (["all","preflop","flop","turn","river"].includes(c)||(typeof c==="string"&&c.startsWith("ex:")&&(EXPLOIT[c.slice(3)]||[]).length))?c:"all";}catch(e){return "all";}})();
+let cat=(function(){try{const c=localStorage.getItem("cat");return (["all","preflop","flop","turn","river","basics"].includes(c)||(typeof c==="string"&&c.startsWith("ex:")&&(EXPLOIT[c.slice(3)]||[]).length))?c:"all";}catch(e){return "all";}})();
 // Adaptive mode: each concept shows in plain words until you've EARNED it (played a
 // spot that uses it well); then it graduates to the poker term + its meaning.
-const VALID_TERMS=new Set(["positions","streets"].concat(Object.keys(TERMS.poker.reason).map(r=>"reason:"+r)));
+const VALID_TERMS=new Set(["positions"].concat(Object.keys(TERMS.poker.reason).map(r=>"reason:"+r)));
 let learned=(function(){try{
   const raw=JSON.parse(localStorage.getItem("learned")||"[]");
   return new Set(Array.isArray(raw)?raw.filter(t=>VALID_TERMS.has(t)):[]);
 }catch(e){return new Set();}})();
 const VOCAB_TOTAL=VALID_TERMS.size;
 function eff(term){return mode!=="progressive"?mode:(learned.has(term)?"learning":"plain");}
-function T(){return TERMS[eff("streets")];}
-function posLabel(q){const m=eff("positions");
-  // Seat ROLE, not this decision's order — "You act first" reads as wrong when you're
-  // facing a bet (they just acted), so use the plain role: in / out of position.
-  if(m==="plain")return q.is_oop?"Out of position":"In position";
-  return (TERMS[m].pos[q.acting_player]||q.acting_player);}
 function actLabel(a){const m=eff("positions");
   if(m!=="plain"&&cur&&cur.labels&&cur.labels[a])return cur.labels[a];  // per-pack bet/raise sizing
-  return (TERMS[m].act[a]||a);}
+  const t=TERMS[m].act[baseAct(a)]||a;
+  return betSize(a)?t+" · "+betSize(a):t;}
 // Short, jargon-free action names for the verdict/cost sentences (the verbose plain
 // labels like "Check (pass, no bet)" are for the buttons, not for prose).
+// Multi-size packs name each bet by its size ("bet_33", "bet_75"); everything that asks "is this
+// a bet?" goes through isBet/baseAct, and the size is part of the name so two bets never look alike.
+function isBet(a){return a==="bet"||/^bet_\d+$/.test(a||"");}
+function baseAct(a){return isBet(a)?"bet":a;}
+function betSize(a){const m=/^bet_(\d+)$/.exec(a||"");return m?m[1]+"%":"";}
 const ACT_SHORT={check:"Check",bet:"Bet",fold:"Fold",call:"Call",raise:"Raise"};
-function shortAct(a){return ACT_SHORT[a]||a;}
+function shortAct(a){return betSize(a)?"Bet "+betSize(a):(ACT_SHORT[a]||a);}
 function actionPrimary(a){
+  if(betSize(a))return "Bet "+betSize(a);
   return {fold:"Fold",check:"Check",call:"Call",bet:"Bet",raise:"Raise",
     open:"Raise","3bet":"3-bet","4bet":"4-bet"}[a]||a;
 }
@@ -1574,6 +1689,7 @@ function actionSecondary(a){
   if(a==="open")return "Open the pot";
   if(a==="3bet"||a==="4bet")return "Re-raise";
   const sized=cur&&cur.labels&&cur.labels[a]?cur.labels[a].replace(/^(Bet|Raise)\s*/,""):"";
+  if(betSize(a))return "Put chips in";   // the size is already in the primary label
   if(a==="bet")return sized?"Put chips in · "+sized:"Put chips in";
   if(a==="raise")return sized?"Bet more · "+sized:"Bet more";
   return "";
@@ -1633,7 +1749,7 @@ const RIVER_LEARNING={
 function inferReason(q,rd){
   const p=q.preferred,made=rd.cat!=="high",strong=handTier(rd)>=4;
   if(p==="raise")return !made?(rd.draw?"raise_semibluff":"raise_bluff"):(strong?"raise_value":"raise_semibluff");
-  if(p==="bet")return !made?(rd.draw?"semi_bluff":"bluff"):(strong?"value":"protection");
+  if(isBet(p))return !made?(rd.draw?"semi_bluff":"bluff"):(strong?"value":"protection");
   if(p==="check")return strong?"trap":(made?"pot_control":"realization");
   // No-pair calls are bluff-catches, not "odds to chase" — only draws chase.
   if(p==="call")return made?"value_call":(rd.draw?"call_odds":"bluff_catch");
@@ -1656,7 +1772,7 @@ function bcReframe(q,rd){
   return (q.reason==="trap"||q.reason==="value")
     &&(rd.boardStraighty>=2||rd.boardFlushy>=2)
     &&(rd.cat==="pair"||rd.cat==="twopair"||rd.cat==="trips")
-    &&q.actions.indexOf("check")>=0&&q.actions.indexOf("bet")>=0;
+    &&q.actions.indexOf("check")>=0&&q.actions.some(isBet);
 }
 function plainHead(q){
   // A "trap"/"value" framing overclaims on a very coordinated board — the made hand is
@@ -1664,7 +1780,7 @@ function plainHead(q){
   // if the solver bets, warn about vulnerability without contradicting the recommendation.
   const rd=handRead(q.hero,q.board);
   if(bcReframe(q,rd)){
-    if(q.preferred==="bet"){
+    if(isBet(q.preferred)){
       return "The board is coordinated — a straight or flush is very possible — so your made hand is vulnerable. Betting here is thin: you often get called by the hands that beat you and fold out the ones you beat.";
     }
     let s="The board is coordinated — a straight or flush is very possible — so your hand is more of a bluff-catcher than a monster. Check to keep the pot small and take a cheap showdown rather than bet into the hands that beat you.";
@@ -1743,7 +1859,7 @@ function card(t,noDeal,dealNew){const r=t[0],s=(t[1]||"").toLowerCase(),sy=SYM[s
   const e=document.createElement("div");e.className="pc pc-"+sy+(noDeal?" nodeal":dealNew?" dealnew":"");
   e.setAttribute("role","img");e.setAttribute("aria-label",(RANK_NAME[r]||r)+" of "+(SUIT_NAME[s]||"spades"));
   const ix=document.createElement("span");ix.className="ix";
-  const b=document.createElement("b");b.textContent=(r==="T"?"10":r);ix.appendChild(b);
+  const b=document.createElement("b");b.textContent=(r==="T"?"10":r);if(r==="T")b.className="ten";ix.appendChild(b);
   ix.appendChild(svgUse("mini","so-"+sy));
   const ct=document.createElement("span");ct.className="center";ct.appendChild(svgUse("psuit","sym-"+sy));
   e.appendChild(ix);e.appendChild(ct);return e;}
@@ -1767,26 +1883,61 @@ function pfSituation(q){
   if(q.ctx==="vs3bet")return "You opened from "+pfPos(q.pos)+", and "+pfPos(q.tbettor)+" 3-bets. Back on you.";
   return "You're on "+pfPos(q.pos)+". It folds to you.";   // rfi
 }
-function pfHeadline(q){
-  if(q.ctx==="def")return (q.opener||"Opponent")+" opens";
-  if(q.ctx==="vs3bet")return (q.tbettor||"Opponent")+" 3-bets";
-  return "Action folds to you";
-}
 function addActionButton(box,a,i){
   const b=document.createElement("button");b.type="button";b.className="act";b.dataset.a=a;
   // Preflop buttons share the same labels as feedback (Open 2.5bb / 3-bet / …).
-  const preflop=!!(cur&&cur.preflop);
-  const l=document.createElement("span");l.className="al";l.textContent=preflop?pfActLabel(a):actionPrimary(a);
-  const sub=document.createElement("span");sub.className="asub";sub.textContent=preflop?"":actionSecondary(a);
+  const preflop=!!(cur&&cur.preflop),basics=!!(cur&&cur.basics);
+  const l=document.createElement("span");l.className="al";l.textContent=basics?a:preflop?pfActLabel(a):actionPrimary(a);
+  const sub=document.createElement("span");sub.className="asub";sub.textContent=(preflop||basics)?"":actionSecondary(a);
   const k=document.createElement("span");k.className="k";k.textContent=String(i+1);
   b.appendChild(l);if(sub.textContent)b.appendChild(sub);b.appendChild(k);
   b.onclick=()=>answer(a);box.appendChild(b);
 }
 function shownStep(){const e=hist[hidx];return e&&Number.isInteger(e.step)?e.step:pos;}
+// --- basics: a plain multiple-choice card (no table, no solver grades) ---
+function basicsCards(label,cs,cls){
+  const w=document.createElement("div");w.className="b-cards"+(cls?" "+cls:"");
+  const c=document.createElement("div");c.className="cap";c.textContent=label;w.appendChild(c);
+  const row=document.createElement("div");row.className="cards";render(cs,row);w.appendChild(row);return w;}
+function renderBasics(q){
+  const posEl=document.getElementById("pos");posEl.textContent="Basics";posEl.className="pos basics";
+  document.getElementById("sitcontext").textContent=q.unit_name;
+  document.getElementById("demotag").hidden=true;document.getElementById("linectx").hidden=true;
+  const el=document.getElementById("seats");el.innerHTML="";el.hidden=false;
+  const st=document.createElement("div");st.className="stage basics-stage";
+  const ask=document.createElement("p");ask.className="b-ask";ask.textContent=q.ask;st.appendChild(ask);
+  if(q.board&&q.board.length)st.appendChild(basicsCards("Board",q.board));
+  if(q.hero&&q.hero.length)st.appendChild(basicsCards("Your hand",q.hero,"b-hero"));
+  if(q.opp_cards&&q.opp_cards.length)st.appendChild(basicsCards("Opponent shows",q.opp_cards,"b-opp"));
+  el.appendChild(st);
+  const box=document.getElementById("acts");box.innerHTML="";box.className="acts basics n-"+q.actions.length;
+  q.actions.forEach((a,i)=>addActionButton(box,a,i));
+  setHint(q.actions.length);
+  document.getElementById("prog").style.width=(100*(shownStep()+1)/Math.max(1,order.length))+"%";
+}
+function renderBasicsFeedback(q,a){
+  const correct=a===q.answer;
+  document.querySelectorAll("#acts .act").forEach(b=>{b.disabled=true;b.className="act";
+    if(b.dataset.a===q.answer)b.classList.add("g-best","chosen");
+    else if(b.dataset.a===a)b.classList.add("g-major_error","chosen");});
+  const v=document.getElementById("verdict");
+  const ans=/^[A-Z][a-z]/.test(q.answer)?q.answer.charAt(0).toLowerCase()+q.answer.slice(1):q.answer;
+  if(correct){v.className="verdict v-best";v.textContent="✓ Correct — "+ans+".";}
+  else{v.className="verdict v-major_error";v.textContent="✗ Not quite — it's "+ans+".";}
+  document.getElementById("read").hidden=true;
+  document.getElementById("reason").style.display="none";
+  document.getElementById("head").textContent=q.why;
+  document.getElementById("cost").hidden=true;document.getElementById("det").innerHTML="";
+  document.getElementById("unlock").hidden=true;document.getElementById("rule").hidden=true;
+  document.querySelector(".mix").style.display="none";
+  const nb=document.getElementById("next");if(nb)nb.innerHTML="Next &nbsp;&#8629;";
+  document.getElementById("fb").className="fb on";sheetOpen(true);
+}
 function renderPreflop(q){
   const posEl=document.getElementById("pos");posEl.textContent=posChip(q.pos);posEl.className="pos "+q.pos;
   document.getElementById("sitcontext").textContent="Preflop";
   const bd=document.getElementById("demotag");bd.hidden=true;
+  document.getElementById("linectx").hidden=true;
   renderSeats(q);   // build the 6-max ring first (creates the centred #hero slot)
   document.getElementById("herocap").textContent="Your hand";
   render(q.hand,document.getElementById("hero"));
@@ -1795,22 +1946,36 @@ function renderPreflop(q){
   setHint(q.actions.length);
   document.getElementById("prog").style.width=(100*(shownStep()+1)/Math.max(1,order.length))+"%";
 }
-function decisionHeadline(q){
-  // Plain levels say "Opponent"; poker level names the seat (UTG / SB / ...).
-  const villain=(eff("positions")==="poker"?(q.villain||"Opponent"):"Opponent"),node=q.node||"";
-  if(node.endsWith("_vs_check"))return villain+" checks";
-  if(node.endsWith("_vs_bet"))return villain+" bets "+(q.bet_pct||66)+"% pot";
-  return "Your action";
+// Conditioned turn/river drills carry q.line — the earlier streets of the solved hand — so
+// the learner knows how the pot got here (the answer depends on it). Level-aware wording.
+function lineText(q){
+  if(!q||!q.line||!q.line.length)return "";
+  const sm=eff("positions"),opp=sm==="poker"?(q.villain||"Opponent"):"your opponent";
+  const pct=q.bet_pct||66;
+  return q.line.map(st=>{
+    // Hero and opponent both name the size. Plain mode says "bet 66% of the pot"
+    // (same wording as the situation line); other levels stay telegraphic.
+    const he={check:"checks",bet:"bets "+pct+"%",call:"calls",fold:"folds",raise:"raises"};
+    const mine={check:"check",bet:"bet "+pct+"%",call:"call",fold:"fold",raise:"raise"};
+    const past={check:"checked",bet:"bet "+pct+"% of the pot",call:"called",fold:"folded",raise:"raised"};
+    const parts=st.acts.map(([who,a])=>sm==="plain"
+      ?(who==="you"?"you ":opp+" ")+(past[a]||a)
+      :(who==="you"?"you "+(mine[a]||a):opp+" "+(he[a]||a)));
+    const list=parts.length>1?parts.slice(0,-1).join(", ")+(sm==="plain"?", and ":", ")+parts[parts.length-1]:parts[0];
+    return (sm==="plain"?"On the "+st.street+", ":cap1(st.street)+": ")+list+".";
+  }).join(" ");
 }
 function renderQuestion(q){
-  var mc=document.getElementById("movecue");if(mc)mc.hidden=false;   // show the decision cue on a fresh hand
+  var mc=document.getElementById("movecue");if(mc){mc.hidden=false;mc.textContent=q.basics?"Tap your answer":"Your move — tap what you'd do";}   // show the decision cue on a fresh hand
   updateHall(q);   // refresh the suit-tinted ambient hall for this hand
   if(q.preflop)return renderPreflop(q);
+  if(q.basics)return renderBasics(q);
   const posEl=document.getElementById("pos");posEl.textContent=q.is_oop?"Out of position":"In position";posEl.className="pos "+(q.is_oop?"oop":"ip");
   // Position is already the coloured lead label; keep the supporting line compact on phones.
   document.getElementById("sitcontext").textContent=cap1(q.street);
   const bd=document.getElementById("demotag");bd.hidden=!q.badge;bd.textContent=q.badge||"";
-  renderSeats(q);   // build the unified felt table first (creates the #board/#hero slots)
+  const lt=lineText(q),lc=document.getElementById("linectx");lc.hidden=!lt;lc.textContent=lt?"So far — "+lt:"";
+  renderSeats(q);   // seat graphic first (creates the #board/#hero slots)
   document.getElementById("boardcap").textContent="Board";
   document.getElementById("herocap").textContent="Your hand";
   // Continuation step>0: hero cards + prior board cards stay put (no re-bounce). Deal only the
@@ -1839,17 +2004,9 @@ function renderSeats(q){
 const RING_ORDER=["BTN","SB","BB","UTG","HJ","CO"];
 const RING_SLOTS=[[50,85,1],[15,67,1],[15,33,0],[50,15,0],[85,33,0],[85,67,1]]; // x%,y%,labelAbove
 // Plain, beginner-friendly seat names by default; real poker terms only in "poker" level.
-const RING_POKER={BTN:"the button",BB:"the big blind",SB:"the small blind",CO:"the cutoff",HJ:"the hijack",UTG:"under the gun"};
-const RING_PLAIN={BTN:"the button",BB:"the big blind",SB:"the small blind",CO:"a late seat",HJ:"a middle seat",UTG:"an early seat"};
-function posName(p){return (eff("positions")==="poker"?RING_POKER:RING_PLAIN)[p]||p;}
 // short label for the preflop seat chip: plain words for beginners, raw seat code only in expert mode
 const CHIP_PLAIN={BTN:"Button",SB:"Small blind",BB:"Big blind",CO:"Late seat",HJ:"Middle seat",UTG:"Early seat"};
 function posChip(p){return eff("positions")==="poker"?p:(CHIP_PLAIN[p]||p);}
-function posLine(hero,villain){   // header: where you and the opponent sit
-  var s='<span class="hl-you">You</span> '+posName(hero);
-  if(villain)s+=' <span class="fl-dot">·</span> <span class="hl-opp">Opponent</span> '+posName(villain);
-  return s;
-}
 // Abstract "constellation": the six seats as small nodes (you at the bottom), the live
 // opponent(s) highlighted, the button ringed, faint links between seats. Position at a glance.
 function constellation(hero,villain){
@@ -1949,7 +2106,7 @@ function updateHall(q){
   const room=document.getElementById("hall-room"),photo=document.getElementById("hall-photo");
   if(!room)return;
   const h=q.preflop?q.hand:q.hero;
-  const street=q.preflop?"preflop":(q.street||"flop");
+  const street=q.preflop?"preflop":q.basics?"flop":(q.street||"flop");
   const oop=q.preflop?!(q.pos==="BTN"||q.pos==="CO"||q.pos==="HJ"):!!q.is_oop;
   const s1=(h&&h[0])?h[0][1]:"s",s2=(h&&h[1])?h[1][1]:"s";
   room.style.backgroundImage="none";room.innerHTML=geoRoom(street,s1,s2,oop);   // geometry bakes suit tint + position temperature
@@ -1960,9 +2117,9 @@ function ringTable(q){
   const hero=q.acting_player||"BB";
   const villain=q.villain||(hero==="BTN"?"BB":"BTN");
   const node=q.node||"";
-  let oppAct="",ok="wait";
-  if(node.endsWith("_vs_check")){oppAct="Checked";ok="check";}
-  else if(node.endsWith("_vs_bet")){oppAct="Bets "+(q.bet_pct||66)+"%";ok="bet";}
+  let ok="wait";
+  if(node.endsWith("_vs_check"))ok="check";
+  else if(/_vs_bet(?:_\d+)?$/.test(node))ok="bet";
   const actLine=ok==="bet"?'<b class="hl-opp">Opponent</b> bets '+(q.bet_pct||66)+'% of the pot'
     :ok==="check"?'<b class="hl-opp">Opponent</b> checks — it’s on you'
     :'No bet yet — you act first';
@@ -1970,12 +2127,10 @@ function ringTable(q){
     +'<div class="action-line">'+actLine+'</div></div>';
   html+='<div class="t-mid"><div class="cap" id="boardcap">Flop</div><div class="cards" id="board"></div>'
     +'<div class="cap" id="herocap">Your hand</div><div class="cards" id="hero"></div></div>';
-  const w=document.createElement("div");w.className="stage duel";w.innerHTML=html;return w;
+  const w=document.createElement("div");w.className="stage";w.innerHTML=html;return w;
 }
 function preflopRing(q){
   const hero=q.pos, villain=q.tbettor||q.opener||null;
-  const act=q.tbettor?"3-bets":q.opener?"Opens":"";
-  const ok=villain?"bet":"wait";
   const actLine=q.tbettor?'<b class="hl-opp">Opponent</b> 3-bets (re-raises)'
     :q.opener?'<b class="hl-opp">Opponent</b> opens (raises first)'
     :'It folds to you — you’re first to act';
@@ -1994,7 +2149,8 @@ function renderHand(){                                  // draw the current hist
   // continuation counts by HAND ("Hand 2 of 5"); drills count by spot ("Hand 3 of 10").
   const step=contMode?contHandNum(shownStep()):Math.min(shownStep()+1,order.length);
   const total=contMode?contHands:order.length;
-  document.getElementById("session-kind").textContent=bonus?"Compare practice":contMode?(cat.startsWith("ex:")?("Exploit: "+(EX_LABEL[cat.slice(3)]||cat.slice(3))):"Play a hand"):({all:"All streets",preflop:"Preflop",flop:"Flop",turn:"Turn",river:"River"}[cat]||(cat.startsWith("ex:")?"Exploit review":"Quick session"));
+  const unitEl=document.getElementById("session-unit");if(unitEl)unitEl.textContent=cat==="basics"?"Question":"Hand";
+  document.getElementById("session-kind").textContent=bonus?"Compare practice":contMode?(cat.startsWith("ex:")?("Exploit: "+(EX_LABEL[cat.slice(3)]||cat.slice(3))):"Play a hand"):({all:"All streets",preflop:"Preflop",flop:"Flop",turn:"Turn",river:"River",basics:"Basics"}[cat]||(cat.startsWith("ex:")?"Exploit review":"Quick session"));
   document.getElementById("session-counter").hidden=bonus;
   document.getElementById("session-bonus").hidden=!bonus;
   document.getElementById("skip-bonus").hidden=!(bonus&&e.pick==null);
@@ -2134,7 +2290,7 @@ function strengthTag(lv,drawing){if(lv==null)return"";
 function renderFactors(q){
   const el=document.getElementById("factors"),wrap=document.getElementById("analytics"),sum=document.getElementById("analytics-sum");
   if(!el||!wrap)return;
-  if(q.preflop||eff("reason:"+q.reason)==="poker"){wrap.hidden=true;el.innerHTML="";return;}
+  if(q.preflop||q.basics||eff("reason:"+q.reason)==="poker"){wrap.hidden=true;el.innerHTML="";return;}
   wrap.hidden=false;el.innerHTML="";
   const rd=handRead(q.hero,q.board),items=decisionFactors(q,rd),hand=items[0];
   const drawing=rd.cat==="high"&&!!rd.draw;   // no made hand, but a draw
@@ -2221,7 +2377,7 @@ function renderHandDetail(q){
   const st=sec("Where you stand");const p=document.createElement("p");p.className="hd-now";p.textContent=d.standing;st.appendChild(p);
 }
 let handDetailReturn=null;
-function openHandDetail(){if(!cur||cur.preflop||!(cur.board&&cur.board.length>=3))return;
+function openHandDetail(){if(!cur||cur.preflop||cur.basics||!(cur.board&&cur.board.length>=3))return;
   handDetailReturn=document.activeElement;
   renderHandDetail(cur);document.getElementById("handdetail").className="hd on";
   var s=document.getElementById("hd-scrim");if(s)s.hidden=false;
@@ -2235,54 +2391,35 @@ function closeHandDetail(){document.getElementById("handdetail").className="hd";
 // reason IS the rule of thumb, so a confusing twin = same hand tier + the paired opposite
 // reason. We surface the closest twin and name the deciding factor that flips it. =====
 const CONTRAST={
-  value:{vs:["trap","pot_control"],axis:"strong"},
-  trap:{vs:["value","protection"],axis:"strong"},
-  protection:{vs:["pot_control","trap"],axis:"medium"},
-  pot_control:{vs:["protection","value"],axis:"medium"},
-  bluff:{vs:["realization"],axis:"weak"},
-  semi_bluff:{vs:["realization"],axis:"draw"},
-  realization:{vs:["bluff","semi_bluff"],axis:"weak"},
-  bluff_catch:{vs:["fold"],axis:"face"},
-  value_call:{vs:["fold"],axis:"face"},
-  call_odds:{vs:["fold"],axis:"draw2"},
-  fold:{vs:["bluff_catch","value_call"],axis:"face"},
-  raise_value:{vs:["value_call","call_odds"],axis:"raise"},
-  raise_bluff:{vs:["fold","call_odds"],axis:"raise"},
-  raise_semibluff:{vs:["call_odds"],axis:"raise"}
+  value:["trap","pot_control"],
+  trap:["value","protection"],
+  protection:["pot_control","trap"],
+  pot_control:["protection","value"],
+  bluff:["realization"],
+  semi_bluff:["realization"],
+  realization:["bluff","semi_bluff"],
+  bluff_catch:["fold"],
+  value_call:["fold"],
+  call_odds:["fold"],
+  fold:["bluff_catch","value_call"],
+  raise_value:["value_call","call_odds"],
+  raise_bluff:["fold","call_odds"],
+  raise_semibluff:["call_odds"]
 };
 const SHORT_RULE={value:"bet for value",protection:"bet to protect",trap:"check to trap",
   pot_control:"check for pot control",bluff:"bet as a bluff",semi_bluff:"bet as a semi-bluff",
   realization:"check and give up",value_call:"call — you're ahead",bluff_catch:"call to catch a bluff",
   call_odds:"call on the odds",fold:"fold",raise_value:"raise for value",raise_bluff:"raise as a bluff",
   raise_semibluff:"raise as a semi-bluff"};
-const AXIS_WHY={
-  strong:"whether a bet gets <b>called by worse hands</b>. Bet to build the pot when weaker hands will pay you off; check to trap when a bet would fold out everything worse — so you keep their bluffs and weak hands in.",
-  medium:"how exposed your hand is and how many worse hands call. Bet to charge draws and get value when a later card could beat you; check to keep the pot small when the board is safe and betting only folds out worse.",
-  weak:"whether betting can win a pot you'd otherwise lose. Bet as a bluff when you can't win by checking but can make better hands fold; check (give up) when a free card or keeping their bluffs in is worth more.",
-  draw:"whether the draw is worth betting now. Bet it as a semi-bluff to fold out better hands and build a pot you'll often win; check to take a free card and keep the pot small.",
-  draw2:"the price versus your chance to improve. Call when the pot lays you enough to chase; fold when it's too expensive for how often you get there.",
-  face:"how many <b>bluffs</b> are in their betting range versus real hands. Call when they'd bet worse (or bluff) often enough that you beat those; fold when their bet is mostly hands that already beat you.",
-  raise:"whether raising wins more than flat-calling. Raise to build the pot / deny equity when worse hands pay or draws must fold; just call to keep their bluffs and weaker hands in."
-};
-// River: no "later card" / "free card" / "chance to improve" — board is final.
-const RIVER_AXIS_WHY={
-  strong:"whether a bet gets <b>called by worse hands</b>. Bet to get paid when weaker hands call; check to trap when a bet would fold out everything worse — so you keep their bluffs in.",
-  medium:"how exposed your hand is on a completed board. Bet thin value/denial when worse still calls; check to keep the pot small when betting only folds out worse.",
-  weak:"whether betting can win a pot you'd otherwise lose. Bet as a bluff when you can't win by checking; check when keeping their bluffs in is worth more.",
-  draw:"draws are done — leftover 'draw' labels are bluffs or give-ups on the river.",
-  draw2:"the price versus showdown value. Call when the pot lays you enough to see who wins; fold when it's too expensive.",
-  face:"how many <b>bluffs</b> are in their betting range versus real hands. Call when you'd beat their bluffs often enough; fold when their bet is mostly hands that already beat you.",
-  raise:"whether raising wins more than flat-calling. Raise to build the pot / get folds; just call to keep their bluffs and weaker hands in."
-};
 function cap1(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
 function findContrast(q){
-  if(q.preflop||!CONTRAST[q.reason])return null;
-  const rd=handRead(q.hero,q.board),vs=CONTRAST[q.reason].vs;
+  if(q.preflop||q.basics||!CONTRAST[q.reason])return null;
+  const rd=handRead(q.hero,q.board),vs=CONTRAST[q.reason];
   // A twin is only instructive if the HAND is genuinely similar — otherwise the strength gap
   // IS the reason it plays differently (two pair calls / one pair folds is trivial, not a
   // "same hand, opposite play"). Require the SAME made-hand category; if there's no twin of
   // the same category with the opposite play, hide the block rather than show a mismatch.
-  const fam=function(x){var a=x.actions||[];return (a.indexOf("bet")>=0&&a.indexOf("check")>=0)?"line":(a.indexOf("fold")>=0&&a.indexOf("call")>=0)?"facing":"?";};
+  const fam=function(x){var a=x.actions||[];return (a.some(isBet)&&a.indexOf("check")>=0)?"line":(a.indexOf("fold")>=0&&a.indexOf("call")>=0)?"facing":"?";};
   const myFam=fam(q);
   let best=null,bs=-1;
   for(let i=0;i<ALLSPOTS.length;i++){const o=ALLSPOTS[i];   // deck + contrast-only pool
@@ -2342,7 +2479,7 @@ function renderContrast(q){
   const rd=handRead(q.hero,q.board);
   const mine=SHORT_RULE[q.reason]||shortAct(q.preferred), theirs=SHORT_RULE[c.q.reason]||shortAct(c.q.preferred);
   const l1=document.createElement("div");l1.className="cmp-line";
-  l1.innerHTML='<span class="cw">This hand</span><b>'+cap1(rd.made)+'</b> &rarr; the play is <span class="cmp-play a-'+q.preferred+'">'+mine+'</span>.';
+  l1.innerHTML='<span class="cw">This hand</span><b>'+cap1(rd.made)+'</b> &rarr; the play is <span class="cmp-play a-'+baseAct(q.preferred)+'">'+mine+'</span>.';
   const l2=document.createElement("div");l2.className="cmp-line";
   l2.innerHTML='<span class="cw">A look-alike hand</span>';
   const hand=document.createElement("div");hand.className="cmp-hand";
@@ -2351,7 +2488,7 @@ function renderContrast(q){
   const hc=document.createElement("div");hc.className="cmp-cards";c.q.hero.forEach(function(x){hc.appendChild(card(x));});
   hand.appendChild(bc);hand.appendChild(plus);hand.appendChild(hc);
   const play=document.createElement("div");play.className="cmp-line";play.style.marginTop="8px";
-  play.innerHTML='<b>'+cap1(c.rd.made)+'</b> &rarr; the play is <span class="cmp-play a-'+c.q.preferred+'">'+theirs+'</span>.';
+  play.innerHTML='<b>'+cap1(c.rd.made)+'</b> &rarr; the play is <span class="cmp-play a-'+baseAct(c.q.preferred)+'">'+theirs+'</span>.';
   l2.appendChild(hand);l2.appendChild(play);
   const why=document.createElement("div");why.className="cmp-why";
   why.innerHTML="<b>What flips it:</b> "+contrastWhy(q,rd,c.q,c.rd);
@@ -2370,7 +2507,9 @@ function renderContrast(q){
 }
 function renderFeedback(q,a,gained){
   var mc=document.getElementById("movecue");if(mc)mc.hidden=true;   // decision made — hide the cue
+  document.getElementById("learn").hidden=!!q.basics;   // basics: the one-line why IS the lesson
   renderContrast(q);renderFactors(q);
+  if(q.basics)return renderBasicsFeedback(q,a);
   if(q.preflop)return renderPreflopFeedback(q,a,gained);
   document.querySelector(".mix").style.display="";
   document.querySelectorAll("#acts .act").forEach(b=>{
@@ -2436,7 +2575,7 @@ function renderFeedback(q,a,gained){
   // rule-of-thumb so beginner/adaptive modes (which hide the Pro #det bullets) still get the
   // actionable "why", not just the headline. Pro still shows it in #det below.
   const ruleText=bcRule
-    ? (q.preferred==="bet"
+    ? (isBet(q.preferred)
       ? "On a coordinated board, a one-pair-type hand is vulnerable — bets are thin and often get called by better."
       : "On a coordinated board, a one-pair-type hand is a bluff-catcher, not a monster — keep the pot small and don't bet into the likely straights and flushes.")
     : ((q.reason==="exploit"&&q.detail&&q.detail.length)?q.detail[0]:ruleFor(q));
@@ -2529,7 +2668,7 @@ function renderFeedback(q,a,gained){
     // (which describes the solver playing the hero's spot) as the conditional "you'd call/fold".
     const dev=a&&q.preferred&&a!==q.preferred;
     let tail=q.villain_action;
-    if(dev)tail=tail.replace(/^You call/,"you'd call").replace(/^You fold/,"you'd fold");
+    if(dev)tail=tail.replace(/^You call/,"you'd call").replace(/^You fold/,"you'd fold").replace(/^You check/,"you'd check");
     v.appendChild(document.createTextNode(" "+(dev?"Continuing on the solver's line: "+tail:tail)));
   }
   if(nb)nb.innerHTML=(q.hand_id&&!q.last)?"Continue &nbsp;&#8629;":"Next hand &nbsp;&#8629;";
@@ -2550,6 +2689,15 @@ function answer(a){
   if(answered)return;answered=true;chosen=a;if(hist[hidx])hist[hidx].pick=a;updateNav();
   document.getElementById("coach").hidden=false;
   const inSession=!(hist[hidx]&&hist[hidx].bonus);
+  if(cur.basics){
+    const hit=a===cur.answer,tier=hit?"solid":"leak";
+    // The session summary counts the quiz; lifetime decision quality does not (Basics row only).
+    if(inSession){recordGrade(stats,tier,hit);trackStreet(lifetime,hit);saveLifetime();}
+    if(inSession&&!hit)sessionMisses.push(cur);
+    syncStatsUI();renderFeedback(cur,a,[]);
+    document.getElementById("next").focus({preventScroll:true});
+    return;
+  }
   if(cur.preflop){
     const correct=a===cur.answer, closeOk=!correct&&cur.mixed&&a===cur.alt;
     const hit=correct||closeOk,tier=hit?"solid":"leak";
@@ -2595,9 +2743,11 @@ function showSessionEnd(){
   document.getElementById("session-ok").textContent=stats.ok;
   document.getElementById("session-leak").textContent=stats.leak;
   const retry=document.getElementById("retry-leaks");retry.disabled=!sessionMisses.length;
+  const quiz=cat==="basics";
+  const noun=quiz?"question":"decision";
   document.getElementById("session-summary").textContent=sessionMisses.length
-    ?sessionMisses.length+" decision"+(sessionMisses.length===1?" needs":"s need")+" another look."
-    :"Clean session — every decision was strong or playable.";
+    ?sessionMisses.length+" "+noun+(sessionMisses.length===1?" needs":"s need")+" another look."
+    :(quiz?"Clean session — every question was right.":"Clean session — every decision was strong or playable.");
   window.scrollTo(0,0);
   document.getElementById("session-end").focus({preventScroll:true});
 }
@@ -2659,15 +2809,15 @@ function reopenSheet(){if(answered){document.getElementById("fb").className="fb 
 })();
 
 // Adaptive unlock: play a spot well (best/good) and its concept graduates into
-// your vocabulary. The 'basics' (positions + streets) unlock on your first good
-// answer; each strategy concept unlocks the first time you nail that spot type.
+// your vocabulary. Positions unlock on your first good answer; each strategy
+// concept unlocks the first time you nail that spot type.
 function tryUnlock(q,g){
   if(mode!=="progressive"||!(g==="best"||g==="good"))return [];
   const gained=[];
-  ["positions","streets"].forEach(t=>{if(!learned.has(t)){learned.add(t);gained.push(t);}});
+  if(!learned.has("positions")){learned.add("positions");gained.push("positions");}
   // Only real vocabulary terms unlock — continuation/exploit steps carry the internal
   // reasons "continuation"/"exploit", which must not enter `learned` (an invalid term
-  // inflates the vocab count to 18/17 and flips eff() off the plain-English path).
+  // inflates the vocab count past 16/16 and flips eff() off the plain-English path).
   const rt="reason:"+q.reason;
   if(VALID_TERMS.has(rt)&&!learned.has(rt)){learned.add(rt);gained.push(rt);}
   if(gained.length){try{localStorage.setItem("learned",JSON.stringify([...learned]));}catch(e){}updateVocab();}
@@ -2697,8 +2847,8 @@ function setMode(m){mode=m;try{localStorage.setItem("lang",m);}catch(e){}applyMo
     if(!document.getElementById("v-train").classList.contains("on"))closeSheet(false);}}}
 document.querySelectorAll("#lang button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
 // --- train-category selector: filter the deck to one street (or all) ---
-function qcat(q){return q.preflop?"preflop":(q.street||"flop");}
-function catCounts(){const c={all:Q.length,preflop:0,flop:0,turn:0,river:0};Q.forEach(q=>{const k=qcat(q);c[k]=(c[k]||0)+1;});return c;}
+function qcat(q){return q.basics?"basics":q.preflop?"preflop":(q.street||"flop");}
+function catCounts(){const c={all:Q.length,preflop:0,flop:0,turn:0,river:0,basics:FOUND.length};Q.forEach(q=>{const k=qcat(q);c[k]=(c[k]||0)+1;});return c;}
 const CONT_HANDS_PER_SESSION=5;
 // order entries are either a Q index (drills) or a continuation step-object (play-a-hand).
 function spotAt(i){const o=order[i];return (o&&typeof o==="object")?o:Q[o];}
@@ -2717,6 +2867,10 @@ function buildOrder(){
     const hands=shuffle(CONT.slice()).slice(0,Math.min(CONT_HANDS_PER_SESSION,CONT.length));
     order=[];hands.forEach(h=>h.forEach(st=>order.push(st)));
     contMode=true;contHands=hands.length;pos=0;hist=[];hidx=-1;return;
+  }
+  if(cat==="basics"){                           // fundamentals quiz: question objects, not Q indices
+    order=shuffle(FOUND.slice()).slice(0,Math.min(SESSION_SIZE,FOUND.length));
+    pos=0;hist=[];hidx=-1;return;
   }
   if(cat!=="all"){                              // secondary: single-street / preflop drills
     const pool=shuffle([...Q.keys()].filter(i=>qcat(Q[i])===cat));
@@ -2815,22 +2969,81 @@ const PROVIDERS={
     parse(j){return ((j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||"").trim();},
     emsg(j){return j&&j.error&&j.error.message;}},
 };
+// Key storage seam. Web: localStorage (the browser has nothing better). Native app: the OS
+// secure store (Keychain / Keystore via the SecureStoragePlugin bridge); localStorage then
+// keeps only provider + model, and the key is cached in memory after an async load.
+const COACH_KEY_ID="coach-key";
+function coachSecure(){const cap=window.Capacitor;
+  return (cap&&cap.isNativePlatform&&cap.isNativePlatform()&&cap.Plugins&&cap.Plugins.SecureStoragePlugin)||null;}
+let coachKeyMem="",coachKeyEpoch=0;   // epoch bumps on every save so a slow start-up load can't clobber it
 function coachCfg(){try{
   const c=JSON.parse(localStorage.getItem("coach")||"{}");
-  if(!c||typeof c!=="object"||Array.isArray(c))return {};
+  if(!c||typeof c!=="object"||Array.isArray(c))return coachSecure()&&coachKeyMem?{provider:"claude",model:"",key:coachKeyMem}:{};
   return {
     provider:Object.prototype.hasOwnProperty.call(PROVIDERS,c.provider)?c.provider:"claude",
     model:typeof c.model==="string"?c.model:"",
-    key:typeof c.key==="string"?c.key:""
+    key:coachSecure()?coachKeyMem:(typeof c.key==="string"?c.key:"")
   };
 }catch(e){return {};}}
-function coachSaveCfg(c){try{localStorage.setItem("coach",JSON.stringify(c));}catch(e){}}
+// Returns true once the key is stored. On a native device the key goes to the secure
+// store first; localStorage drops it only after that write resolves. A failed write keeps
+// the key in localStorage so a migration cannot delete the only copy. Saves run one at a
+// time, in call order, so a start-up migration and a user save can't land out of order.
+let coachSaveQ=Promise.resolve();
+function coachSaveCfg(c){
+  coachKeyEpoch++;
+  if(coachSecure())coachKeyMem=c.key||"";      // the live coach uses the newest key at once
+  const run=coachSaveQ.then(()=>coachSaveNow(c));
+  coachSaveQ=run.catch(()=>{});
+  return run;
+}
+async function coachSaveNow(c){
+  const ss=coachSecure();
+  const key=c.key||"";
+  const pub={provider:c.provider,model:c.model};
+  if(ss){
+    try{
+      if(key) await ss.set({key:COACH_KEY_ID,value:key});
+      else await ss.remove({key:COACH_KEY_ID});
+    }catch(e){
+      try{localStorage.setItem("coach",JSON.stringify(Object.assign({key:key},pub)));}catch(err){}
+      return false;
+    }
+    try{localStorage.setItem("coach",JSON.stringify(pub));}catch(e){}
+    return true;
+  }
+  try{localStorage.setItem("coach",JSON.stringify(Object.assign({key:key},pub)));}catch(e){}
+  return true;
+}
+// Native start-up: pull the key out of the secure store (moving any key an older build left in
+// localStorage), then refresh the settings panel. Missing key => get() rejects => stay empty.
+async function coachLoadSecureKey(){
+  const ss=coachSecure();if(!ss)return;
+  let legacy=null;try{legacy=JSON.parse(localStorage.getItem("coach")||"{}");}catch(e){}
+  if(legacy&&typeof legacy.key==="string"&&legacy.key){await coachSaveCfg(legacy);}
+  else{const epoch=coachKeyEpoch;let v="";
+    try{const r=await ss.get({key:COACH_KEY_ID});v=(r&&typeof r.value==="string")?r.value:"";}catch(e){v="";}
+    if(epoch!==coachKeyEpoch)return;     // the user saved a key while this read was in flight — theirs wins
+    coachKeyMem=v;}
+  const k=document.getElementById("coach-key");if(k&&coachKeyMem)k.value=coachKeyMem;
+  coachSettings(false);
+}
 let coachMsgs=[],coachBusy=false,coachErr=null,coachGen=0;
 
 // Serialize the current spot's real solver data so the model explains THIS hand, not
 // generic theory. Everything here already drives the on-screen feedback.
 function coachSpot(q){
   const L=[];
+  if(q.basics){
+    L.push("This is a BASICS quiz question ("+q.unit_name+"), not a strategy spot.");
+    L.push("Question: "+q.ask);
+    if(q.board&&q.board.length)L.push("Board: "+cardsText(q.board)+".");
+    if(q.hero&&q.hero.length)L.push("Your hand: "+cardsText(q.hero)+".");
+    if(q.opp_cards&&q.opp_cards.length)L.push("Opponent's hand: "+cardsText(q.opp_cards)+".");
+    L.push("Options: "+q.actions.join(" / ")+".");
+    L.push("Correct answer: "+q.answer+". Explanation shown: "+q.why);
+    return L.join("\n");
+  }
   if(q.preflop){
     L.push("Street: PRE-FLOP.");
     L.push("Your position: "+(q.pos||"?")+".");
@@ -2846,7 +3059,8 @@ function coachSpot(q){
   L.push("Board (shared cards): "+cardsText(q.board)+".");
   L.push("Your hand: "+cardsText(q.hero)+".");
   L.push("You "+(q.is_oop?"act first":"act last")+" ("+(q.is_oop?"out of position":"in position")+").");
-  try{L.push("Situation: "+situation(q)+".");}catch(e){}
+  try{L.push("Situation: "+situation(q).replace(/\.$/,"")+".");}catch(e){}
+  if(q.line&&q.line.length){try{L.push("Earlier streets of this hand: "+lineText(q));}catch(e){}}
   if(q.reason==="exploit"){
     // Exploit steps: the EVs/preferred are the best response vs a PINNED archetype, while
     // freq is the balanced GTO mix — without this context the coach would explain an
@@ -2948,36 +3162,52 @@ function coachInit(){
   document.getElementById("coach-model").value=cfg.model||(PROVIDERS[prov.value]||PROVIDERS.claude).dflt;
   if(cfg.key)document.getElementById("coach-key").value=cfg.key;
   prov.onchange=()=>applyProv(true);
-  document.getElementById("coach-save").onclick=()=>{
+  document.getElementById("coach-save").onclick=async()=>{
     const key=document.getElementById("coach-key").value.trim();
     if(!key){coachErr="Please paste an API key first.";coachRender();return;}
-    coachSaveCfg({provider:prov.value,model:document.getElementById("coach-model").value.trim(),key:key});
+    const ok=await coachSaveCfg({provider:prov.value,model:document.getElementById("coach-model").value.trim(),key:key});
+    if(!ok){coachErr="Couldn't save the key in secure storage. It's still on this device; we'll try again next time you open the app.";coachRender();return;}
     coachErr=null;coachSettings(false);coachRender();
   };
   // Best-effort hint that an embedded preview will block the network call.
   try{if(window.self!==window.top)document.getElementById("coach-envnote").textContent="Note: embedded previews block external calls — if chat fails, open the Pages site or app.";}
   catch(e){document.getElementById("coach-envnote").textContent="Note: embedded previews block external calls — if chat fails, open the Pages site or app.";}
-  const chips=["Why is that the best play?","What hands beat me here?","When would the other option be right?"];
-  const cw=document.getElementById("coach-chips");
-  chips.forEach(c=>{const b=document.createElement("button");b.type="button";b.textContent=c;b.onclick=()=>coachAsk(c);cw.appendChild(b);});
+  syncCoachChips();
   const send=document.getElementById("coach-send"),inp=document.getElementById("coach-input");
   const fire=()=>{const t=inp.value.trim();if(t){inp.value="";coachAsk(t);}};
   send.onclick=fire;
   inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();fire();}});
   coachSettings(false);
+  coachLoadSecureKey();
 }
-function coachReset(){coachGen++;coachMsgs=[];coachErr=null;coachBusy=false;coachRender();coachToggleSend();}
+const COACH_CHIPS={
+  spot:["Why is that the best play?","What hands beat me here?","When would the other option be right?"],
+  basics:["Why is that the answer?","What do the other choices get wrong?","How do I spot this next time?"]
+};
+function syncCoachChips(){
+  const cw=document.getElementById("coach-chips");if(!cw)return;
+  const labels=(cur&&cur.basics)?COACH_CHIPS.basics:COACH_CHIPS.spot;
+  const btns=[...cw.querySelectorAll("button")];
+  if(btns.length!==labels.length){
+    cw.innerHTML="";
+    labels.forEach(c=>{const b=document.createElement("button");b.type="button";b.textContent=c;b.onclick=()=>coachAsk(c);cw.appendChild(b);});
+    return;
+  }
+  labels.forEach((c,i)=>{btns[i].textContent=c;btns[i].onclick=()=>coachAsk(c);});
+}
+function coachReset(){coachGen++;coachMsgs=[];coachErr=null;coachBusy=false;syncCoachChips();coachRender();coachToggleSend();}
 
 // ===== mobile-app shell: view switching, progress, settings =====
 function renderProgress(){
   const el=document.getElementById("mastery");if(!el)return;el.innerHTML="";
-  [["preflop","Preflop","c-pre"],["flop","Flop","c-flop"],["turn","Turn","c-turn"],["river","River","c-river"]].forEach(function(r){
+  [["preflop","Preflop","c-pre"],["flop","Flop","c-flop"],["turn","Turn","c-turn"],["river","River","c-river"],["basics","Basics","c-basics"]].forEach(function(r){
     const s=lifetime.street[r[0]]||{n:0,hit:0};const pct=s.n?Math.round(100*s.hit/s.n):0;
     const row=document.createElement("div");row.className="prow";
     const nm=document.createElement("span");nm.className="pn";nm.textContent=r[1];
     const bar=document.createElement("span");bar.className="pbar";
     const i=document.createElement("i");i.className=r[2];i.style.width=(s.n<5?0:pct)+"%";bar.appendChild(i);
-    const v=document.createElement("span");v.className="pv";v.textContent=!s.n?"—":s.n<5?s.n+" hand"+(s.n===1?"":"s"):pct+"%";
+    const noun=r[0]==="basics"?"question":"hand";
+    const v=document.createElement("span");v.className="pv";v.textContent=!s.n?"—":s.n<5?s.n+" "+noun+(s.n===1?"":"s"):pct+"%";
     row.appendChild(nm);row.appendChild(bar);row.appendChild(v);el.appendChild(row);
   });
   syncStatsUI();
@@ -3011,13 +3241,10 @@ document.getElementById("coach-open").onclick=function(){
   const reduced=motionOff||(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   requestAnimationFrame(()=>c.scrollIntoView({behavior:reduced?"auto":"smooth",block:"start"}));
 };
+// The content gallery is a separate Pages file; the app bundles only this page.
+try{const c=window.Capacitor;if(c&&c.isNativePlatform&&c.isNativePlatform())document.getElementById("gallery-note").hidden=true;}catch(e){}
 coachInit();applyModeUI();updateVocab();updateLevelHint();syncStatsUI();applyCatUI();buildOrder();newHand();
 </script>'''
 
 if __name__ == "__main__":
-    import argparse
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--allow-missing-demo-packs", action="store_true",
-                    help="skip turn/river pack if absent (default: require it)")
-    a = ap.parse_args()
-    build(allow_missing_demo_packs=a.allow_missing_demo_packs)
+    build()

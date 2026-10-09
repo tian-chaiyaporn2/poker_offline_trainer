@@ -4,13 +4,14 @@
   "unit": "board_reading",
   "kind": "suit_texture",
   "prompt": "How many suits are on the flop As 7h 2d?",
+  "ask": "How many suits are on this flop?",
   "options": [
    "Monotone (one suit)",
    "Two-tone (two suits)",
    "Rainbow (three suits)"
   ],
   "answer": "Rainbow (three suits)",
-  "explanation": "As 7h 2d is rainbow (three suits) \u2014 flush possibilities scale with shared suits.",
+  "explanation": "Every card is a different suit, so nobody can have a flush or even a one-card flush draw yet.",
   "data": {
    "board": "As7h2d",
    "tags": [
@@ -26,12 +27,13 @@
   "unit": "board_reading",
   "kind": "pairing",
   "prompt": "Is the flop As 7h 2d paired?",
+  "ask": "Is this flop paired?",
   "options": [
    "Paired",
    "Unpaired"
   ],
   "answer": "Unpaired",
-  "explanation": "All three ranks are distinct.",
+  "explanation": "All three cards are different ranks \u2014 no pair on the board.",
   "data": {
    "board": "As7h2d",
    "tags": [
@@ -47,12 +49,13 @@
   "unit": "board_reading",
   "kind": "connectedness",
   "prompt": "Is the flop As 7h 2d connected (coordinated for straights)?",
+  "ask": "Are these cards close enough together to make straights likely?",
   "options": [
    "Connected",
    "Disconnected"
   ],
   "answer": "Disconnected",
-  "explanation": "The ranks are spread out, so straights are unlikely.",
+  "explanation": "The cards are far apart in rank, so straights are unlikely.",
   "data": {
    "board": "As7h2d",
    "tags": [
@@ -68,13 +71,14 @@
   "unit": "board_reading",
   "kind": "suit_texture",
   "prompt": "How many suits are on the flop Kd 9c 4h?",
+  "ask": "How many suits are on this flop?",
   "options": [
    "Monotone (one suit)",
    "Two-tone (two suits)",
    "Rainbow (three suits)"
   ],
   "answer": "Rainbow (three suits)",
-  "explanation": "Kd 9c 4h is rainbow (three suits) \u2014 flush possibilities scale with shared suits.",
+  "explanation": "Every card is a different suit, so nobody can have a flush or even a one-card flush draw yet.",
   "data": {
    "board": "Kd9c4h",
    "tags": [
@@ -90,12 +94,13 @@
   "unit": "board_reading",
   "kind": "pairing",
   "prompt": "Is the flop Kd 9c 4h paired?",
+  "ask": "Is this flop paired?",
   "options": [
    "Paired",
    "Unpaired"
   ],
   "answer": "Unpaired",
-  "explanation": "All three ranks are distinct.",
+  "explanation": "All three cards are different ranks \u2014 no pair on the board.",
   "data": {
    "board": "Kd9c4h",
    "tags": [
@@ -111,12 +116,13 @@
   "unit": "board_reading",
   "kind": "connectedness",
   "prompt": "Is the flop Kd 9c 4h connected (coordinated for straights)?",
+  "ask": "Are these cards close enough together to make straights likely?",
   "options": [
    "Connected",
    "Disconnected"
   ],
   "answer": "Disconnected",
-  "explanation": "The ranks are spread out, so straights are unlikely.",
+  "explanation": "The cards are far apart in rank, so straights are unlikely.",
   "data": {
    "board": "Kd9c4h",
    "tags": [
@@ -132,13 +138,14 @@
   "unit": "board_reading",
   "kind": "suit_texture",
   "prompt": "How many suits are on the flop Th 9h 8d?",
+  "ask": "How many suits are on this flop?",
   "options": [
    "Monotone (one suit)",
    "Two-tone (two suits)",
    "Rainbow (three suits)"
   ],
   "answer": "Two-tone (two suits)",
-  "explanation": "Th 9h 8d is two-tone (two suits) \u2014 flush possibilities scale with shared suits.",
+  "explanation": "Two cards share a suit, so anyone holding two more of that suit has a flush draw \u2014 one more card of it makes a flush.",
   "data": {
    "board": "Th9h8d",
    "tags": [
@@ -154,12 +161,13 @@
   "unit": "board_reading",
   "kind": "pairing",
   "prompt": "Is the flop Th 9h 8d paired?",
+  "ask": "Is this flop paired?",
   "options": [
    "Paired",
    "Unpaired"
   ],
   "answer": "Unpaired",
-  "explanation": "All three ranks are distinct.",
+  "explanation": "All three cards are different ranks \u2014 no pair on the board.",
   "data": {
    "board": "Th9h8d",
    "tags": [
@@ -175,12 +183,13 @@
   "unit": "board_reading",
   "kind": "connectedness",
   "prompt": "Is the flop Th 9h 8d connected (coordinated for straights)?",
+  "ask": "Are these cards close enough together to make straights likely?",
   "options": [
    "Connected",
    "Disconnected"
   ],
   "answer": "Connected",
-  "explanation": "The ranks are close enough to make straights likely.",
+  "explanation": "The cards are close in rank, so many two-card hands make a straight or a straight draw.",
   "data": {
    "board": "Th9h8d",
    "tags": [
@@ -196,13 +205,14 @@
   "unit": "board_reading",
   "kind": "suit_texture",
   "prompt": "How many suits are on the flop 8s 7s 6c?",
+  "ask": "How many suits are on this flop?",
   "options": [
    "Monotone (one suit)",
    "Two-tone (two suits)",
    "Rainbow (three suits)"
   ],
   "answer": "Two-tone (two suits)",
-  "explanation": "8s 7s 6c is two-tone (two suits) \u2014 flush possibilities scale with shared suits.",
+  "explanation": "Two cards share a suit, so anyone holding two more of that suit has a flush draw \u2014 one more card of it makes a flush.",
   "data": {
    "board": "8s7s6c",
    "tags": [
@@ -218,12 +228,13 @@
   "unit": "board_reading",
   "kind": "pairing",
   "prompt": "Is the flop 8s 7s 6c paired?",
+  "ask": "Is this flop paired?",
   "options": [
    "Paired",
    "Unpaired"
   ],
   "answer": "Unpaired",
-  "explanation": "All three ranks are distinct.",
+  "explanation": "All three cards are different ranks \u2014 no pair on the board.",
   "data": {
    "board": "8s7s6c",
    "tags": [
@@ -239,12 +250,13 @@
   "unit": "board_reading",
   "kind": "connectedness",
   "prompt": "Is the flop 8s 7s 6c connected (coordinated for straights)?",
+  "ask": "Are these cards close enough together to make straights likely?",
   "options": [
    "Connected",
    "Disconnected"
   ],
   "answer": "Connected",
-  "explanation": "The ranks are close enough to make straights likely.",
+  "explanation": "The cards are close in rank, so many two-card hands make a straight or a straight draw.",
   "data": {
    "board": "8s7s6c",
    "tags": [
@@ -260,13 +272,14 @@
   "unit": "board_reading",
   "kind": "suit_texture",
   "prompt": "How many suits are on the flop Ks Kd 6h?",
+  "ask": "How many suits are on this flop?",
   "options": [
    "Monotone (one suit)",
    "Two-tone (two suits)",
    "Rainbow (three suits)"
   ],
   "answer": "Rainbow (three suits)",
-  "explanation": "Ks Kd 6h is rainbow (three suits) \u2014 flush possibilities scale with shared suits.",
+  "explanation": "Every card is a different suit, so nobody can have a flush or even a one-card flush draw yet.",
   "data": {
    "board": "KsKd6h",
    "tags": [
@@ -282,12 +295,13 @@
   "unit": "board_reading",
   "kind": "pairing",
   "prompt": "Is the flop Ks Kd 6h paired?",
+  "ask": "Is this flop paired?",
   "options": [
    "Paired",
    "Unpaired"
   ],
   "answer": "Paired",
-  "explanation": "Two of the three cards share a rank.",
+  "explanation": "Two of the cards share a rank, so anyone holding the third one already has three of a kind.",
   "data": {
    "board": "KsKd6h",
    "tags": [
@@ -303,12 +317,13 @@
   "unit": "board_reading",
   "kind": "connectedness",
   "prompt": "Is the flop Ks Kd 6h connected (coordinated for straights)?",
+  "ask": "Are these cards close enough together to make straights likely?",
   "options": [
    "Connected",
    "Disconnected"
   ],
   "answer": "Disconnected",
-  "explanation": "The ranks are spread out, so straights are unlikely.",
+  "explanation": "The cards are far apart in rank, so straights are unlikely.",
   "data": {
    "board": "KsKd6h",
    "tags": [
@@ -324,13 +339,14 @@
   "unit": "board_reading",
   "kind": "suit_texture",
   "prompt": "How many suits are on the flop 5c 5d 2h?",
+  "ask": "How many suits are on this flop?",
   "options": [
    "Monotone (one suit)",
    "Two-tone (two suits)",
    "Rainbow (three suits)"
   ],
   "answer": "Rainbow (three suits)",
-  "explanation": "5c 5d 2h is rainbow (three suits) \u2014 flush possibilities scale with shared suits.",
+  "explanation": "Every card is a different suit, so nobody can have a flush or even a one-card flush draw yet.",
   "data": {
    "board": "5c5d2h",
    "tags": [
@@ -346,12 +362,13 @@
   "unit": "board_reading",
   "kind": "pairing",
   "prompt": "Is the flop 5c 5d 2h paired?",
+  "ask": "Is this flop paired?",
   "options": [
    "Paired",
    "Unpaired"
   ],
   "answer": "Paired",
-  "explanation": "Two of the three cards share a rank.",
+  "explanation": "Two of the cards share a rank, so anyone holding the third one already has three of a kind.",
   "data": {
    "board": "5c5d2h",
    "tags": [
@@ -367,12 +384,13 @@
   "unit": "board_reading",
   "kind": "connectedness",
   "prompt": "Is the flop 5c 5d 2h connected (coordinated for straights)?",
+  "ask": "Are these cards close enough together to make straights likely?",
   "options": [
    "Connected",
    "Disconnected"
   ],
   "answer": "Connected",
-  "explanation": "The ranks are close enough to make straights likely.",
+  "explanation": "The cards are close in rank, so many two-card hands make a straight or a straight draw.",
   "data": {
    "board": "5c5d2h",
    "tags": [
@@ -388,13 +406,14 @@
   "unit": "board_reading",
   "kind": "suit_texture",
   "prompt": "How many suits are on the flop Ah Qh 7c?",
+  "ask": "How many suits are on this flop?",
   "options": [
    "Monotone (one suit)",
    "Two-tone (two suits)",
    "Rainbow (three suits)"
   ],
   "answer": "Two-tone (two suits)",
-  "explanation": "Ah Qh 7c is two-tone (two suits) \u2014 flush possibilities scale with shared suits.",
+  "explanation": "Two cards share a suit, so anyone holding two more of that suit has a flush draw \u2014 one more card of it makes a flush.",
   "data": {
    "board": "AhQh7c",
    "tags": [
@@ -410,12 +429,13 @@
   "unit": "board_reading",
   "kind": "pairing",
   "prompt": "Is the flop Ah Qh 7c paired?",
+  "ask": "Is this flop paired?",
   "options": [
    "Paired",
    "Unpaired"
   ],
   "answer": "Unpaired",
-  "explanation": "All three ranks are distinct.",
+  "explanation": "All three cards are different ranks \u2014 no pair on the board.",
   "data": {
    "board": "AhQh7c",
    "tags": [
@@ -431,12 +451,13 @@
   "unit": "board_reading",
   "kind": "connectedness",
   "prompt": "Is the flop Ah Qh 7c connected (coordinated for straights)?",
+  "ask": "Are these cards close enough together to make straights likely?",
   "options": [
    "Connected",
    "Disconnected"
   ],
   "answer": "Disconnected",
-  "explanation": "The ranks are spread out, so straights are unlikely.",
+  "explanation": "The cards are far apart in rank, so straights are unlikely.",
   "data": {
    "board": "AhQh7c",
    "tags": [
@@ -452,13 +473,14 @@
   "unit": "board_reading",
   "kind": "suit_texture",
   "prompt": "How many suits are on the flop Jd 8d 3s?",
+  "ask": "How many suits are on this flop?",
   "options": [
    "Monotone (one suit)",
    "Two-tone (two suits)",
    "Rainbow (three suits)"
   ],
   "answer": "Two-tone (two suits)",
-  "explanation": "Jd 8d 3s is two-tone (two suits) \u2014 flush possibilities scale with shared suits.",
+  "explanation": "Two cards share a suit, so anyone holding two more of that suit has a flush draw \u2014 one more card of it makes a flush.",
   "data": {
    "board": "Jd8d3s",
    "tags": [
@@ -474,12 +496,13 @@
   "unit": "board_reading",
   "kind": "pairing",
   "prompt": "Is the flop Jd 8d 3s paired?",
+  "ask": "Is this flop paired?",
   "options": [
    "Paired",
    "Unpaired"
   ],
   "answer": "Unpaired",
-  "explanation": "All three ranks are distinct.",
+  "explanation": "All three cards are different ranks \u2014 no pair on the board.",
   "data": {
    "board": "Jd8d3s",
    "tags": [
@@ -495,12 +518,13 @@
   "unit": "board_reading",
   "kind": "connectedness",
   "prompt": "Is the flop Jd 8d 3s connected (coordinated for straights)?",
+  "ask": "Are these cards close enough together to make straights likely?",
   "options": [
    "Connected",
    "Disconnected"
   ],
   "answer": "Disconnected",
-  "explanation": "The ranks are spread out, so straights are unlikely.",
+  "explanation": "The cards are far apart in rank, so straights are unlikely.",
   "data": {
    "board": "Jd8d3s",
    "tags": [
@@ -516,13 +540,14 @@
   "unit": "board_reading",
   "kind": "suit_texture",
   "prompt": "How many suits are on the flop Qh 8h 3h?",
+  "ask": "How many suits are on this flop?",
   "options": [
    "Monotone (one suit)",
    "Two-tone (two suits)",
    "Rainbow (three suits)"
   ],
   "answer": "Monotone (one suit)",
-  "explanation": "Qh 8h 3h is monotone (one suit) \u2014 flush possibilities scale with shared suits.",
+  "explanation": "All three cards are the same suit, so anyone holding two of that suit already has a flush.",
   "data": {
    "board": "Qh8h3h",
    "tags": [
@@ -538,12 +563,13 @@
   "unit": "board_reading",
   "kind": "pairing",
   "prompt": "Is the flop Qh 8h 3h paired?",
+  "ask": "Is this flop paired?",
   "options": [
    "Paired",
    "Unpaired"
   ],
   "answer": "Unpaired",
-  "explanation": "All three ranks are distinct.",
+  "explanation": "All three cards are different ranks \u2014 no pair on the board.",
   "data": {
    "board": "Qh8h3h",
    "tags": [
@@ -559,12 +585,13 @@
   "unit": "board_reading",
   "kind": "connectedness",
   "prompt": "Is the flop Qh 8h 3h connected (coordinated for straights)?",
+  "ask": "Are these cards close enough together to make straights likely?",
   "options": [
    "Connected",
    "Disconnected"
   ],
   "answer": "Disconnected",
-  "explanation": "The ranks are spread out, so straights are unlikely.",
+  "explanation": "The cards are far apart in rank, so straights are unlikely.",
   "data": {
    "board": "Qh8h3h",
    "tags": [
@@ -580,13 +607,14 @@
   "unit": "board_reading",
   "kind": "suit_texture",
   "prompt": "How many suits are on the flop 7s 5s 2s?",
+  "ask": "How many suits are on this flop?",
   "options": [
    "Monotone (one suit)",
    "Two-tone (two suits)",
    "Rainbow (three suits)"
   ],
   "answer": "Monotone (one suit)",
-  "explanation": "7s 5s 2s is monotone (one suit) \u2014 flush possibilities scale with shared suits.",
+  "explanation": "All three cards are the same suit, so anyone holding two of that suit already has a flush.",
   "data": {
    "board": "7s5s2s",
    "tags": [
@@ -602,12 +630,13 @@
   "unit": "board_reading",
   "kind": "pairing",
   "prompt": "Is the flop 7s 5s 2s paired?",
+  "ask": "Is this flop paired?",
   "options": [
    "Paired",
    "Unpaired"
   ],
   "answer": "Unpaired",
-  "explanation": "All three ranks are distinct.",
+  "explanation": "All three cards are different ranks \u2014 no pair on the board.",
   "data": {
    "board": "7s5s2s",
    "tags": [
@@ -623,12 +652,13 @@
   "unit": "board_reading",
   "kind": "connectedness",
   "prompt": "Is the flop 7s 5s 2s connected (coordinated for straights)?",
+  "ask": "Are these cards close enough together to make straights likely?",
   "options": [
    "Connected",
    "Disconnected"
   ],
   "answer": "Disconnected",
-  "explanation": "The ranks are spread out, so straights are unlikely.",
+  "explanation": "The cards are far apart in rank, so straights are unlikely.",
   "data": {
    "board": "7s5s2s",
    "tags": [
@@ -644,13 +674,14 @@
   "unit": "board_reading",
   "kind": "suit_texture",
   "prompt": "How many suits are on the flop 6h 4d 2c?",
+  "ask": "How many suits are on this flop?",
   "options": [
    "Monotone (one suit)",
    "Two-tone (two suits)",
    "Rainbow (three suits)"
   ],
   "answer": "Rainbow (three suits)",
-  "explanation": "6h 4d 2c is rainbow (three suits) \u2014 flush possibilities scale with shared suits.",
+  "explanation": "Every card is a different suit, so nobody can have a flush or even a one-card flush draw yet.",
   "data": {
    "board": "6h4d2c",
    "tags": [
@@ -666,12 +697,13 @@
   "unit": "board_reading",
   "kind": "pairing",
   "prompt": "Is the flop 6h 4d 2c paired?",
+  "ask": "Is this flop paired?",
   "options": [
    "Paired",
    "Unpaired"
   ],
   "answer": "Unpaired",
-  "explanation": "All three ranks are distinct.",
+  "explanation": "All three cards are different ranks \u2014 no pair on the board.",
   "data": {
    "board": "6h4d2c",
    "tags": [
@@ -687,12 +719,13 @@
   "unit": "board_reading",
   "kind": "connectedness",
   "prompt": "Is the flop 6h 4d 2c connected (coordinated for straights)?",
+  "ask": "Are these cards close enough together to make straights likely?",
   "options": [
    "Connected",
    "Disconnected"
   ],
   "answer": "Connected",
-  "explanation": "The ranks are close enough to make straights likely.",
+  "explanation": "The cards are close in rank, so many two-card hands make a straight or a straight draw.",
   "data": {
    "board": "6h4d2c",
    "tags": [
@@ -708,13 +741,14 @@
   "unit": "board_reading",
   "kind": "suit_texture",
   "prompt": "How many suits are on the flop Jc Ts 9d?",
+  "ask": "How many suits are on this flop?",
   "options": [
    "Monotone (one suit)",
    "Two-tone (two suits)",
    "Rainbow (three suits)"
   ],
   "answer": "Rainbow (three suits)",
-  "explanation": "Jc Ts 9d is rainbow (three suits) \u2014 flush possibilities scale with shared suits.",
+  "explanation": "Every card is a different suit, so nobody can have a flush or even a one-card flush draw yet.",
   "data": {
    "board": "JcTs9d",
    "tags": [
@@ -730,12 +764,13 @@
   "unit": "board_reading",
   "kind": "pairing",
   "prompt": "Is the flop Jc Ts 9d paired?",
+  "ask": "Is this flop paired?",
   "options": [
    "Paired",
    "Unpaired"
   ],
   "answer": "Unpaired",
-  "explanation": "All three ranks are distinct.",
+  "explanation": "All three cards are different ranks \u2014 no pair on the board.",
   "data": {
    "board": "JcTs9d",
    "tags": [
@@ -751,12 +786,13 @@
   "unit": "board_reading",
   "kind": "connectedness",
   "prompt": "Is the flop Jc Ts 9d connected (coordinated for straights)?",
+  "ask": "Are these cards close enough together to make straights likely?",
   "options": [
    "Connected",
    "Disconnected"
   ],
   "answer": "Connected",
-  "explanation": "The ranks are close enough to make straights likely.",
+  "explanation": "The cards are close in rank, so many two-card hands make a straight or a straight draw.",
   "data": {
    "board": "JcTs9d",
    "tags": [
@@ -768,10 +804,346 @@
   }
  },
  {
+  "id": "found_board_suit_12",
+  "unit": "board_reading",
+  "kind": "suit_texture",
+  "prompt": "How many suits are on the flop 9h 6h 2c?",
+  "ask": "How many suits are on this flop?",
+  "options": [
+   "Monotone (one suit)",
+   "Two-tone (two suits)",
+   "Rainbow (three suits)"
+  ],
+  "answer": "Two-tone (two suits)",
+  "explanation": "Two cards share a suit, so anyone holding two more of that suit has a flush draw \u2014 one more card of it makes a flush.",
+  "data": {
+   "board": "9h6h2c",
+   "tags": [
+    "unpaired",
+    "two_tone",
+    "low",
+    "disconnected"
+   ]
+  }
+ },
+ {
+  "id": "found_board_pair_12",
+  "unit": "board_reading",
+  "kind": "pairing",
+  "prompt": "Is the flop 9h 6h 2c paired?",
+  "ask": "Is this flop paired?",
+  "options": [
+   "Paired",
+   "Unpaired"
+  ],
+  "answer": "Unpaired",
+  "explanation": "All three cards are different ranks \u2014 no pair on the board.",
+  "data": {
+   "board": "9h6h2c",
+   "tags": [
+    "unpaired",
+    "two_tone",
+    "low",
+    "disconnected"
+   ]
+  }
+ },
+ {
+  "id": "found_board_conn_12",
+  "unit": "board_reading",
+  "kind": "connectedness",
+  "prompt": "Is the flop 9h 6h 2c connected (coordinated for straights)?",
+  "ask": "Are these cards close enough together to make straights likely?",
+  "options": [
+   "Connected",
+   "Disconnected"
+  ],
+  "answer": "Disconnected",
+  "explanation": "The cards are far apart in rank, so straights are unlikely.",
+  "data": {
+   "board": "9h6h2c",
+   "tags": [
+    "unpaired",
+    "two_tone",
+    "low",
+    "disconnected"
+   ]
+  }
+ },
+ {
+  "id": "found_board_suit_13",
+  "unit": "board_reading",
+  "kind": "suit_texture",
+  "prompt": "How many suits are on the flop Qh Qc 6h?",
+  "ask": "How many suits are on this flop?",
+  "options": [
+   "Monotone (one suit)",
+   "Two-tone (two suits)",
+   "Rainbow (three suits)"
+  ],
+  "answer": "Two-tone (two suits)",
+  "explanation": "Two cards share a suit, so anyone holding two more of that suit has a flush draw \u2014 one more card of it makes a flush.",
+  "data": {
+   "board": "QhQc6h",
+   "tags": [
+    "paired",
+    "two_tone",
+    "high_card",
+    "disconnected"
+   ]
+  }
+ },
+ {
+  "id": "found_board_pair_13",
+  "unit": "board_reading",
+  "kind": "pairing",
+  "prompt": "Is the flop Qh Qc 6h paired?",
+  "ask": "Is this flop paired?",
+  "options": [
+   "Paired",
+   "Unpaired"
+  ],
+  "answer": "Paired",
+  "explanation": "Two of the cards share a rank, so anyone holding the third one already has three of a kind.",
+  "data": {
+   "board": "QhQc6h",
+   "tags": [
+    "paired",
+    "two_tone",
+    "high_card",
+    "disconnected"
+   ]
+  }
+ },
+ {
+  "id": "found_board_conn_13",
+  "unit": "board_reading",
+  "kind": "connectedness",
+  "prompt": "Is the flop Qh Qc 6h connected (coordinated for straights)?",
+  "ask": "Are these cards close enough together to make straights likely?",
+  "options": [
+   "Connected",
+   "Disconnected"
+  ],
+  "answer": "Disconnected",
+  "explanation": "The cards are far apart in rank, so straights are unlikely.",
+  "data": {
+   "board": "QhQc6h",
+   "tags": [
+    "paired",
+    "two_tone",
+    "high_card",
+    "disconnected"
+   ]
+  }
+ },
+ {
+  "id": "found_board_suit_14",
+  "unit": "board_reading",
+  "kind": "suit_texture",
+  "prompt": "How many suits are on the flop 9s 6d 2c?",
+  "ask": "How many suits are on this flop?",
+  "options": [
+   "Monotone (one suit)",
+   "Two-tone (two suits)",
+   "Rainbow (three suits)"
+  ],
+  "answer": "Rainbow (three suits)",
+  "explanation": "Every card is a different suit, so nobody can have a flush or even a one-card flush draw yet.",
+  "data": {
+   "board": "9s6d2c",
+   "tags": [
+    "unpaired",
+    "rainbow",
+    "low",
+    "disconnected"
+   ]
+  }
+ },
+ {
+  "id": "found_board_pair_14",
+  "unit": "board_reading",
+  "kind": "pairing",
+  "prompt": "Is the flop 9s 6d 2c paired?",
+  "ask": "Is this flop paired?",
+  "options": [
+   "Paired",
+   "Unpaired"
+  ],
+  "answer": "Unpaired",
+  "explanation": "All three cards are different ranks \u2014 no pair on the board.",
+  "data": {
+   "board": "9s6d2c",
+   "tags": [
+    "unpaired",
+    "rainbow",
+    "low",
+    "disconnected"
+   ]
+  }
+ },
+ {
+  "id": "found_board_conn_14",
+  "unit": "board_reading",
+  "kind": "connectedness",
+  "prompt": "Is the flop 9s 6d 2c connected (coordinated for straights)?",
+  "ask": "Are these cards close enough together to make straights likely?",
+  "options": [
+   "Connected",
+   "Disconnected"
+  ],
+  "answer": "Disconnected",
+  "explanation": "The cards are far apart in rank, so straights are unlikely.",
+  "data": {
+   "board": "9s6d2c",
+   "tags": [
+    "unpaired",
+    "rainbow",
+    "low",
+    "disconnected"
+   ]
+  }
+ },
+ {
+  "id": "found_board_suit_15",
+  "unit": "board_reading",
+  "kind": "suit_texture",
+  "prompt": "How many suits are on the flop 8h 8c 7h?",
+  "ask": "How many suits are on this flop?",
+  "options": [
+   "Monotone (one suit)",
+   "Two-tone (two suits)",
+   "Rainbow (three suits)"
+  ],
+  "answer": "Two-tone (two suits)",
+  "explanation": "Two cards share a suit, so anyone holding two more of that suit has a flush draw \u2014 one more card of it makes a flush.",
+  "data": {
+   "board": "8h8c7h",
+   "tags": [
+    "paired",
+    "two_tone",
+    "low",
+    "connected"
+   ]
+  }
+ },
+ {
+  "id": "found_board_pair_15",
+  "unit": "board_reading",
+  "kind": "pairing",
+  "prompt": "Is the flop 8h 8c 7h paired?",
+  "ask": "Is this flop paired?",
+  "options": [
+   "Paired",
+   "Unpaired"
+  ],
+  "answer": "Paired",
+  "explanation": "Two of the cards share a rank, so anyone holding the third one already has three of a kind.",
+  "data": {
+   "board": "8h8c7h",
+   "tags": [
+    "paired",
+    "two_tone",
+    "low",
+    "connected"
+   ]
+  }
+ },
+ {
+  "id": "found_board_conn_15",
+  "unit": "board_reading",
+  "kind": "connectedness",
+  "prompt": "Is the flop 8h 8c 7h connected (coordinated for straights)?",
+  "ask": "Are these cards close enough together to make straights likely?",
+  "options": [
+   "Connected",
+   "Disconnected"
+  ],
+  "answer": "Connected",
+  "explanation": "The cards are close in rank, so many two-card hands make a straight or a straight draw.",
+  "data": {
+   "board": "8h8c7h",
+   "tags": [
+    "paired",
+    "two_tone",
+    "low",
+    "connected"
+   ]
+  }
+ },
+ {
+  "id": "found_board_suit_16",
+  "unit": "board_reading",
+  "kind": "suit_texture",
+  "prompt": "How many suits are on the flop Jh Jc Td?",
+  "ask": "How many suits are on this flop?",
+  "options": [
+   "Monotone (one suit)",
+   "Two-tone (two suits)",
+   "Rainbow (three suits)"
+  ],
+  "answer": "Rainbow (three suits)",
+  "explanation": "Every card is a different suit, so nobody can have a flush or even a one-card flush draw yet.",
+  "data": {
+   "board": "JhJcTd",
+   "tags": [
+    "paired",
+    "rainbow",
+    "high_card",
+    "connected"
+   ]
+  }
+ },
+ {
+  "id": "found_board_pair_16",
+  "unit": "board_reading",
+  "kind": "pairing",
+  "prompt": "Is the flop Jh Jc Td paired?",
+  "ask": "Is this flop paired?",
+  "options": [
+   "Paired",
+   "Unpaired"
+  ],
+  "answer": "Paired",
+  "explanation": "Two of the cards share a rank, so anyone holding the third one already has three of a kind.",
+  "data": {
+   "board": "JhJcTd",
+   "tags": [
+    "paired",
+    "rainbow",
+    "high_card",
+    "connected"
+   ]
+  }
+ },
+ {
+  "id": "found_board_conn_16",
+  "unit": "board_reading",
+  "kind": "connectedness",
+  "prompt": "Is the flop Jh Jc Td connected (coordinated for straights)?",
+  "ask": "Are these cards close enough together to make straights likely?",
+  "options": [
+   "Connected",
+   "Disconnected"
+  ],
+  "answer": "Connected",
+  "explanation": "The cards are close in rank, so many two-card hands make a straight or a straight draw.",
+  "data": {
+   "board": "JhJcTd",
+   "tags": [
+    "paired",
+    "rainbow",
+    "high_card",
+    "connected"
+   ]
+  }
+ },
+ {
   "id": "found_pot_odds_00",
   "unit": "pot_odds",
   "kind": "arithmetic",
   "prompt": "The pot is 6 bb and your opponent bets 2 bb. What equity do you need to profitably call?",
+  "ask": "The pot is 6 chips and your opponent bets 2. How often do you need to win for calling to pay off?",
   "options": [
    "25%",
    "20%",
@@ -779,7 +1151,7 @@
    "33%"
   ],
   "answer": "20%",
-  "explanation": "You risk 2 to win 8; break-even = bet / (pot + 2\u00b7bet) = 2/10 = 20%.",
+  "explanation": "Calling costs 2. If you call, the final pot is 6 + 2 + 2 = 10 chips. You break even when you win your share of it: 2 \u00f7 10 = 20%. Win more often than that and calling makes money.",
   "data": {
    "pot": 6,
    "bet": 2,
@@ -791,6 +1163,7 @@
   "unit": "pot_odds",
   "kind": "arithmetic",
   "prompt": "The pot is 6 bb and your opponent bets 3 bb. What equity do you need to profitably call?",
+  "ask": "The pot is 6 chips and your opponent bets 3. How often do you need to win for calling to pay off?",
   "options": [
    "33%",
    "50%",
@@ -798,7 +1171,7 @@
    "25%"
   ],
   "answer": "25%",
-  "explanation": "You risk 3 to win 9; break-even = bet / (pot + 2\u00b7bet) = 3/12 = 25%.",
+  "explanation": "Calling costs 3. If you call, the final pot is 6 + 3 + 3 = 12 chips. You break even when you win your share of it: 3 \u00f7 12 = 25%. Win more often than that and calling makes money.",
   "data": {
    "pot": 6,
    "bet": 3,
@@ -810,6 +1183,7 @@
   "unit": "pot_odds",
   "kind": "arithmetic",
   "prompt": "The pot is 6 bb and your opponent bets 4 bb. What equity do you need to profitably call?",
+  "ask": "The pot is 6 chips and your opponent bets 4. How often do you need to win for calling to pay off?",
   "options": [
    "22%",
    "67%",
@@ -817,7 +1191,7 @@
    "40%"
   ],
   "answer": "29%",
-  "explanation": "You risk 4 to win 10; break-even = bet / (pot + 2\u00b7bet) = 4/14 = 29%.",
+  "explanation": "Calling costs 4. If you call, the final pot is 6 + 4 + 4 = 14 chips. You break even when you win your share of it: 4 \u00f7 14 = 29%. Win more often than that and calling makes money.",
   "data": {
    "pot": 6,
    "bet": 4,
@@ -829,6 +1203,7 @@
   "unit": "pot_odds",
   "kind": "arithmetic",
   "prompt": "The pot is 6 bb and your opponent bets 6 bb. What equity do you need to profitably call?",
+  "ask": "The pot is 6 chips and your opponent bets 6. How often do you need to win for calling to pay off?",
   "options": [
    "33%",
    "100%",
@@ -836,7 +1211,7 @@
    "50%"
   ],
   "answer": "33%",
-  "explanation": "You risk 6 to win 12; break-even = bet / (pot + 2\u00b7bet) = 6/18 = 33%.",
+  "explanation": "Calling costs 6. If you call, the final pot is 6 + 6 + 6 = 18 chips. You break even when you win your share of it: 6 \u00f7 18 = 33%. Win more often than that and calling makes money.",
   "data": {
    "pot": 6,
    "bet": 6,
@@ -848,6 +1223,7 @@
   "unit": "pot_odds",
   "kind": "arithmetic",
   "prompt": "The pot is 10 bb and your opponent bets 5 bb. What equity do you need to profitably call?",
+  "ask": "The pot is 10 chips and your opponent bets 5. How often do you need to win for calling to pay off?",
   "options": [
    "33%",
    "50%",
@@ -855,7 +1231,7 @@
    "20%"
   ],
   "answer": "25%",
-  "explanation": "You risk 5 to win 15; break-even = bet / (pot + 2\u00b7bet) = 5/20 = 25%.",
+  "explanation": "Calling costs 5. If you call, the final pot is 10 + 5 + 5 = 20 chips. You break even when you win your share of it: 5 \u00f7 20 = 25%. Win more often than that and calling makes money.",
   "data": {
    "pot": 10,
    "bet": 5,
@@ -867,6 +1243,7 @@
   "unit": "pot_odds",
   "kind": "arithmetic",
   "prompt": "The pot is 10 bb and your opponent bets 7.5 bb. What equity do you need to profitably call?",
+  "ask": "The pot is 10 chips and your opponent bets 7.5. How often do you need to win for calling to pay off?",
   "options": [
    "30%",
    "43%",
@@ -874,7 +1251,7 @@
    "75%"
   ],
   "answer": "30%",
-  "explanation": "You risk 7.5 to win 17.5; break-even = bet / (pot + 2\u00b7bet) = 7.5/25 = 30%.",
+  "explanation": "Calling costs 7.5. If you call, the final pot is 10 + 7.5 + 7.5 = 25 chips. You break even when you win your share of it: 7.5 \u00f7 25 = 30%. Win more often than that and calling makes money.",
   "data": {
    "pot": 10,
    "bet": 7.5,
@@ -886,6 +1263,7 @@
   "unit": "pot_odds",
   "kind": "arithmetic",
   "prompt": "The pot is 4 bb and your opponent bets 2 bb. What equity do you need to profitably call?",
+  "ask": "The pot is 4 chips and your opponent bets 2. How often do you need to win for calling to pay off?",
   "options": [
    "33%",
    "25%",
@@ -893,7 +1271,7 @@
    "20%"
   ],
   "answer": "25%",
-  "explanation": "You risk 2 to win 6; break-even = bet / (pot + 2\u00b7bet) = 2/8 = 25%.",
+  "explanation": "Calling costs 2. If you call, the final pot is 4 + 2 + 2 = 8 chips. You break even when you win your share of it: 2 \u00f7 8 = 25%. Win more often than that and calling makes money.",
   "data": {
    "pot": 4,
    "bet": 2,
@@ -905,14 +1283,15 @@
   "unit": "pot_odds",
   "kind": "arithmetic",
   "prompt": "The pot is 8 bb and your opponent bets 12 bb. What equity do you need to profitably call?",
+  "ask": "The pot is 8 chips and your opponent bets 12. How often do you need to win for calling to pay off?",
   "options": [
-   "150%",
+   "62%",
    "38%",
    "60%",
    "27%"
   ],
   "answer": "38%",
-  "explanation": "You risk 12 to win 20; break-even = bet / (pot + 2\u00b7bet) = 12/32 = 38%.",
+  "explanation": "Calling costs 12. If you call, the final pot is 8 + 12 + 12 = 32 chips. You break even when you win your share of it: 12 \u00f7 32 = 38%. Win more often than that and calling makes money.",
   "data": {
    "pot": 8,
    "bet": 12,
@@ -924,6 +1303,7 @@
   "unit": "hand_reading",
   "kind": "evaluator",
   "prompt": "You hold Ah Kh on Qh 8h 3h. What is your hand?",
+  "ask": "What hand do you have?",
   "options": [
    "flush",
    "high card + flush draw",
@@ -931,7 +1311,7 @@
    "two pair"
   ],
   "answer": "flush",
-  "explanation": "Ah Kh on Qh 8h 3h makes: flush.",
+  "explanation": "You have a flush (five cards of the same suit).",
   "data": {
    "hand": "AhKh",
    "board": "Qh8h3h"
@@ -942,6 +1322,7 @@
   "unit": "hand_reading",
   "kind": "evaluator",
   "prompt": "You hold As 5s on Ah 7d 2c. What is your hand?",
+  "ask": "What hand do you have?",
   "options": [
    "overpair",
    "straight",
@@ -949,7 +1330,7 @@
    "pocket pair"
   ],
   "answer": "top pair",
-  "explanation": "As 5s on Ah 7d 2c makes: top pair.",
+  "explanation": "You have top pair (one of your cards pairs the highest card on the board).",
   "data": {
    "hand": "As5s",
    "board": "Ah7d2c"
@@ -960,6 +1341,7 @@
   "unit": "hand_reading",
   "kind": "evaluator",
   "prompt": "You hold 7c 7d on As 7h 2d. What is your hand?",
+  "ask": "What hand do you have?",
   "options": [
    "straight",
    "overpair",
@@ -967,7 +1349,7 @@
    "three of a kind"
   ],
   "answer": "three of a kind",
-  "explanation": "7c 7d on As 7h 2d makes: three of a kind.",
+  "explanation": "You have three of a kind (three cards of the same rank).",
   "data": {
    "hand": "7c7d",
    "board": "As7h2d"
@@ -978,6 +1360,7 @@
   "unit": "hand_reading",
   "kind": "evaluator",
   "prompt": "You hold Kd Qd on Ks Qh 4c. What is your hand?",
+  "ask": "What hand do you have?",
   "options": [
    "straight",
    "middle/bottom pair",
@@ -985,7 +1368,7 @@
    "two pair"
   ],
   "answer": "two pair",
-  "explanation": "Kd Qd on Ks Qh 4c makes: two pair.",
+  "explanation": "You have two pair (two different pairs).",
   "data": {
    "hand": "KdQd",
    "board": "KsQh4c"
@@ -996,6 +1379,7 @@
   "unit": "hand_reading",
   "kind": "evaluator",
   "prompt": "You hold Jh Th on 9h 8h 2c. What is your hand?",
+  "ask": "What hand do you have?",
   "options": [
    "straight",
    "three of a kind",
@@ -1003,7 +1387,7 @@
    "pocket pair"
   ],
   "answer": "high card + flush draw + straight draw",
-  "explanation": "Jh Th on 9h 8h 2c makes: high card + flush draw + straight draw.",
+  "explanation": "No pair yet, but you have a flush draw (four cards of one suit, so one more makes a flush) and a straight draw (four cards in a row, so the right next card makes a straight).",
   "data": {
    "hand": "JhTh",
    "board": "9h8h2c"
@@ -1014,6 +1398,7 @@
   "unit": "hand_reading",
   "kind": "evaluator",
   "prompt": "You hold Ac Qc on Qs 9d 4h. What is your hand?",
+  "ask": "What hand do you have?",
   "options": [
    "overpair",
    "two pair",
@@ -1021,7 +1406,7 @@
    "straight"
   ],
   "answer": "top pair",
-  "explanation": "Ac Qc on Qs 9d 4h makes: top pair.",
+  "explanation": "You have top pair (one of your cards pairs the highest card on the board).",
   "data": {
    "hand": "AcQc",
    "board": "Qs9d4h"
@@ -1032,6 +1417,7 @@
   "unit": "hand_reading",
   "kind": "evaluator",
   "prompt": "You hold 6s 6d on As 7h 2d. What is your hand?",
+  "ask": "What hand do you have?",
   "options": [
    "pocket pair",
    "two pair",
@@ -1039,7 +1425,7 @@
    "middle/bottom pair"
   ],
   "answer": "pocket pair",
-  "explanation": "6s 6d on As 7h 2d makes: pocket pair.",
+  "explanation": "You have a pocket pair (your pair is below the top board card).",
   "data": {
    "hand": "6s6d",
    "board": "As7h2d"
@@ -1050,6 +1436,7 @@
   "unit": "hand_reading",
   "kind": "evaluator",
   "prompt": "You hold Kh Qs on Jd Td 3c. What is your hand?",
+  "ask": "What hand do you have?",
   "options": [
    "high card + straight draw",
    "top pair + flush draw",
@@ -1057,7 +1444,7 @@
    "high card + flush draw"
   ],
   "answer": "high card + straight draw",
-  "explanation": "Kh Qs on Jd Td 3c makes: high card + straight draw.",
+  "explanation": "No pair yet, but you have a straight draw (four cards in a row, so the right next card makes a straight).",
   "data": {
    "hand": "KhQs",
    "board": "JdTd3c"
@@ -1068,6 +1455,7 @@
   "unit": "hand_reading",
   "kind": "evaluator",
   "prompt": "You hold Ah Ad on Ks 8c 2h. What is your hand?",
+  "ask": "What hand do you have?",
   "options": [
    "overpair",
    "two pair",
@@ -1075,7 +1463,7 @@
    "flush"
   ],
   "answer": "overpair",
-  "explanation": "Ah Ad on Ks 8c 2h makes: overpair.",
+  "explanation": "You have an overpair (a pocket pair higher than every board card).",
   "data": {
    "hand": "AhAd",
    "board": "Ks8c2h"
@@ -1086,6 +1474,7 @@
   "unit": "hand_reading",
   "kind": "evaluator",
   "prompt": "You hold 9c 8c on Ah 7c 2c. What is your hand?",
+  "ask": "What hand do you have?",
   "options": [
    "overpair",
    "straight",
@@ -1093,7 +1482,7 @@
    "high card + straight draw"
   ],
   "answer": "high card + flush draw",
-  "explanation": "9c 8c on Ah 7c 2c makes: high card + flush draw.",
+  "explanation": "No pair yet, but you have a flush draw (four cards of one suit, so one more makes a flush).",
   "data": {
    "hand": "9c8c",
    "board": "Ah7c2c"
@@ -1104,6 +1493,7 @@
   "unit": "hand_reading",
   "kind": "evaluator",
   "prompt": "You hold Ts Th on Ac Kd 5s. What is your hand?",
+  "ask": "What hand do you have?",
   "options": [
    "pocket pair",
    "straight",
@@ -1111,7 +1501,7 @@
    "high card"
   ],
   "answer": "pocket pair",
-  "explanation": "Ts Th on Ac Kd 5s makes: pocket pair.",
+  "explanation": "You have a pocket pair (your pair is below the top board card).",
   "data": {
    "hand": "TsTh",
    "board": "AcKd5s"
@@ -1122,6 +1512,7 @@
   "unit": "hand_reading",
   "kind": "evaluator",
   "prompt": "You hold Js Jd on Th 9h 2c. What is your hand?",
+  "ask": "What hand do you have?",
   "options": [
    "top pair",
    "overpair",
@@ -1129,7 +1520,7 @@
    "high card + flush draw"
   ],
   "answer": "overpair",
-  "explanation": "Js Jd on Th 9h 2c makes: overpair.",
+  "explanation": "You have an overpair (a pocket pair higher than every board card).",
   "data": {
    "hand": "JsJd",
    "board": "Th9h2c"
@@ -1138,8 +1529,9 @@
  {
   "id": "found_equity_00",
   "unit": "equity",
-  "kind": "montecarlo",
+  "kind": "exact",
   "prompt": "You hold Ah Kh on Qh 8h 3h against Jc Tc. Roughly what is your equity to the river?",
+  "ask": "Your opponent shows their hand. If the turn and river are dealt, roughly how often do you win?",
   "options": [
    "0\u201320% (big underdog)",
    "20\u201340% (behind)",
@@ -1148,7 +1540,7 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "80\u2013100% (big favorite)",
-  "explanation": "Enumerated/Monte-Carlo equity is about 100% \u2014 80\u2013100% (big favorite).",
+  "explanation": "Counting every possible turn and river, you win 100% of the time (a split pot counts as half). That's in the 80\u2013100% range.",
   "data": {
    "hero": "AhKh",
    "villain": "JcTc",
@@ -1159,8 +1551,9 @@
  {
   "id": "found_equity_01",
   "unit": "equity",
-  "kind": "montecarlo",
+  "kind": "exact",
   "prompt": "You hold 7c 7d on As 7h 2d against Ah Kd. Roughly what is your equity to the river?",
+  "ask": "Your opponent shows their hand. If the turn and river are dealt, roughly how often do you win?",
   "options": [
    "0\u201320% (big underdog)",
    "20\u201340% (behind)",
@@ -1169,19 +1562,20 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "80\u2013100% (big favorite)",
-  "explanation": "Enumerated/Monte-Carlo equity is about 98% \u2014 80\u2013100% (big favorite).",
+  "explanation": "Counting every possible turn and river, you win 98.3% of the time (a split pot counts as half). That's in the 80\u2013100% range.",
   "data": {
    "hero": "7c7d",
    "villain": "AhKd",
    "board": "As7h2d",
-   "equity": 0.9833
+   "equity": 0.9838
   }
  },
  {
   "id": "found_equity_02",
   "unit": "equity",
-  "kind": "montecarlo",
+  "kind": "exact",
   "prompt": "You hold Qs Qd on Kd 9c 4h against Ah 5h. Roughly what is your equity to the river?",
+  "ask": "Your opponent shows their hand. If the turn and river are dealt, roughly how often do you win?",
   "options": [
    "0\u201320% (big underdog)",
    "20\u201340% (behind)",
@@ -1190,19 +1584,20 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "80\u2013100% (big favorite)",
-  "explanation": "Enumerated/Monte-Carlo equity is about 81% \u2014 80\u2013100% (big favorite).",
+  "explanation": "Counting every possible turn and river, you win 81.4% of the time (a split pot counts as half). That's in the 80\u2013100% range.",
   "data": {
    "hero": "QsQd",
    "villain": "Ah5h",
    "board": "Kd9c4h",
-   "equity": 0.8143
+   "equity": 0.8141
   }
  },
  {
   "id": "found_equity_03",
   "unit": "equity",
-  "kind": "montecarlo",
+  "kind": "exact",
   "prompt": "You hold Ah Kd on Th 9h 8d against 7c 7d. Roughly what is your equity to the river?",
+  "ask": "Your opponent shows their hand. If the turn and river are dealt, roughly how often do you win?",
   "options": [
    "0\u201320% (big underdog)",
    "20\u201340% (behind)",
@@ -1211,19 +1606,20 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "20\u201340% (behind)",
-  "explanation": "Enumerated/Monte-Carlo equity is about 28% \u2014 20\u201340% (behind).",
+  "explanation": "Counting every possible turn and river, you win 27.8% of the time (a split pot counts as half). That's in the 20\u201340% range.",
   "data": {
    "hero": "AhKd",
    "villain": "7c7d",
    "board": "Th9h8d",
-   "equity": 0.2791
+   "equity": 0.2788
   }
  },
  {
   "id": "found_equity_04",
   "unit": "equity",
-  "kind": "montecarlo",
+  "kind": "exact",
   "prompt": "You hold Kd Qd on Ks 8c 2h against As 5s. Roughly what is your equity to the river?",
+  "ask": "Your opponent shows their hand. If the turn and river are dealt, roughly how often do you win?",
   "options": [
    "0\u201320% (big underdog)",
    "20\u201340% (behind)",
@@ -1232,19 +1628,20 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "80\u2013100% (big favorite)",
-  "explanation": "Enumerated/Monte-Carlo equity is about 82% \u2014 80\u2013100% (big favorite).",
+  "explanation": "Counting every possible turn and river, you win 82.1% of the time (a split pot counts as half). That's in the 80\u2013100% range.",
   "data": {
    "hero": "KdQd",
    "villain": "As5s",
    "board": "Ks8c2h",
-   "equity": 0.8209
+   "equity": 0.8212
   }
  },
  {
   "id": "found_equity_05",
   "unit": "equity",
-  "kind": "montecarlo",
+  "kind": "exact",
   "prompt": "You hold 9h 8h on 7h 6c 2c against Ac Ad. Roughly what is your equity to the river?",
+  "ask": "Your opponent shows their hand. If the turn and river are dealt, roughly how often do you win?",
   "options": [
    "0\u201320% (big underdog)",
    "20\u201340% (behind)",
@@ -1253,19 +1650,20 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "20\u201340% (behind)",
-  "explanation": "Enumerated/Monte-Carlo equity is about 35% \u2014 20\u201340% (behind).",
+  "explanation": "Counting every possible turn and river, you win 35% of the time (a split pot counts as half). That's in the 20\u201340% range.",
   "data": {
    "hero": "9h8h",
    "villain": "AcAd",
    "board": "7h6c2c",
-   "equity": 0.3504
+   "equity": 0.3505
   }
  },
  {
   "id": "found_equity_06",
   "unit": "equity",
-  "kind": "montecarlo",
+  "kind": "exact",
   "prompt": "You hold As Qs on Qd 9d 4c against Kh Kc. Roughly what is your equity to the river?",
+  "ask": "Your opponent shows their hand. If the turn and river are dealt, roughly how often do you win?",
   "options": [
    "0\u201320% (big underdog)",
    "20\u201340% (behind)",
@@ -1274,19 +1672,20 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "20\u201340% (behind)",
-  "explanation": "Enumerated/Monte-Carlo equity is about 20% \u2014 20\u201340% (behind).",
+  "explanation": "Counting every possible turn and river, you win 20.2% of the time (a split pot counts as half). That's in the 20\u201340% range \u2014 just inside it.",
   "data": {
    "hero": "AsQs",
    "villain": "KhKc",
    "board": "Qd9d4c",
-   "equity": 0.2023
+   "equity": 0.202
   }
  },
  {
   "id": "found_equity_07",
   "unit": "equity",
-  "kind": "montecarlo",
+  "kind": "exact",
   "prompt": "You hold Jh Th on 9h 8h 2c against Ac Ad. Roughly what is your equity to the river?",
+  "ask": "Your opponent shows their hand. If the turn and river are dealt, roughly how often do you win?",
   "options": [
    "0\u201320% (big underdog)",
    "20\u201340% (behind)",
@@ -1295,12 +1694,12 @@
    "80\u2013100% (big favorite)"
   ],
   "answer": "40\u201360% (coin flip)",
-  "explanation": "Enumerated/Monte-Carlo equity is about 56% \u2014 40\u201360% (coin flip).",
+  "explanation": "Counting every possible turn and river, you win 56.2% of the time (a split pot counts as half). That's in the 40\u201360% range.",
   "data": {
    "hero": "JhTh",
    "villain": "AcAd",
    "board": "9h8h2c",
-   "equity": 0.5616
+   "equity": 0.5626
   }
  }
 ]

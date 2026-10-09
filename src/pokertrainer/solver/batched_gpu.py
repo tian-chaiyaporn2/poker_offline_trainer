@@ -27,6 +27,7 @@ from typing import Dict, List
 import numpy as np
 
 from ..evaluator import evaluate
+from .batched_multi import MultiSizeStreetMixin
 
 CHECK, BET = 0, 1
 FOLD, CALL, RAISE = 0, 1, 2
@@ -60,10 +61,10 @@ def _strat(xp, reg):
     return xp.where(tot > 0, pos / xp.where(tot > 0, tot, 1.0), 1.0 / n)
 
 
-class BatchedGPUCFR:
+class BatchedGPUCFR(MultiSizeStreetMixin):
     def __init__(self, flop, oop, ip, w_oop, w_ip, pot_bb,
                  bet_frac=0.66, streets=3, backend="auto", dtype="float64",
-                 bet_streets=None, raise_x=None, eff_stack=None):
+                 bet_streets=None, raise_x=None, eff_stack=None, bet_fracs=None):
         self.xp, self.scatter_add, self.to_dev, self.to_host, self.backend = get_backend(backend)
         xp = self.xp
         # Effective stack behind the pot (bb); a bet/raise can't exceed what's left
@@ -77,7 +78,13 @@ class BatchedGPUCFR:
         self.ic = np.array(ip, dtype=np.int64)
         self.no, self.ni = len(oop), len(ip)
         self.P0 = float(pot_bb)
-        self.bet_frac = bet_frac
+        # Bet-size menu (solver/betsizes.py): None / one size = legacy tree (bit-for-bit);
+        # >= 2 sizes = multi-size tree (_solve_multi). Mirrors BatchedCFR.
+        from .betsizes import normalize_bet_fracs
+        self.bet_fracs, self.bet_labels = normalize_bet_fracs(bet_frac, bet_fracs,
+                                                              pot_bb, eff_stack)
+        self._multi = len(self.bet_fracs) > 1
+        self.bet_frac = self.bet_fracs[0] if not self._multi else None
         self.n_streets = streets
         self.bet_streets = streets if bet_streets is None else bet_streets
         self.raise_x = raise_x
@@ -270,6 +277,24 @@ class BatchedGPUCFR:
         ui = (s_ipc * u_ipc).sum(axis=2) + (s_ivb * u_ivb).sum(axis=2)
         return uo, ui
 
+    # --- backend hooks for MultiSizeStreetMixin._solve_multi (batched_multi.py) ---
+    @property
+    def _mx(self):
+        return self.xp
+
+    @property
+    def _mdtype(self):
+        return self.dtype
+
+    def _mstrat(self, path, node, C, oop, na):
+        return self._get_strat(path, node, C, oop, na)
+
+    def _mshowdown(self, boards, eo, ei, ro, ri, path):
+        return self._showdown(boards, eo, ei, ro, ri, path)
+
+    def _mkeep_cap(self, cap):
+        self._cap = cap
+
     def _solve(self, street, boards, eo, ei, ro, ri, path):
         xp = self.xp
         C = len(boards)
@@ -279,6 +304,8 @@ class BatchedGPUCFR:
             if street >= self.n_streets:
                 return self._showdown(boards, eo, ei, ro, ri, path + "s")
             return self._chance(street, boards, eo, ei, ro, ri, path + "c")
+        if self._multi:
+            return self._solve_multi(street, boards, eo, ei, ro, ri, path)
         if self.raise_x is not None:
             return self._solve_raise(street, boards, eo, ei, ro, ri, path)
         b = self._capbet(self.bet_frac * (self.P0 + eo + ei), eo, ei)
@@ -363,11 +390,10 @@ class BatchedGPUCFR:
         from ..cards import hand_str
         out = {}
         from .batched import preferred_action
+        acts = ["check"] + list(self.bet_labels)     # ["check", "bet"] single-size
         for i in range(self.no):
-            ev = {"check": float(u_root[0, i, CHECK] / opp[i]),
-                  "bet": float(u_root[0, i, BET] / opp[i])}
-            freq = {"check": float(s_root[0, i, CHECK]),
-                    "bet": float(s_root[0, i, BET])}
+            ev = {a: float(u_root[0, i, k] / opp[i]) for k, a in enumerate(acts)}
+            freq = {a: float(s_root[0, i, k]) for k, a in enumerate(acts)}
             out[hand_str((int(self.oc[i, 0]), int(self.oc[i, 1])))] = {
                 "ev": ev, "freq": freq, "preferred": preferred_action(ev, freq),
             }
@@ -427,6 +453,9 @@ class BatchedGPUCFR:
         # an empty _ucache (which would KeyError in decision()) or ignore a pin.
         if self.raise_x is not None:
             raise ValueError("eval_capture_targets is only implemented for the no-raise tree")
+        if self._multi:
+            raise ValueError("eval_capture_targets is only implemented for the single-size tree "
+                             "(continuation/exploit content does not support bet_fracs yet)")
         xp = self.xp
         self._targets = set(targets)
         self._ucache = {}

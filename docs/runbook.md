@@ -100,11 +100,43 @@ More positions (`co_vs_bb_srp`, `btn_vs_sb_srp`) reuse the SRP machinery — new
 **Full-range TURN / RIVER pass (range only).** `colab/kaggle_content_turnriver.ipynb` (GPU,
 one commit ~20–40 min) runs `demo/gen_turn_river.py --solver gpu --n 400 --iters 300
 --version turnriver_fullrange` over the 16 curated runouts (Check/Bet + Fold/Call, no raise
-— use the raise notebook above to add raises). **Shipped:** the full-range pack is live.
+— use the raise notebook above to add raises). **No longer served by the trainer:** these
+spots are card-removal-only ("unconditioned"), so the turn/river drills now come from the
+continuation pack's solved lines instead (`load_conditioned_turnriver` in
+`demo/build_trainer.py` — ranges conditioned on the earlier streets, re-explained per spot,
+shown with a "So far" line). The trade-off: those lines model no raise (Fold/Call only).
 Local reduced-range default:
 ```bash
 python demo/gen_turn_river.py            # cpu, N=90 -> turnriver_demo
 python demo/gen_turn_river.py --raise-x 3 --n 6 --iters 15 --version tr_raise_smoke  # local raise smoke
+```
+
+**Multiple bet sizes (Check / Bet 33% / Bet 75%).** All three solvers take `bet_fracs`
+(CLI `--bet-sizes 0.33,0.75` on `content_yield` and `demo/gen_turn_river.py`). With 2+ sizes
+the tree offers one bet action per size, labelled `bet_<pct>` (`bet_33`, `bet_75`), and every
+size gets its **own** response node(s): `bb_vs_bet_33` / `btn_vs_bet_75` (relabelled per
+scenario, e.g. `co_vs_bet_33`), each record carrying `facing_bet` + `facing_bet_frac`.
+`--raise-x` composes (per-size Fold/Call/Raise + per-size raise-response nodes) and every size
+respects the `eff_stack` all-in cap. Omitting the flag is the legacy tree, bit-for-bit: plain
+`bet`, `bb_vs_bet`, existing packs/checkpoints unchanged. A single size (`--bet-sizes 0.5`) is
+exactly "bet_frac = that size": legacy tree, plain `bet`, and the size flows into
+`solve_config.json` (`bet_frac`) and the pack config's `bet_pct_pot`. Rejected loudly, before
+any checkpoint or `solve_config.json` is written: duplicate sizes / sizes sharing a 1% label,
+>9 sizes, two sizes that cap to the same all-in at the root; also continuation/exploit
+extraction (`eval_capture_targets`) on a multi-size tree. `content_pack --records` reads the
+`solve_config.json` beside `records.json` for the pack's bet-size keys (`bet_pct_pot`, or
+`bet_sizes_pct` for a menu); for hand-merged records with no `solve_config.json` beside them it
+falls back to the default 66%, so copy one part's `solve_config.json` next to the merge.
+Cost: 2 sizes ≈ the single-size raise tree (5 lines/street); 2 sizes + raise ≈ 6× that — not
+Kaggle-friendly. Full-range BTN-vs-BB pass: `colab/kaggle_content_betsizes.ipynb` (2 parts,
+same flow as the raise notebook; download `records_betsizes_<PART>.json`, merge board-wise,
+build/sign as in §4). The trainer already renders it: `_to_q` labels `bet_NN` as "Bet NN%"
+and folds a `*_vs_bet_NN` node back to `*_vs_bet` with the faced size as the spot's `bet_pct`
+(the JS goes through `isBet`/`baseAct`). To ship, point a `load_scenario` loader at the built
+pack. Local smoke:
+```bash
+python -m pokertrainer.content_yield --solver cpu --n 8 --iters 25 --roots 0 \
+    --bet-sizes 0.33,0.75 --out /tmp/betsizes_smoke   # bb_first: check/bet_33/bet_75
 ```
 
 ## 4. Build + sign + verify the pack
@@ -133,8 +165,10 @@ python -m pokertrainer.foundations --out output/foundations
 ```
 Deterministic — same output every run, so it can go into a signed pack. Answers are
 computed from the same primitives as the solver pipeline (evaluator, board texture,
-pot-odds arithmetic, MC equity). Trainer integration (serving these alongside flop
-decisions) is the next step.
+pot-odds arithmetic, MC equity). The trainer serves them as **Basics** (a category beside the
+streets): `demo/build_trainer.py` embeds `questions.json` at build time, so regenerate it after
+editing `foundations.py`. Copy is beginner-facing (chips not bb, no "equity"); each question
+has a card-free `ask` because the app draws the cards.
 
 ## 5b. Prioritize what to solve/teach next
 
@@ -158,7 +192,25 @@ Shareable review page (no server), regenerated from a signed pack:
 ```bash
 python demo/build_preview.py             # -> demo/content_preview.html + index.html
 ```
+The trainer itself (the Pages site and the app's web layer) is one self-contained page:
+```bash
+PYTHONPATH=src python demo/build_trainer.py   # -> index.html + demo/trainer_demo.html
+```
 `index.html` is the GitHub Pages landing page; push to `main` and Pages rebuilds.
+
+## 6b. Mobile app (Capacitor)
+
+`mobile/` wraps the same `index.html` as an iOS/Android app (Capacitor 7, Node >= 20).
+```bash
+cd mobile && npm install
+npm run sync       # copies ../index.html -> www/, then `cap sync` (rebuild the page first)
+npm run ios        # sync + open Xcode      (needs `xcodebuild -runFirstLaunch` once per Xcode)
+npm run android    # sync + open Android Studio (Gradle needs JDK 21 — Studio's bundled JBR)
+```
+On device the coach goes through native `CapacitorHttp` (no CORS) and the BYOK key lives in
+the OS secure store (`capacitor-secure-storage-plugin` → Keychain / Keystore); fetch patching
+stays off so the page CSP is unchanged. The app id `io.github.tianlog21.holdemtrainer` in
+`mobile/capacitor.config.json` is a placeholder — set the real one before the first store build.
 
 ## 7. Invariants & gotchas (hard-won)
 

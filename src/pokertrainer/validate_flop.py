@@ -88,11 +88,16 @@ def _streets_for_board(flop) -> int:
     return n
 
 
-def _make_solver(solver, dtype, raise_x=None, eff_stack=None):
+def _make_solver(solver, dtype, raise_x=None, eff_stack=None, bet_fracs=None):
     """Return a factory building a flop-root-reporting solver on cpu or gpu.
 
     bet_streets controls which streets have betting; raise_x enables fold/call/raise.
     eff_stack caps bets at the remaining stack (SPR / 3-bet-pot dynamics; None = deep).
+    bet_fracs=None = the single `bf` size (unchanged). When bet_fracs is set the
+    factory's `bf` argument is IGNORED: >= 2 sizes build the multi-size tree, and a
+    single size builds the legacy tree at THAT size (not `bf`). Callers should collapse
+    a single size into `bf` first (content_yield.resolve_bet_sizes) so records and
+    pack config report the size that was actually solved.
     n_streets is derived from the starting board length so turn/river demos deal
     the correct number of runout cards (not a hard-coded flop tree).
     """
@@ -101,10 +106,11 @@ def _make_solver(solver, dtype, raise_x=None, eff_stack=None):
         # broken/missing rather than silently grinding a multi-hour Kaggle session on CPU.
         return lambda f, o, i, wo, wi, pot, bf, bet_streets: BatchedGPUCFR(
             f, o, i, wo, wi, pot, bf, streets=_streets_for_board(f),
-            bet_streets=bet_streets, backend="cupy", dtype=dtype, raise_x=raise_x, eff_stack=eff_stack)
+            bet_streets=bet_streets, backend="cupy", dtype=dtype, raise_x=raise_x,
+            eff_stack=eff_stack, bet_fracs=bet_fracs)
     return lambda f, o, i, wo, wi, pot, bf, bet_streets: BatchedCFR(
         f, o, i, wo, wi, pot, bf, streets=_streets_for_board(f),
-        bet_streets=bet_streets, raise_x=raise_x, eff_stack=eff_stack)
+        bet_streets=bet_streets, raise_x=raise_x, eff_stack=eff_stack, bet_fracs=bet_fracs)
 
 
 def solve_board(flop, oop, ip, pot, bet_frac, iters, make):

@@ -31,7 +31,7 @@ def test_mobile_player_loop_contract_is_generated_from_source():
     required = (
         "const SESSION_SIZE=10",
         "class=\"session-hud\"",
-        "w.className=\"stage duel\"",
+        "class=\"action-line\"",
         ".acts.n-3{grid-template-columns:repeat(3",
         "class=\"fb-actions\"",
         "function showSessionEnd()",
@@ -43,6 +43,7 @@ def test_mobile_player_loop_contract_is_generated_from_source():
         "setView(\"train\")",
         "function skipBonus()",
         "html.sheet-open,html.sheet-open body{overflow:hidden}",
+        "padding-bottom:calc(60px + env(safe-area-inset-bottom))",
     )
     for marker in required:
         assert marker in source
@@ -135,9 +136,11 @@ def test_mobile_ux_copy_and_compact_layout_contract():
     assert ".sit .demo{display:none}" in source
     assert '"Why "+actionPrimary(pref)+" is stronger"' in source
     assert '"How the choices compare"' in source
-    assert 'oppAct="Bets "+(q.bet_pct||66)+"%"' in source
+    assert '\'<b class="hl-opp">Opponent</b> bets \'+(q.bet_pct||66)+\'% of the pot\'' in source
     assert 'document.getElementById("sitcontext").textContent=cap1(q.street)' in source
-    assert "with Fold/Call/Raise available on facing-a-bet nodes" in source
+    # turn/river drills are conditioned on the solved line, and the footer says so
+    assert "ranges reflect the earlier streets' action" in source
+    assert "facing a bet there is Fold/Call" in source
 
 
 def test_session_history_and_comparison_practice_are_accounted_correctly():

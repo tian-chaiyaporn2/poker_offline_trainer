@@ -20,6 +20,8 @@ import numpy as np
 
 from ..cards import hand_str
 from ..evaluator import evaluate
+from .betsizes import normalize_bet_fracs
+from .batched_multi import MultiSizeStreetMixin
 
 CHECK, BET = 0, 1
 FOLD, CALL, RAISE = 0, 1, 2
@@ -32,16 +34,22 @@ def _strat(reg: np.ndarray) -> np.ndarray:
     return np.where(tot > 0, pos / np.where(tot > 0, tot, 1.0), 1.0 / n)
 
 
-class BatchedCFR:
+class BatchedCFR(MultiSizeStreetMixin):
     def __init__(self, flop: List[int], oop, ip, w_oop, w_ip, pot_bb,
                  bet_frac: float = 0.66, streets: int = 3, bet_streets=None,
-                 raise_x=None, eff_stack=None):
+                 raise_x=None, eff_stack=None, bet_fracs=None):
         self.flop = list(flop)
         self.oc = np.array(oop, dtype=np.int64)
         self.ic = np.array(ip, dtype=np.int64)
         self.no, self.ni = len(oop), len(ip)
         self.P0 = float(pot_bb)
-        self.bet_frac = bet_frac
+        # Bet-size menu (solver/betsizes.py). None / one size = the legacy single-size
+        # tree (bit-for-bit, plain "bet" label); >= 2 sizes = the multi-size tree
+        # (_solve_multi), labels "bet_33", "bet_75", ...
+        self.bet_fracs, self.bet_labels = normalize_bet_fracs(bet_frac, bet_fracs,
+                                                              pot_bb, eff_stack)
+        self._multi = len(self.bet_fracs) > 1
+        self.bet_frac = self.bet_fracs[0] if not self._multi else None
         # Effective stack behind the pot (bb). A bet/raise can't put in more than
         # what's left, so on a low-SPR (3-bet) pot bets hit all-in and later-street
         # betting is capped — the SPR dynamic. None = no cap (deep SRP, unchanged).
@@ -100,9 +108,10 @@ class BatchedCFR:
         key = path + node
         r = self.R.get(key)
         if r is None:
-            r = np.zeros((C, self.no if node in ("R", "V", "W") else self.ni, na))
+            r = np.zeros((C, self.no if node[0] in ("R", "V", "W") else self.ni, na))
             # node letter: R=root(OOP), P=ipc(IP), V=ovb(OOP), I=ivb(IP),
-            #              O=orip(IP vs OOP raise), W=iroop(OOP vs IP raise)
+            #              O=orip(IP vs OOP raise), W=iroop(OOP vs IP raise);
+            # multi-size response nodes append the size index ("V0", "I1", ...)
             self.R[key] = r
             self.S[key] = np.zeros_like(r)
         return r
@@ -228,6 +237,19 @@ class BatchedCFR:
         ui = (s_ipc * u_ipc).sum(axis=2) + (s_ivb * u_ivb).sum(axis=2)
         return uo, ui
 
+    # --- backend hooks for MultiSizeStreetMixin._solve_multi (batched_multi.py) ---
+    _mx = np
+    _mdtype = None          # np.zeros default (float64), as before the dedup
+
+    def _mstrat(self, path, node, C, oop, na):
+        return self._get_strat(path, node, C, na)
+
+    def _mshowdown(self, boards, eo, ei, ro, ri, path):
+        return self._showdown(boards, eo, ei, ro, ri)
+
+    def _mkeep_cap(self, cap):
+        self._cap = {k: v.copy() for k, v in cap.items()}
+
     def _solve(self, street, boards, eo, ei, ro, ri, path):
         C = len(boards)
         if street > self.bet_streets:
@@ -235,6 +257,8 @@ class BatchedCFR:
             if street >= self.n_streets:
                 return self._showdown(boards, eo, ei, ro, ri)
             return self._chance(street, boards, eo, ei, ro, ri, path + "c")
+        if self._multi:
+            return self._solve_multi(street, boards, eo, ei, ro, ri, path)
         if self.raise_x is not None:
             return self._solve_raise(street, boards, eo, ei, ro, ri, path)
         b = self._capbet(self.bet_frac * (self.P0 + eo + ei), eo, ei)   # [C]
@@ -314,12 +338,11 @@ class BatchedCFR:
         s_root, u_root = cap["s_root"], cap["u_root"]
         opp = self.B @ self.w_i
         opp = np.where(opp > 1e-12, opp, 1.0)
+        acts = ["check"] + list(self.bet_labels)     # ["check", "bet"] single-size
         out = {}
         for i in range(self.no):
-            ev = {"check": float(u_root[0, i, CHECK] / opp[i]),
-                  "bet": float(u_root[0, i, BET] / opp[i])}
-            freq = {"check": float(s_root[0, i, CHECK]),
-                    "bet": float(s_root[0, i, BET])}
+            ev = {a: float(u_root[0, i, k] / opp[i]) for k, a in enumerate(acts)}
+            freq = {a: float(s_root[0, i, k]) for k, a in enumerate(acts)}
             out[hand_str((int(self.oc[i, 0]), int(self.oc[i, 1])))] = {
                 "ev": ev, "freq": freq, "preferred": preferred_action(ev, freq),
             }
@@ -393,17 +416,36 @@ def _flop_decisions_from_cap(solver) -> List[Dict]:
     B = to_host(solver.B); w_o = to_host(solver.w_o); w_i = to_host(solver.w_i)
     s_root = cap["s_root"]; s_ipc = cap["s_ipc"]
     ro_ck = w_o * s_root[0, :, CHECK]
-    ro_bt = w_o * s_root[0, :, BET]
-    ri_bt = w_i * s_ipc[0, :, BET]
     resp = ["fold", "call", "raise"] if solver.raise_x is not None else ["fold", "call"]
+    labels = list(getattr(solver, "bet_labels", ["bet"]))
+    first = ["check"] + labels
+    # (node, player, combos, actions, u, s, opp_mass, extra record fields)
     nodes = [
-        ("bb_first",     "BB",  solver.oc, ["check", "bet"], cap["u_root"], cap["s_root"], B @ w_i),
-        ("btn_vs_check", "BTN", solver.ic, ["check", "bet"], cap["u_ipc"], cap["s_ipc"], B.T @ ro_ck),
-        ("bb_vs_bet",    "BB",  solver.oc, resp, cap["u_ovb"], cap["s_ovb"], B @ ri_bt),
-        ("btn_vs_bet",   "BTN", solver.ic, resp, cap["u_ivb"], cap["s_ivb"], B.T @ ro_bt),
+        ("bb_first",     "BB",  solver.oc, first, cap["u_root"], cap["s_root"], B @ w_i, {}),
+        ("btn_vs_check", "BTN", solver.ic, first, cap["u_ipc"], cap["s_ipc"], B.T @ ro_ck, {}),
     ]
+    if not getattr(solver, "_multi", False):
+        ro_bt = w_o * s_root[0, :, BET]
+        ri_bt = w_i * s_ipc[0, :, BET]
+        nodes += [
+            ("bb_vs_bet",  "BB",  solver.oc, resp, cap["u_ovb"], cap["s_ovb"], B @ ri_bt, {}),
+            ("btn_vs_bet", "BTN", solver.ic, resp, cap["u_ivb"], cap["s_ivb"], B.T @ ro_bt, {}),
+        ]
+    else:
+        # One response node per faced size, named after the size's label
+        # ("bb_vs_bet_33"), carrying the faced size so the spot is self-describing.
+        for k, (frac, lab) in enumerate(zip(solver.bet_fracs, labels)):
+            ro_bt = w_o * s_root[0, :, 1 + k]
+            ri_bt = w_i * s_ipc[0, :, 1 + k]
+            extra = {"facing_bet": lab, "facing_bet_frac": float(frac)}
+            nodes += [
+                (f"bb_vs_{lab}",  "BB",  solver.oc, resp, cap[f"u_ovb_{k}"], cap[f"s_ovb_{k}"],
+                 B @ ri_bt, extra),
+                (f"btn_vs_{lab}", "BTN", solver.ic, resp, cap[f"u_ivb_{k}"], cap[f"s_ivb_{k}"],
+                 B.T @ ro_bt, extra),
+            ]
     recs: List[Dict] = []
-    for key, player, combos, actions, u, s, opp_mass in nodes:
+    for key, player, combos, actions, u, s, opp_mass, extra in nodes:
         safe = np.where(opp_mass > 1e-12, opp_mass, 1.0)
         for i in range(len(combos)):
             ev = {a: float(u[0, i, k] / safe[i]) for k, a in enumerate(actions)}
@@ -414,6 +456,7 @@ def _flop_decisions_from_cap(solver) -> List[Dict]:
                 "actions": list(actions), "ev": ev, "freq": freq,
                 "preferred": preferred_action(ev, freq),
                 "reach_mass": float(opp_mass[i]),
+                **extra,
             })
     return recs
 

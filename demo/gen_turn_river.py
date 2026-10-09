@@ -14,8 +14,8 @@ Run:  PYTHONPATH=src python demo/gen_turn_river.py
 import numpy as np
 
 from pokertrainer.cards import parse_cards
-from pokertrainer.content_pack import build_pack, verify_pack
-from pokertrainer.content_yield import extract_records
+from pokertrainer.content_pack import bet_size_config, build_pack, verify_pack
+from pokertrainer.content_yield import extract_records, parse_bet_sizes, resolve_bet_sizes
 from pokertrainer.presets import BB_SRP, BTN_SRP
 from pokertrainer.ranges import expand_range
 from pokertrainer.validate_flop import _make_solver, subsample
@@ -35,17 +35,22 @@ POT, BET = 5.5, 0.66
 
 
 def run(solver="cpu", dtype="float64", n=90, iters=200, version="turnriver_demo",
-        note="turn/river demo (reduced range; NOT check-check filtered)", raise_x=None):
+        note="turn/river demo (reduced range; NOT check-check filtered)", raise_x=None,
+        bet_fracs=None):
     """Solve the curated turn/river runouts. Demo defaults (cpu, n=90) run locally;
     pass --solver gpu --n 400 --iters 300 (Kaggle) for the full-range pack. Pass
-    --raise-x 3 to add Fold/Call/Raise on the facing-a-bet nodes (the raise pass)."""
-    make = _make_solver(solver, dtype, raise_x=raise_x)
+    --raise-x 3 to add Fold/Call/Raise on the facing-a-bet nodes (the raise pass).
+    Pass --bet-sizes 0.33,0.75 for a multi-size tree (bet_33/bet_75 + per-size
+    vs-bet nodes); a single --bet-sizes value is just that bet size (plain 'bet')."""
+    # Validate the menu before solving anything; a single size becomes the bet size.
+    bet, bet_fracs = resolve_bet_sizes(BET, bet_fracs, POT, None)
+    make = _make_solver(solver, dtype, raise_x=raise_x, bet_fracs=bet_fracs)
     recs = []
     for i, (board, streets) in enumerate(RUNOUTS, 1):
         flop = parse_cards(board)
         oop = subsample([c for c, _ in expand_range(BB_SRP, flop)], n)
         ip = subsample([c for c, _ in expand_range(BTN_SRP, flop)], n)
-        r = [x for x in extract_records(board, oop, ip, iters, make, POT, BET, streets=streets)
+        r = [x for x in extract_records(board, oop, ip, iters, make, POT, bet, streets=streets)
              if x.get("accepted")]
         recs.extend(r)
         street = {2: "turn", 1: "river"}[streets]
@@ -53,6 +58,14 @@ def run(solver="cpu", dtype="float64", n=90, iters=200, version="turnriver_demo"
     config = {"positions": {"ip": "BTN", "oop": "BB"}, "stack_bb": 100, "pot_bb": POT,
               "bet_pct_pot": 66, "line": "unconditioned_later_street",
               "note": note, "solver_model": "full_street_cfr_plus"}
+    sizes = bet_size_config(bet, bet_fracs)
+    if "bet_pct_pot" in sizes:
+        config["bet_pct_pot"] = sizes["bet_pct_pot"]   # in place: default stays byte-identical
+    else:
+        # multi-size: record the menu. There is no single bet_pct_pot; each vs-bet node
+        # names its faced size (bb_vs_bet_33).
+        del config["bet_pct_pot"]
+        config.update(sizes)
     build_pack(recs, config, "output/packs", version)
     verdict = verify_pack(f"output/packs/flop_pack_{version}.db")
     print("VERIFY:", verdict)
@@ -71,5 +84,9 @@ if __name__ == "__main__":
     ap.add_argument("--note", default="turn/river demo (reduced range; NOT check-check filtered)")
     ap.add_argument("--raise-x", dest="raise_x", type=float, default=None,
                     help="raise-to multiple of the bet (e.g. 3) — adds Fold/Call/Raise on vs-bet nodes")
+    ap.add_argument("--bet-sizes", dest="bet_sizes", default=None,
+                    help="comma-separated pot fractions, e.g. 0.33,0.75 (multi-size tree); "
+                         "default: single 66%% size")
     a = ap.parse_args()
-    run(a.solver, a.dtype, a.n, a.iters, a.version, a.note, raise_x=a.raise_x)
+    run(a.solver, a.dtype, a.n, a.iters, a.version, a.note, raise_x=a.raise_x,
+        bet_fracs=parse_bet_sizes(a.bet_sizes))

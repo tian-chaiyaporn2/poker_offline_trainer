@@ -38,6 +38,14 @@ def test_pot_odds_arithmetic_is_correct():
         pot, bet = q["data"]["pot"], q["data"]["bet"]
         assert abs(q["data"]["break_even"] - bet / (pot + 2 * bet)) < 1e-3  # stored rounded to 4dp
         assert q["answer"] == f"{round(100 * bet / (pot + 2 * bet))}%"
+        # "How often do you win" cannot be more than all the time, and two identical
+        # buttons would make the quiz ungradeable.
+        seen = set()
+        for opt in q["options"]:
+            assert opt not in seen, q["id"]
+            seen.add(opt)
+            pct = int(opt.rstrip("%"))
+            assert 1 <= pct <= 100, q["id"]
 
 
 def test_hand_reading_matches_evaluator():

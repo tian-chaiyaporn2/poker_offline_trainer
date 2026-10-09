@@ -29,7 +29,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from pokertrainer.cards import parse_cards, hand_str            # noqa: E402
 from pokertrainer.content_pack import build_pack, verify_pack, record_id  # noqa: E402
-from pokertrainer.content_yield import validate_records         # noqa: E402
+from pokertrainer.content_yield import ev_close, validate_records         # noqa: E402
 from pokertrainer.evaluator import evaluate                     # noqa: E402
 from pokertrainer.presets import BB_SRP, BTN_SRP                # noqa: E402
 from pokertrainer.ranges import expand_range                    # noqa: E402
@@ -151,14 +151,13 @@ def _build_trajectory(s, flopb, turn, river, flop_s, seat, hero_idx, version):
     recs, path, prev_len = [], "", len(flopb)
 
     def rec(street, node_key, actions, d, newcard):
-        second = sorted(d["freq"].values())[-2] if len(d["freq"]) > 1 else 0.0
         step_index = len(recs)
         recs.append({
             "board": board_strs[street], "board_texture": [], "board_favored": None,
             "node": _NODE[(seat, node_key)], "acting_player": hero_pos,
             "decision_type": "continuation", "hand": hand, "hand_category": "cont",
             "actions": actions, "ev": d["ev"], "freq": d["freq"], "preferred": d["preferred"],
-            "reach_mass": d["reach_mass"], "mixed": bool(second >= 0.35),
+            "reach_mass": d["reach_mass"], "mixed": ev_close(d["ev"], _pot_after(path)),
             "pot_bb": _pot_after(path), "scenario": f"cont|{hand_id}|s{step_index}|{seat}",
             "oop_pos": "BB", "ip_pos": "BTN",
             "explanation": {"reason": "continuation",
@@ -228,7 +227,8 @@ def _build_trajectory(s, flopb, turn, river, flop_s, seat, hero_idx, version):
                     else:
                         after(r, "Opponent folds — you take the pot."); ended = True
                 else:
-                    after(r, "Opponent checks back — the " + nxt(street) + " comes."); path += "1"
+                    # Hero is IP and checks. The opponent already checked to reach this node.
+                    after(r, "You check back — the " + nxt(street) + " comes."); path += "1"
     if recs:
         recs[-1]["explanation"]["detail"]["last"] = True
     return recs
@@ -296,7 +296,7 @@ def _write_continuation_pack(recs, conv, version, note, solver):
     if errs:
         print("VALIDATE WARNINGS:", errs[:5])
     config = {"positions": {"ip": "BTN", "oop": "BB"}, "stack_bb": 100, "pot_bb": POT,
-              "bet_pct_pot": 66, "line": "continuation_solved_villain", "note": note,
+              "bet_pct_pot": PCT, "line": "continuation_solved_villain", "note": note,
               "solver_model": ("multistreet_spike_cfr_plus" if solver == "oracle"
                                else "batched_gpu_cfr_plus"), "convergence": conv}
     build_pack(recs, config, "output/packs", version, pot=POT, dedup_cap=999)
